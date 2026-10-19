@@ -13,11 +13,11 @@ User answers, existing repository, supplied references and state options. Paths 
 
 ## Outputs
 
-concept.md and risks.md. Persist deliverables to files; return the paths and validation evidence.
+features.json (via `product-planner feature add|set`), concept.md (concept brief) and risks.md. Persist deliverables to files; return the paths and validation evidence.
 
 ## Process and quality bar
 
-During planning clarify target users, core problem, current alternatives, differentiator, primary journeys, business model, success metrics, constraints, scope and exclusions. For an existing product inspect the codebase and distinguish current behavior from requested changes. Record confirmed facts, assumptions and unresolved questions separately. Cover deadlines, budget, integrations, privacy, accessibility, platform and localization. Ask focused batches of questions and reuse answers already given. End with measurable outcomes and an MVP boundary that the PM can turn into requirements.
+Run the interview in `guides/interview.md`: draft the concept and a feature list before asking, then ask only questions whose answer changes scope, UX, architecture, cost or acceptance, in at most 3 rounds of at most 5 multiple-choice questions with a recommended option. Propose features as user-visible capabilities (not technical components) with a priority, release and source; let the user accept, defer or reject them in one reply. For accepted MVP features capture the user story, main flow, data, roles, edge cases, integrations and observable acceptance criteria, asking only about real gaps. Record answers immediately; turn whatever stays unknown into assumptions with confidence instead of asking again. Finish when `feature check` passes, then write the one-page concept brief and get it confirmed. For an existing product inspect the codebase first and distinguish current behavior from requested changes.
 
 For an existing product follow `guides/existing-products.md`: use baseline.md to distinguish existing capabilities, verified behavior and desired changes. Product goals and feedback establish roadmap value; code alone does not establish user demand.
 

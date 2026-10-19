@@ -1,6 +1,7 @@
 {
   "title": "API endpoints",
   "order": 20,
+  "tab": "tasks",
   "type": "table",
   "columns": [
     "Endpoint",

@@ -19,6 +19,7 @@ export function normalise(t) {
     task.acceptance ??= [];
     task.notes ??= [];
     task.agent ??= 'developer';
+    task.workedBy ??= [];
   }
   return t;
 }
@@ -43,6 +44,8 @@ export function validateTasks(t) {
     if (!Object.hasOwn(PRIORITY_RANK, task.priority ?? 'medium')) errors.push(`${task.id}: invalid priority ${task.priority}`);
     if (task.estimate && !['S', 'M', 'L'].includes(task.estimate)) errors.push(`${task.id}: invalid estimate ${task.estimate}`);
     if (task.dependsOn != null && !Array.isArray(task.dependsOn)) errors.push(`${task.id}: dependsOn must be an array`);
+    if (task.features != null && (!Array.isArray(task.features) || task.features.some((x) => typeof x !== 'string'))) errors.push(`${task.id}: features must be an array of feature ids`);
+    if (task.model != null && typeof task.model !== 'string') errors.push(`${task.id}: model must be a string`);
     if (task.epic && !epicIds.has(task.epic)) errors.push(`${task.id}: unknown epic ${task.epic}`);
     if (!Array.isArray(task.acceptance) || !task.acceptance.length || task.acceptance.some((a) => typeof a !== 'string' || !a.trim())) errors.push(`${task.id}: acceptance must contain nonempty criteria`);
   }
@@ -110,10 +113,22 @@ export function transition(cwd, id, status, extra = {}) {
   if (status === 'done') { task.completedAt = nowIso(); delete task.blockedReason; }
   if (status === 'blocked') task.blockedReason = extra.reason || 'unspecified';
   if (status === 'todo') { delete task.blockedReason; }
-  if (extra.note) task.notes.push({ ts: nowIso(), text: extra.note, agent: extra.agent });
+  const agent = agentName(extra.agent);
+  if (agent || extra.model) recordWorker(task, agent || task.agent, extra.model);
+  if (extra.note) task.notes.push({ ts: nowIso(), text: extra.note, agent, model: extra.model });
   saveTasks(cwd, t);
-  appendLog(cwd, { type: 'task', task: id, from, to: status, agent: extra.agent, note: extra.note || extra.reason });
+  appendLog(cwd, { type: 'task', task: id, from, to: status, agent, model: extra.model, note: extra.note || extra.reason });
   return task;
+}
+
+/** Persona names are stored without the pp- prefix used by installed agent files. */
+export function agentName(agent) { return agent ? String(agent).trim().replace(/^pp-/, '') : undefined; }
+
+/** Remember which agent persona and AI model actually worked on a task. */
+export function recordWorker(task, agent, model) {
+  const existing = task.workedBy.find((w) => w.agent === agent && (!model || !w.model || w.model === model));
+  if (existing) { if (model) existing.model = model; existing.ts = nowIso(); }
+  else task.workedBy.push({ agent, ...(model ? { model } : {}), ts: nowIso() });
 }
 
 export function addTask(cwd, task) {

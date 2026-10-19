@@ -16,6 +16,7 @@
       "acceptance": [
         "The documented setup command starts the application successfully."
       ],
+      "features": ["F1"],
       "agent": "developer",
       "priority": "high",
       "estimate": "S",

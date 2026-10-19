@@ -4,11 +4,13 @@ import { PKG_ROOT, STATE_DIR, readJson, nowIso } from './util/fs.js';
 import { init } from './init/index.js';
 import { TOOLS, uninstallTools } from './init/adapters.js';
 import { loadState, saveState, loadConfig, setByPath, appendLog, PHASES, PLANNING_STEPS, isInitialised, configPath } from './state.js';
-import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
+import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, agentName, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
 import { buildDashboard, openInBrowser, watchDashboard } from './dashboard/index.js';
 import { search, fetchPage, SETUP_OPTIONS } from './research/index.js';
 import { buildIndex, searchMemory, setupVector, memoryStatus } from './memory/index.js';
 import { doctor } from './doctor.js';
+import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature } from './features.js';
+import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
 import { writeJson } from './util/fs.js';
 
 const HELP = `product-planner – multi-agent product planning & build kit
@@ -22,15 +24,24 @@ Usage: product-planner <command> [options]
   task list [--status s] [--json]     List tasks
   task next [--json]                  Next ready task (deps satisfied, by priority)
   task show <id>                      Show one task
-  task start|review|done|block|unblock|reopen <id> [--note "…"] [--reason "…"] [--agent name]
+  task start|review|done|block|unblock|reopen <id> [--note "…"] [--reason "…"] [--agent name] [--model id]
   task add --json '{…}' | --file f    Add one task (or {"epics":[],"tasks":[]} file to merge)
-  task validate                       Check tasks.json for errors
+  task validate                       Check tasks.json for errors and feature coverage
+  feature list [--json] | show <id>   The feature register (agreed scope) from the planning interview
+  feature add --json '{…}' | --file f Add/update features ({"features":[…]} or one feature)
+  feature set <id> <status|priority|release|title|story> <value>
+  feature check                       Is the scope ready for requirements/tasks? (exit 1 if not)
   state get [key] | set <key> <value> | phase <phase> | step <step> <status> | product --name --tagline --summary
-  log "<message>" [--agent a] [--task id]   Append to the activity log
+  log "<message>" [--agent a] [--model id] [--task id]   Append to the activity log
   research search "<query>" [--max n] [--json]   Key-less web search (DuckDuckGo)
   research fetch <url> [--max-chars n] [--json]  Fetch a page as readable text
   research options                    Print free research setup options
   memory index [--paths p1,p2] | search "<q>" [--k n] | setup | status   Project memory (BM25, optional local vectors)
+  browser status | options           Browser access available to agents (host browser, MCP servers, cached browsers)
+  browser use host|none [--detail "…"]   Record that the AI tool's own browser (or no browser) is used
+  browser setup [--tools a,b] [--engine chromium] [--headless] [--version x] [--skip-install] [--force]
+                                      After user approval: install free Playwright MCP + Chromium and register it
+  browser remove                      Remove the Playwright MCP entry from this project's tool configs
   doctor                              Environment checks (node, git, web, memory)
   version | help
 
@@ -47,10 +58,12 @@ export async function main(argv) {
     case 'status': return cmdStatus(cwd, rest);
     case 'dashboard': return cmdDashboard(cwd, rest);
     case 'task': return cmdTask(cwd, rest);
+    case 'feature': return cmdFeature(cwd, rest);
     case 'state': return cmdState(cwd, rest);
     case 'log': return cmdLog(cwd, rest);
     case 'research': return cmdResearch(cwd, rest);
     case 'memory': return cmdMemory(cwd, rest);
+    case 'browser': return cmdBrowser(cwd, rest);
     case 'doctor': { const checks = await doctor(cwd); for (const c of checks) console.log(`${c.ok ? '✔' : '✖'} ${c.name.padEnd(12)} ${c.detail}`); if (checks.some((c) => !c.ok)) process.exitCode = 1; return; }
     default: throw new Error(`unknown command "${cmd}". Run product-planner help`);
   }
@@ -100,9 +113,9 @@ function cmdDashboard(cwd, rest) {
 function cmdTask(cwd, rest) {
   requireInit(cwd);
   const [sub, id] = rest;
-  const { values, positionals } = args(rest.slice(1), { status: { type: 'string' }, json: { type: sub === 'add' ? 'string' : 'boolean' }, note: { type: 'string' }, reason: { type: 'string' }, agent: { type: 'string' }, file: { type: 'string' } });
+  const { values, positionals } = args(rest.slice(1), { status: { type: 'string' }, json: { type: sub === 'add' ? 'string' : 'boolean' }, note: { type: 'string' }, reason: { type: 'string' }, agent: { type: 'string' }, model: { type: 'string' }, file: { type: 'string' } });
   const t = loadTasks(cwd);
-  const show = (task) => console.log(`${task.id}  [${task.status}] ${task.title}\n  epic: ${task.epic || '-'} · agent: ${task.agent} · priority: ${task.priority}${task.estimate ? ' · estimate: ' + task.estimate : ''}${task.dependsOn.length ? '\n  depends on: ' + task.dependsOn.join(', ') : ''}${task.description ? '\n  ' + task.description.replace(/\n/g, '\n  ') : ''}${task.acceptance.length ? '\n  acceptance:\n' + task.acceptance.map((a) => '   - ' + a).join('\n') : ''}${task.blockedReason ? '\n  BLOCKED: ' + task.blockedReason : ''}${task.notes.length ? '\n  notes:\n' + task.notes.map((n) => `   - ${n.ts.slice(0, 16)} ${n.agent ? n.agent + ': ' : ''}${n.text}`).join('\n') : ''}`);
+  const show = (task) => console.log(`${task.id}  [${task.status}] ${task.title}\n  epic: ${task.epic || '-'} · agent: ${task.agent}${task.model ? ' · planned model: ' + task.model : ''} · priority: ${task.priority}${task.estimate ? ' · estimate: ' + task.estimate : ''}${task.dependsOn.length ? '\n  depends on: ' + task.dependsOn.join(', ') : ''}${task.description ? '\n  ' + task.description.replace(/\n/g, '\n  ') : ''}${task.acceptance.length ? '\n  acceptance:\n' + task.acceptance.map((a) => '   - ' + a).join('\n') : ''}${task.workedBy.length ? '\n  worked by: ' + task.workedBy.map((w) => `${w.agent}${w.model ? ' (' + w.model + ')' : ''}`).join(', ') : ''}${task.blockedReason ? '\n  BLOCKED: ' + task.blockedReason : ''}${task.notes.length ? '\n  notes:\n' + task.notes.map((n) => `   - ${n.ts.slice(0, 16)} ${n.agent ? n.agent + (n.model ? ' (' + n.model + ')' : '') + ': ' : ''}${n.text}`).join('\n') : ''}`);
   switch (sub) {
     case 'list': {
       let list = t.tasks; if (values.status) list = list.filter((x) => x.status === values.status);
@@ -123,7 +136,7 @@ function cmdTask(cwd, rest) {
       if (!id) throw new Error('task id required');
       const map = { start: 'in_progress', review: 'review', done: 'done', block: 'blocked', unblock: 'todo', reopen: 'todo' };
       if (sub === 'block' && !values.reason) throw new Error('--reason "…" is required when blocking');
-      const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent });
+      const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent, model: values.model });
       console.log(`${task.id} → ${task.status}`);
       const current = loadState(cwd);
       if (current.phase === 'done' && sub === 'reopen') { current.phase = 'build'; saveState(cwd, current); appendLog(cwd, { type: 'phase', from: 'done', to: 'build', message: 'Task reopened' }); }
@@ -147,7 +160,7 @@ function cmdTask(cwd, rest) {
       } else { const task = addTask(cwd, src); console.log(`added ${task.id}: ${task.title}`); }
       refreshDashboard(cwd); return;
     }
-    case 'validate': { const errors = validateTasks(t); if (errors.length) { console.log(errors.join('\n')); process.exitCode = 1; } else console.log(`ok: ${t.tasks.length} tasks, ${t.epics.length} epics, ${readyTasks(t).length} ready`); return; }
+    case 'validate': { const fx = loadFeatures(cwd); const errors = [...validateTasks(t), ...(fx.features.length ? [...validateFeatures(fx), ...coverage(fx, t).errors] : [])]; if (errors.length) { console.log(errors.join('\n')); process.exitCode = 1; } else console.log(`ok: ${t.tasks.length} tasks, ${t.epics.length} epics, ${readyTasks(t).length} ready`); return; }
     default: throw new Error(`unknown task subcommand "${sub}" (list, next, show, start, review, done, block, unblock, reopen, add, validate)`);
   }
 }
@@ -168,10 +181,10 @@ function cmdState(cwd, rest) {
 
 function cmdLog(cwd, rest) {
   requireInit(cwd);
-  const { values, positionals } = args(rest, { agent: { type: 'string' }, task: { type: 'string' } });
+  const { values, positionals } = args(rest, { agent: { type: 'string' }, model: { type: 'string' }, task: { type: 'string' } });
   const message = positionals.join(' ');
   if (!message) throw new Error('message required');
-  appendLog(cwd, { type: 'note', message, agent: values.agent, task: values.task });
+  appendLog(cwd, { type: 'note', message, agent: agentName(values.agent), model: values.model, task: values.task });
   refreshDashboard(cwd);
   console.log('logged');
 }
@@ -217,5 +230,75 @@ async function cmdMemory(cwd, rest) {
     }
     case 'status': case undefined: console.log(JSON.stringify(memoryStatus(cwd), null, 2)); return;
     default: throw new Error('usage: memory index | search "<q>" | setup | status');
+  }
+}
+
+function cmdBrowser(cwd, rest) {
+  const [sub, ...more] = rest;
+  const { values, positionals } = args(more, { tools: { type: 'string' }, engine: { type: 'string' }, headless: { type: 'boolean' }, version: { type: 'string' }, 'skip-install': { type: 'boolean' }, force: { type: 'boolean' }, detail: { type: 'string' }, json: { type: 'boolean' } });
+  switch (sub) {
+    case 'options': console.log(BROWSER_OPTIONS); return;
+    case 'status': case undefined: {
+      const s = browserStatus(cwd);
+      if (values.json) { console.log(JSON.stringify(s, null, 2)); return; }
+      console.log(`Recorded choice: ${s.choice ? `${s.choice.source}${s.choice.detail ? ` (${s.choice.detail})` : ''}${s.choice.package ? ` · ${s.choice.package} · ${s.choice.engine}` : ''}` : 'none yet (decided during pp-plan)'}`);
+      console.log(`Browser MCP servers in project configs: ${s.servers.length ? s.servers.map((x) => `${x.name} (${x.tool}: ${x.file})`).join(', ') : 'none'}`);
+      console.log(`Playwright browser cache: ${s.cachedBrowsers.length ? s.cachedBrowsers.join(', ') : 'empty'} (${s.playwrightCache})`);
+      console.log(`Installed browsers: ${s.systemBrowsers.join(', ') || 'none detected'}`);
+      console.log('Host built-in browsers cannot be detected from the shell; the agent checks its own tool list first.');
+      return;
+    }
+    case 'use': {
+      requireInit(cwd);
+      const source = positionals[0];
+      if (!['host', 'none'].includes(source)) throw new Error('usage: browser use host|none [--detail "…"] (use "browser setup" for Playwright MCP)');
+      const b = recordChoice(cwd, { source, ...(values.detail ? { detail: values.detail } : {}) });
+      console.log(`browser access recorded: ${b.source}${b.detail ? ` (${b.detail})` : ''}`); refreshDashboard(cwd); return;
+    }
+    case 'setup': {
+      requireInit(cwd);
+      const tools = values.tools?.split(',').map((x) => x.trim()).filter(Boolean);
+      const unknown = (tools || []).filter((x) => !Object.hasOwn(TARGETS, x));
+      if (unknown.length) throw new Error(`unknown tool(s): ${unknown.join(', ')} (known: ${Object.keys(TARGETS).join(', ')})`);
+      const r = setupBrowser(cwd, { tools, engine: values.engine, headless: values.headless, version: values.version, skipInstall: values['skip-install'], force: values.force });
+      console.log(`\nPlaywright MCP ${r.version}: ${r.cmd.join(' ')}`);
+      for (const x of r.results) console.log(`  ${x.tool.padEnd(9)} ${x.action}${x.file ? ` ${x.file}` : ''}${x.detail ? `\n    ${x.detail.replace(/\n/g, '\n    ')}` : ''}`);
+      console.log('\nReload or restart your AI tool session so it loads the new MCP server, and approve it if the tool asks.');
+      refreshDashboard(cwd); return;
+    }
+    case 'remove': { requireInit(cwd); const removed = unregisterServer(cwd); console.log(removed.length ? `removed the ${'playwright'} server from: ${removed.join(', ')}` : 'no Playwright MCP entries found'); return; }
+    default: throw new Error('usage: browser status | options | use host|none | setup | remove');
+  }
+}
+
+function cmdFeature(cwd, rest) {
+  requireInit(cwd);
+  const [sub, id, field, ...vals] = rest;
+  const f = loadFeatures(cwd);
+  const show = (x) => console.log(`${x.id}  ${x.title}  [${x.priority} · ${x.status} · ${x.release}]${x.story ? `\n  ${x.story}` : ''}${x.flow?.length ? '\n  flow:\n' + x.flow.map((s, i) => `   ${i + 1}. ${s}`).join('\n') : ''}${x.acceptance.length ? '\n  acceptance:\n' + x.acceptance.map((a) => '   - ' + a).join('\n') : ''}${x.openQuestions.length ? '\n  open questions:\n' + x.openQuestions.map((q) => '   ? ' + q).join('\n') : ''}${x.assumptions.length ? '\n  assumptions:\n' + x.assumptions.map((a) => '   ~ ' + a).join('\n') : ''}`);
+  switch (sub) {
+    case 'list': case undefined: {
+      if (rest.includes('--json')) { console.log(JSON.stringify(f.features, null, 2)); return; }
+      if (!f.features.length) { console.log('no features yet (the pp-plan interview creates them)'); return; }
+      const { byFeature } = coverage(f, loadTasks(cwd));
+      for (const x of sortedFeatures(f)) { const ts = byFeature.get(x.id) || []; console.log(`${x.id.padEnd(4)} ${x.release.padEnd(6)} ${x.priority.padEnd(7)} ${x.status.padEnd(9)} ${x.title}${ts.length ? `  (${ts.filter((t) => t.status === 'done').length}/${ts.length} tasks done)` : ''}${x.openQuestions.length ? `  ?${x.openQuestions.length}` : ''}`); }
+      return;
+    }
+    case 'show': { const x = f.features.find((y) => y.id === id); if (!x) throw new Error(`unknown feature ${id}`); show(x); return; }
+    case 'add': {
+      const { values, positionals } = args(rest.slice(1), { json: { type: 'string' }, file: { type: 'string' } });
+      const src = values.file ? readJson(path.resolve(cwd, values.file)) : JSON.parse(values.json || positionals[0] || '{}');
+      const r = upsertFeatures(cwd, Array.isArray(src.features) ? src.features : [src]);
+      console.log(`features: ${r.added} added, ${r.updated} updated, ${r.total} total`); refreshDashboard(cwd); return;
+    }
+    case 'set': { if (!id || !field || !vals.length) throw new Error('usage: feature set <id> <field> <value>'); const x = setFeature(cwd, id, field, vals.join(' ')); console.log(`${x.id} ${field} = ${x[field]}`); refreshDashboard(cwd); return; }
+    case 'check': {
+      const structural = validateFeatures(f); const r = readiness(f);
+      const errors = [...structural, ...r.errors];
+      for (const w of r.warnings) console.log(`warning: ${w}`);
+      if (errors.length) { console.log(errors.map((e) => `not ready: ${e}`).join('\n')); process.exitCode = 1; return; }
+      console.log(`ready: ${r.mvp} accepted MVP feature(s) with acceptance criteria and no open questions`); return;
+    }
+    default: throw new Error('usage: feature list | show <id> | add --json/--file | set <id> <field> <value> | check');
   }
 }

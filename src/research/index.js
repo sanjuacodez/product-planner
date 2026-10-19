@@ -68,4 +68,6 @@ export const SETUP_OPTIONS = `Web research options (all free):
                                https://github.com/modelcontextprotocol/servers/tree/main/src/fetch
                                For search integrations, verify provider terms and current client setup first.
   4. Self-hosted             - SearXNG (docker run -p 8080:8080 searxng/searxng) for heavy research.
+  5. Interactive browser     - Prefer the AI tool's own browser. Without one, and after approval:
+                               product-planner browser setup (free Playwright MCP + Chromium). See: product-planner browser options
 Run 'product-planner doctor' to confirm this machine has outbound web access.`;

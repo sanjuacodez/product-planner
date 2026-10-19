@@ -17,6 +17,7 @@ export function defaultState() {
     phase: 'init',
     planning: Object.fromEntries(PLANNING_STEPS.map((s) => [s, 'pending'])),
     options: {
+      track: 'standard',
       research: true,
       marketing: false,
       memory: false,

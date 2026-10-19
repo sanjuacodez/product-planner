@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { isInitialised, loadConfig, loadState } from './state.js';
 import { memoryStatus } from './memory/index.js';
+import { browserStatus } from './browser/index.js';
 
 export async function doctor(cwd) {
   const checks = [];
@@ -18,5 +19,8 @@ export async function doctor(cwd) {
   } catch (e) { webDetail = e.name === 'AbortError' ? 'timeout' : e.message; }
   checks.push({ name: 'web access', ok: web, detail: web ? `reachable (${webDetail}) – research CLI will work` : `unreachable (${webDetail}) – research must use the tool's own browser or user-provided material` });
   if (init) { const m = memoryStatus(cwd); checks.push({ name: 'memory', ok: true, detail: m.indexed ? `${m.backend}, ${m.chunks} chunks from ${m.files} files` : `not indexed (optional) – vector libs ${m.vectorAvailable ? 'installed' : 'not installed'}` }); }
+  const b = browserStatus(cwd);
+  const bDetail = b.choice ? `${b.choice.source}${b.choice.detail ? ` (${b.choice.detail})` : ''}` : b.servers.length ? `MCP: ${b.servers.map((x) => x.name).join(', ')}` : 'not chosen yet (host browser preferred; see browser options)';
+  checks.push({ name: 'browser', ok: true, detail: `${bDetail}${b.cachedBrowsers.length ? ` · cached: ${b.cachedBrowsers.join(', ')}` : ''}` });
   return checks;
 }

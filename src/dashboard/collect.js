@@ -2,6 +2,7 @@ import path from 'node:path';
 import { stateDir, loadState, loadConfig, readLog, PLANNING_STEPS } from '../state.js';
 import { loadTasks, summary, tasksByEpic } from '../tasks.js';
 import { readText, readJson, listFiles } from '../util/fs.js';
+import { loadFeatures, sortedFeatures, coverage } from '../features.js';
 
 const DOCS = [
   ['concept', 'Product concept', 'concept.md'],
@@ -9,7 +10,8 @@ const DOCS = [
   ['ux', 'UX and UI direction', 'ux.md'],
   ['marketing', 'Marketing plan', 'marketing.md'],
   ['architecture', 'Architecture', 'architecture.md'],
-  ['market', 'Market research', path.join('research', 'market.md')],
+  ['baseline', 'Current product baseline', 'baseline.md'],
+  ['lessons', 'Verified lessons', 'lessons.md'],
 ];
 
 export function collect(cwd = process.cwd()) {
@@ -18,13 +20,15 @@ export function collect(cwd = process.cwd()) {
   const config = loadConfig(cwd);
   const tasks = loadTasks(cwd);
   const log = readLog(cwd);
+  const featureFile = loadFeatures(cwd);
+  const features = sortedFeatures(featureFile).map((f) => ({ ...f, tasks: coverage(featureFile, tasks).byFeature.get(f.id) || [] }));
   const docs = DOCS.map(([key, title, file]) => ({ key, title, file, text: readText(path.join(dir, file)) })).filter((d) => d.text);
   const custom = listFiles(path.join(dir, 'dashboard'), (f) => f.endsWith('.json'))
     .map((f) => { try { return { file: path.basename(f), ...readJson(f) }; } catch (e) { return { file: path.basename(f), title: path.basename(f), type: 'text', text: `Invalid JSON: ${e.message}` }; } })
     .sort((a, b) => (a.order ?? 50) - (b.order ?? 50) || a.file.localeCompare(b.file));
   return {
     generatedAt: new Date().toISOString(),
-    state, config, tasks, log,
+    state, config, tasks, log, features,
     summary: summary(tasks),
     byEpic: tasksByEpic(tasks),
     planningSteps: PLANNING_STEPS.map((s) => ({ step: s, status: state.planning?.[s] || 'pending' })),
@@ -33,6 +37,8 @@ export function collect(cwd = process.cwd()) {
     risks: readText(path.join(dir, 'risks.md')),
     decisions: readText(path.join(dir, 'decisions.md')),
     competitors: readJson(path.join(dir, 'research', 'competitors.json'), null),
+    market: readText(path.join(dir, 'research', 'market.md')),
+    sources: readText(path.join(dir, 'research', 'sources.md')),
     custom,
     burnup: burnupSeries(log, tasks),
   };
