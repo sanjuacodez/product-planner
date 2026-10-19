@@ -171,3 +171,61 @@ test('replanning updates unfinished tasks, removes unneeded ones and never rewri
   assert.match(run(cwd, 'task', 'remove', 'T1', '--reason', 'x').stderr, /only todo or blocked/);
   const html = fs.readFileSync(buildDashboard(cwd), 'utf8'); assert.match(html, /removed: Old idea/); assert.match(html, /updated title, acceptance: replan: reschedule/);
 });
+
+test('check finds uncovered requirements, vague criteria and unfilled templates; context briefs one task', async (t) => {
+  const cwd = project(t); ok(cwd, 'init', '--tools', 'generic', '--yes');
+  const dir = path.join(cwd, '.product-planner');
+  ok(cwd, 'feature', 'add', '--json', JSON.stringify({ features: [{ id: 'F1', title: 'Booking', priority: 'must', status: 'accepted', acceptance: ['Double booking throws SLOT_UNAVAILABLE'], story: 'As a student I book a lesson.' }] }));
+  fs.writeFileSync(path.join(dir, 'prd.md'), '# PRD\n- FR-001 (F1): book a free slot\n- FR-002 (F1): reject overlaps with SLOT_UNAVAILABLE\n- FR-003: export (removed in replan)\n');
+  fs.writeFileSync(path.join(dir, 'architecture.md'), '# Architecture\n## Modules\n<!-- Replace with concrete project evidence, requirements or decisions. -->\n');
+  fs.writeFileSync(path.join(dir, 'decisions.md'), '- F1 uses an in-memory store\n');
+  fs.writeFileSync(path.join(cwd, 'plan.json'), JSON.stringify({ epics: [{ id: 'E1', title: 'Core' }], tasks: [
+    { id: 'T1', epic: 'E1', title: 'Booking core (FR-001)', features: ['F1'], acceptance: ['Booking is fast'], risk: 'high' },
+    { id: 'T2', epic: 'E1', title: 'Docs', acceptance: ['README lists commands', 'list prints No todos when empty'], dependsOn: ['T1'] },
+  ] })); ok(cwd, 'task', 'add', '--file', 'plan.json');
+  const r = JSON.parse(ok(cwd, 'check', '--json'));
+  assert.deepEqual(r.errors, []);
+  const w = r.warnings.join('\n');
+  assert.match(w, /FR-002 in prd.md is not referenced/); assert.doesNotMatch(w, /FR-001|FR-003/);
+  assert.match(w, /T1: vague acceptance "Booking is fast"/); assert.doesNotMatch(w, /No todos/); assert.match(w, /T2: not linked to a feature/);
+  assert.match(w, /architecture.md: still has unfilled/); assert.match(w, /request.md missing/);
+  assert.deepEqual(r.stats.highRisk, ['T1']);
+  const brief = ok(cwd, 'task', 'context', 'T1');
+  assert.match(brief, /# T1: Booking core/); assert.match(brief, /risk high/); assert.match(brief, /Feature F1: Booking/); assert.match(brief, /FR-001 \(F1\)/); assert.match(brief, /F1 uses an in-memory store/); assert.match(brief, /architecture.md: # Architecture · ## Modules/);
+  assert.equal(run(cwd, 'task', 'update', 'T2', '--json', '{"risk":"extreme"}').status, 1);
+});
+
+test('QA loop warning appears after repeated returns', async (t) => {
+  let out = '';
+  const t2 = project(t); ok(t2, 'init', '--tools', 'generic', '--yes');
+  ok(t2, 'task', 'add', '--json', JSON.stringify({ title: 'Tricky', acceptance: ['Works'] })); ok(t2, 'task', 'start', 'T1');
+  for (let i = 0; i < 3; i++) { ok(t2, 'task', 'review', 'T1'); transition(t2, 'T1', 'in_progress', { note: 'QA failed' }); }
+  assert.equal(loadTasks(t2).tasks[0].qaReturns, 3);
+  ok(t2, 'task', 'review', 'T1'); out = ok(t2, 'task', 'start', 'T1');
+  assert.match(out, /QA has returned T1 4 times/);
+});
+
+test('usage hook attributes transcript tokens to active tasks and phases; hooks install and uninstall cleanly', async (t) => {
+  const cwd = project(t);
+  fs.mkdirSync(path.join(cwd, '.claude')); fs.writeFileSync(path.join(cwd, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Bash(ls:*)'] } }));
+  ok(cwd, 'init', '--tools', 'claude', '--yes'); ok(cwd, 'init', '--tools', 'claude', '--yes');
+  const settings = JSON.parse(fs.readFileSync(path.join(cwd, '.claude/settings.json'), 'utf8'));
+  assert.deepEqual(settings.permissions, { allow: ['Bash(ls:*)'] }); assert.equal(settings.hooks.PostToolUse.length, 1); assert.equal(settings.hooks.Stop.length, 1);
+  ok(cwd, 'task', 'add', '--json', JSON.stringify({ title: 'Build', acceptance: ['Works'] }));
+  const tr = path.join(cwd, 'session.jsonl');
+  const msg = (id, out) => JSON.stringify({ type: 'assistant', message: { id, model: 'claude-test', usage: { input_tokens: 1, cache_creation_input_tokens: 10, cache_read_input_tokens: 100, output_tokens: out } } });
+  const hook = (event, command) => spawnSync(process.execPath, [cli, 'usage', 'hook'], { cwd, encoding: 'utf8', input: JSON.stringify({ hook_event_name: event, session_id: 's1', transcript_path: tr, cwd, tool_input: { command } }) });
+  fs.writeFileSync(tr, [msg('m1', 5), msg('m1', 5), msg('m2', 7)].join('\n') + '\n');
+  hook('PostToolUse', 'ls -la'); assert.equal(fs.existsSync(path.join(cwd, '.product-planner/usage.jsonl')), false);
+  hook('PostToolUse', 'product-planner task start T1'); ok(cwd, 'task', 'start', 'T1'); hook('PostToolUse', 'product-planner task start T1');
+  fs.appendFileSync(tr, msg('m3', 20) + '\n');
+  fs.mkdirSync(path.join(cwd, 'session', 'subagents'), { recursive: true }); fs.writeFileSync(path.join(cwd, 'session/subagents/agent-1.jsonl'), msg('s1', 30) + '\n');
+  hook('Stop');
+  const lines = fs.readFileSync(path.join(cwd, '.product-planner/usage.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(lines.length, 2); assert.equal(lines[0].phase, 'init'); assert.equal(lines[0].tokens.output, 12);
+  assert.deepEqual(lines[1].tasks, ['T1']); assert.equal(lines[1].tokens.output, 50); assert.equal(lines[1].tokens.cacheRead, 200);
+  assert.match(ok(cwd, 'usage'), /T1 +272 tokens/);
+  assert.match(fs.readFileSync(buildDashboard(cwd), 'utf8'), /Token usage/);
+  uninstallTools(cwd);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(cwd, '.claude/settings.json'), 'utf8')), { permissions: { allow: ['Bash(ls:*)'] } });
+});

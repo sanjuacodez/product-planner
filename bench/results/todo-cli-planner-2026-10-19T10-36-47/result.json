@@ -1,0 +1,25 @@
+{
+  "scenario": "todo-cli",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-19T10:39:55.716Z",
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8
+  },
+  "costUsd": 1.0865,
+  "minutes": 3.1,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 48,
+  "tokens": {
+    "input": 58,
+    "cacheWrite": 54037,
+    "cacheRead": 1430020,
+    "output": 18397,
+    "total": 1502512
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-todo-cli-planner-qSmb0D"
+}

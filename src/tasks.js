@@ -45,6 +45,7 @@ export function validateTasks(t) {
     if (task.estimate && !['S', 'M', 'L'].includes(task.estimate)) errors.push(`${task.id}: invalid estimate ${task.estimate}`);
     if (task.dependsOn != null && !Array.isArray(task.dependsOn)) errors.push(`${task.id}: dependsOn must be an array`);
     if (task.features != null && (!Array.isArray(task.features) || task.features.some((x) => typeof x !== 'string'))) errors.push(`${task.id}: features must be an array of feature ids`);
+    if (task.risk != null && !['low', 'medium', 'high'].includes(task.risk)) errors.push(`${task.id}: risk must be low, medium or high`);
     if (task.model != null && typeof task.model !== 'string') errors.push(`${task.id}: model must be a string`);
     if (task.epic && !epicIds.has(task.epic)) errors.push(`${task.id}: unknown epic ${task.epic}`);
     if (!Array.isArray(task.acceptance) || !task.acceptance.length || task.acceptance.some((a) => typeof a !== 'string' || !a.trim())) errors.push(`${task.id}: acceptance must contain nonempty criteria`);
@@ -107,6 +108,7 @@ export function transition(cwd, id, status, extra = {}) {
   if (!allowed[from]?.includes(status)) throw new Error(`cannot move ${id} from ${from} to ${status}`);
   if (status === 'in_progress' && task.dependsOn.some((d) => getTask(t, d).status !== 'done')) throw new Error(`${id}: dependencies are not done`);
   if (status === 'blocked' && !extra.reason?.trim()) throw new Error('blocking requires a reason');
+  if (from === 'review' && status === 'in_progress') task.qaReturns = (task.qaReturns || 0) + 1;
   task.status = status;
   if (status !== 'done') delete task.completedAt;
   if (status === 'in_progress') { task.startedAt ??= nowIso(); delete task.blockedReason; }
@@ -143,7 +145,8 @@ export function addTask(cwd, task) {
   appendLog(cwd, { type: 'task', task: task.id, from: null, to: task.status, note: `added: ${task.title}` });
   return task;
 }
-const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features'];
+const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features', 'risk'];
+export const LOOP_LIMIT = 3;
 
 /** Replanning: revise a task that has not been completed. Done work is never rewritten; add a follow-up task instead. */
 export function updateTask(cwd, id, changes, note) {

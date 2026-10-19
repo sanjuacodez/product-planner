@@ -16,6 +16,9 @@ A human describes a product idea. During a single **planning phase** the agents 
   log.jsonl            activity log (append-only; feeds the dashboard)
   baseline.md          existing-product capabilities, source evidence and roadmap gaps
   lessons.md           verified project lessons with task/source/QA evidence
+  request.md           the user's original request(s), verbatim (checked by the final acceptance audit)
+  acceptance.md        acceptance audit: each requirement → evidence → result (qa, end of build)
+  usage.jsonl          tokens per task/phase from the host's transcripts (Claude Code hook)
   features.json        feature register: agreed scope from the interview, traced to tasks (analyst)
   concept.md           one-page concept brief confirmed by the user (analyst)
   research/
@@ -57,6 +60,9 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Plan models per persona | `product-planner state set models.<agent> <model-id>` (or `models.default`) |
 | Browser access | `product-planner browser status`, `browser use host|none`, `browser setup` (after approval) |
 | Validate the plan | `product-planner task validate` (also checks every accepted MVP feature has tasks) |
+| Analyse the whole plan (no model) | `product-planner check` — coverage, FR→task traceability, vague criteria, unfilled templates |
+| Brief for one task | `product-planner task context T#` — read this instead of whole documents |
+| Token usage | `product-planner usage` (recorded automatically by the Claude Code hook) |
 | Replan tasks | `product-planner task update T# --json '{…}' --note "…"` (not done tasks), `task remove T# --reason "…"` (todo/blocked, no dependents) |
 | Automatic mode | `product-planner auto on|off|status` |
 | Feature register | `product-planner feature list|show|add|set|check` |

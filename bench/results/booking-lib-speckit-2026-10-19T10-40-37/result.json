@@ -1,0 +1,25 @@
+{
+  "scenario": "booking-lib",
+  "arm": "speckit",
+  "model": "opus",
+  "date": "2026-10-19T10:48:24.117Z",
+  "hidden": {
+    "pass": 17,
+    "fail": 0,
+    "total": 17
+  },
+  "costUsd": 6.7698,
+  "minutes": 7.7,
+  "messages": 4,
+  "scriptedReplies": 0,
+  "agentTurns": 47,
+  "tokens": {
+    "input": 58,
+    "cacheWrite": 107910,
+    "cacheRead": 2184364,
+    "output": 49666,
+    "total": 2341998
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-booking-lib-speckit-93mmTw"
+}

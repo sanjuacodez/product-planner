@@ -3,6 +3,7 @@ import { stateDir, loadState, loadConfig, readLog, PLANNING_STEPS } from '../sta
 import { loadTasks, summary, tasksByEpic } from '../tasks.js';
 import { readText, readJson, listFiles } from '../util/fs.js';
 import { loadFeatures, sortedFeatures, coverage } from '../features.js';
+import { readUsage, summarizeUsage } from '../usage.js';
 
 const DOCS = [
   ['concept', 'Product concept', 'concept.md'],
@@ -12,6 +13,8 @@ const DOCS = [
   ['architecture', 'Architecture', 'architecture.md'],
   ['baseline', 'Current product baseline', 'baseline.md'],
   ['lessons', 'Verified lessons', 'lessons.md'],
+  ['acceptance', 'Acceptance audit', 'acceptance.md'],
+  ['request', 'Original request (verbatim)', 'request.md'],
 ];
 
 export function collect(cwd = process.cwd()) {
@@ -41,6 +44,7 @@ export function collect(cwd = process.cwd()) {
     sources: readText(path.join(dir, 'research', 'sources.md')),
     custom,
     burnup: burnupSeries(log, tasks),
+    usage: summarizeUsage(readUsage(cwd)),
   };
 }
 

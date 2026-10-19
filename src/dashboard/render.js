@@ -35,6 +35,7 @@ export function renderDashboard(d) {
       kpis(d),
       blocked.length ? blockedCallout(blocked) : '',
       hasTasks ? section('overview-charts', 'Progress', `<div class="charts">${donut(d)}${stackedBars('Tasks per epic', 'Tasks per epic by status', d.byEpic.filter((g) => g.tasks.length).map((g) => ({ label: g.epic.title || g.epic.id, tasks: g.tasks })))}${stackedBars('Tasks by agent and AI model', 'Tasks by agent and model, by status', agentGroups(d).map((g) => ({ label: g.label, tasks: g.tasks })))}${burnup(d)}</div>${chartTables(d)}`) : '',
+      d.usage?.all ? usageSection(d) : '',
       hasTasks ? section('overview-tables', 'Summary tables', `<div class="two-col">${epicTable(d)}${agentTable(d)}</div>`) : '',
       ...custom.overview,
       d.log.length ? section('overview-activity', 'Recent activity', activityList(d.log.slice(-8)), '<a class="more" href="#activity">All activity →</a>') : '',
@@ -210,6 +211,13 @@ function blockedCallout(blocked) {
   return `<section id="overview-blocked" class="callout"><h3>⊘ Blocked tasks need your input</h3><ul>${blocked.map((t) =>
     `<li><strong>${esc(t.id)}</strong> ${esc(t.title)} — ${esc(t.blockedReason || 'no reason given')}</li>`).join('')}</ul></section>`;
 }
+function usageSection(d) {
+  const u = d.usage; const n = (x) => Number(x).toLocaleString('en-US');
+  const rows = [...Object.entries(u.byPhase).map(([k, v]) => [`${k} (no task active)`, v]), ...Object.entries(u.byTask).sort((a, b) => u.sum(b[1]) - u.sum(a[1])).map(([k, v]) => [`${k} ${d.tasks.tasks.find((t) => t.id === k)?.title || ''}`, v])];
+  const table = `<table><caption>Tokens by phase and task (from the AI tool's transcripts)</caption><thead><tr><th>Where</th><th class="num">Total</th><th class="num">Output</th><th class="num">Cache read</th><th class="num">Cache write</th><th class="num">Input</th></tr></thead><tbody>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${n(u.sum(v))}</td><td class="num">${n(v.output)}</td><td class="num">${n(v.cacheRead)}</td><td class="num">${n(v.cacheWrite)}</td><td class="num">${n(v.input)}</td></tr>`).join('')}</tbody></table>`;
+  const models = Object.entries(u.byModel).map(([m, v]) => `${esc(m)}: ${n(u.sum(v))}`).join(' · ');
+  return section('overview-usage', 'Token usage', `<div class="tiles"><div class="tile"><div class="tile-l">Total tokens</div><div class="tile-v">${n(u.all)}</div><div class="tile-s">${models}</div></div><div class="tile"><div class="tile-l">Output tokens</div><div class="tile-v">${n(u.total.output)}</div><div class="tile-s">written by the model</div></div><div class="tile"><div class="tile-l">Cache reads</div><div class="tile-v">${u.all ? Math.round((u.total.cacheRead / u.all) * 100) : 0}%</div><div class="tile-s">of all tokens (cheapest kind)</div></div></div>${table}`);
+}
 function epicTable(d) {
   const rows = d.byEpic.map(({ epic, tasks }) => {
     const c = (k) => tasks.filter((t) => t.status === k).length;
@@ -233,7 +241,7 @@ function statusPill(status) {
   return `<span class="status st-${esc(status)}"><i style="background:${`var(--status-${status})`}"></i>${STATUS_META[status]?.icon || ''} ${esc(STATUS_META[status]?.label || status)}</span>`;
 }
 function taskCard(t, d, epicTitle, opts = {}) {
-  return `<article class="tcard st-${esc(t.status)}" ${taskAttrs(t, d, epicTitle)}><div class="tcard-h"><span class="mono">${esc(t.id)}</span>${opts.status ? statusPill(t.status) : ''}<span class="prio prio-${esc(t.priority)}">${esc(t.priority)}</span></div>
+  return `<article class="tcard st-${esc(t.status)}" ${taskAttrs(t, d, epicTitle)}><div class="tcard-h"><span class="mono">${esc(t.id)}</span>${opts.status ? statusPill(t.status) : ''}<span class="prio prio-${esc(t.priority)}">${esc(t.priority)}</span>${t.risk === 'high' ? '<span class="prio prio-critical">⚠ risk</span>' : ''}</div>
 <div class="tcard-t">${esc(t.title)}</div>${opts.epic && t.epic ? `<div class="small">${esc(epicTitle.get(t.epic) || t.epic)}</div>` : ''}<div class="who">${whoChips(t, d)}</div>${t.dependsOn?.length ? `<div class="small">After ${t.dependsOn.map(esc).join(', ')}</div>` : ''}${t.blockedReason ? `<div class="small blocked">⊘ ${esc(t.blockedReason)}</div>` : ''}</article>`;
 }
 /** Group tasks into waves: a task's wave is one more than its latest dependency. */
@@ -257,11 +265,11 @@ function taskViews(d) {
   const tasks = d.tasks.tasks;
   const rows = tasks.map((t) => `<tr ${taskAttrs(t, d, epicTitle)}>
 <td class="mono">${esc(t.id)}</td>
-<td><details><summary>${esc(t.title)}</summary><div class="task-detail">${t.description ? mdToHtml(t.description) : ''}${t.acceptance?.length ? `<p class="k">Acceptance</p><ul>${t.acceptance.map((a) => `<li>${inline(a)}</li>`).join('')}</ul>` : ''}${t.features?.length ? `<p class="k">Features: ${t.features.map(esc).join(', ')}</p>` : ''}${t.dependsOn?.length ? `<p class="k">Depends on: ${t.dependsOn.map(esc).join(', ')}</p>` : ''}${t.blockedReason ? `<p class="k blocked">Blocked: ${esc(t.blockedReason)}</p>` : ''}${t.notes?.length ? `<p class="k">Notes</p><ul>${t.notes.map((n) => `<li><small>${esc((n.ts || '').slice(0, 16).replace('T', ' '))}${n.agent ? ' · ' + esc(n.agent) : ''}${n.model ? ' · ' + esc(n.model) : ''}</small> ${inline(n.text)}</li>`).join('')}</ul>` : ''}</div></details></td>
+<td><details><summary>${esc(t.title)}</summary><div class="task-detail">${t.description ? mdToHtml(t.description) : ''}${t.acceptance?.length ? `<p class="k">Acceptance</p><ul>${t.acceptance.map((a) => `<li>${inline(a)}</li>`).join('')}</ul>` : ''}${t.features?.length ? `<p class="k">Features: ${t.features.map(esc).join(', ')}</p>` : ''}${d.usage?.byTask?.[t.id] ? `<p class="k">Tokens: ${d.usage.sum(d.usage.byTask[t.id]).toLocaleString('en-US')}</p>` : ''}${t.dependsOn?.length ? `<p class="k">Depends on: ${t.dependsOn.map(esc).join(', ')}</p>` : ''}${t.blockedReason ? `<p class="k blocked">Blocked: ${esc(t.blockedReason)}</p>` : ''}${t.notes?.length ? `<p class="k">Notes</p><ul>${t.notes.map((n) => `<li><small>${esc((n.ts || '').slice(0, 16).replace('T', ' '))}${n.agent ? ' · ' + esc(n.agent) : ''}${n.model ? ' · ' + esc(n.model) : ''}</small> ${inline(n.text)}</li>`).join('')}</ul>` : ''}</div></details></td>
 <td>${esc(epicTitle.get(t.epic) || t.epic || '')}</td>
 <td class="who">${whoChips(t, d)}</td>
-<td><span class="prio prio-${esc(t.priority)}">${esc(t.priority)}</span></td>
-<td>${statusPill(t.status)}</td>
+<td><span class="prio prio-${esc(t.priority)}">${esc(t.priority)}</span>${t.risk === 'high' ? ' <span class="prio prio-critical" title="High risk: listed at plan approval">⚠ high risk</span>' : ''}</td>
+<td>${statusPill(t.status)}${t.qaReturns ? ` <small title="Times QA sent it back">↺${t.qaReturns}</small>` : ''}</td>
 <td class="mono small">${esc((t.completedAt || t.startedAt || '').slice(0, 10))}</td></tr>`).join('');
   const table = `<table id="task-table"><thead><tr><th>ID</th><th>Task</th><th>Epic</th><th>Agent · AI model</th><th>Priority</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table>`;
   const board = `<div class="board">${BOARD_ORDER.map((k) => {
@@ -357,7 +365,10 @@ function activityList(log) {
     let text = '';
     if (e.type === 'task' && e.from && e.from === e.to) text = `<strong>${esc(e.task)}</strong> ${esc(e.note || 'updated')}`;
     else if (e.type === 'task') text = `<strong>${esc(e.task)}</strong> ${esc(e.from || 'new')} → ${esc(e.to)}${e.note ? ` · ${esc(e.note)}` : ''}`;
-    else text = `${e.message ? inline(e.message) : esc(JSON.stringify(e))}`;
+    else if (e.message) text = inline(e.message);
+    else if (e.type === 'phase') text = `Phase ${esc(e.from || '—')} → <strong>${esc(e.to)}</strong>`;
+    else if (e.type === 'planning') text = `Planning step <strong>${esc(e.step)}</strong> → ${esc(e.to)}`;
+    else text = esc(JSON.stringify(e));
     const who = [e.agent, e.model].filter(Boolean).map(esc).join(' · ');
     return `<li><span class="when">${when}</span>${who ? `<span class="who">${who}</span>` : ''}<span>${text}</span></li>`;
   }).join('');

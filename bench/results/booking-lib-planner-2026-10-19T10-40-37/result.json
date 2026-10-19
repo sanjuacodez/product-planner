@@ -1,0 +1,25 @@
+{
+  "scenario": "booking-lib",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-19T10:52:02.124Z",
+  "hidden": {
+    "pass": 17,
+    "fail": 0,
+    "total": 17
+  },
+  "costUsd": 3.1047,
+  "minutes": 11.4,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 55,
+  "tokens": {
+    "input": 66,
+    "cacheWrite": 100834,
+    "cacheRead": 2416169,
+    "output": 59514,
+    "total": 2576583
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-booking-lib-planner-0iFoxT"
+}

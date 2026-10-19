@@ -15,6 +15,47 @@ All requirements gathering happens during planning. You review the complete plan
 - **Resume across sessions and tools.** Project documents and task state stay in the repository, so a new session can recover what was decided and what remains.
 - **Start without extra services.** The core CLI has no npm dependencies, API keys or hosted backend. Your chosen AI tool may have its own costs; optional memory downloads are separate.
 
+## How it compares
+
+Product Planner runs **inside the AI coding tool you already use**. It is a set of instructions plus a small CLI with no server, no Docker and no model of its own. The closest alternatives, reviewed on 2026-10-19:
+
+| | Product Planner | [GitHub spec-kit](https://github.com/github/spec-kit) v1.2.1 | [OpenHands](https://github.com/OpenHands/OpenHands) v1.27 |
+|---|---|---|---|
+| Shape | Instructions + Node CLI inside your tool | Python CLI that installs per-feature spec commands | Its own agent runtime and UI ("Agent Canvas"), Docker sandboxes, cloud |
+| Planning scope | Whole product: interview, features, PRD, UX, architecture, roadmap, research | One feature at a time: spec → plan → tasks | PLAN.md outline plus a flat to-do list |
+| Clarifying questions | ≤3 rounds × ≤5 multiple choice with recommended answers; none if the request is precise | ≤5 per clarify session, one at a time, with recommendations | Ad hoc in chat |
+| Requirement → task traceability | `pp check` in code (zero tokens) + feature coverage in `task validate` | `/analyze` run by the model | No |
+| Code vs request check at the end | Acceptance audit against your verbatim request | `/converge` | `/goal` completion judge |
+| Task tracking | State machine with dependencies, review/QA per task, blocked reasons | Checkboxes in tasks.md | Flat todo/in progress/done |
+| Change an approved plan | `pp-replan`: impact, questions, one approval, synced tasks | No revise command (open issue #4156) | No |
+| Starts without commands | Automatic mode (intent routing) | No (explicit slash commands) | Not applicable |
+| Progress view | Offline tabbed dashboard: charts, kanban, roadmap, tokens per task | Community extensions only | Live web UI and trajectories |
+| Agent + model per task | Recorded and shown | No | Per conversation |
+| Token tracking | Per task and phase (Claude Code hook) | No | Per call metrics (no budget limits yet, issue #17691) |
+| Sandboxing | Your tool's permission system | Your tool's | Docker/Kubernetes sandboxes, risk-based confirmation |
+| Proof | `bench/`: hidden-test benchmark against plain prompting and spec-kit | None in core | SWE-bench and other benchmarks via `OpenHands/benchmarks` |
+| Ecosystem | 6 dedicated tool adapters + AGENTS.md | 41 agent integrations, 180+ community extensions, presets, workflows | ACP integrations, automations, Slack/Jira/GitHub |
+
+Where the others are ahead: spec-kit supports far more agents and has a large extension ecosystem and a "constitution" that gates plans; Product Planner has a lighter equivalent in the concept brief's project principles. OpenHands has real sandboxing, its own runtime and published benchmark results on public datasets. Product Planner's results come from its own small benchmark, described below.
+
+## Proof: benchmark
+
+`bench/` runs the same request through **plain Claude Code**, **Claude Code + Product Planner** and **Claude Code + spec-kit**. A scripted user gives every arm the same replies, and the results are scored by hidden acceptance tests the agents never see. The method is in [bench/README.md](bench/README.md) and every run in [bench/RESULTS.md](bench/RESULTS.md).
+
+First results (2026-10-19, Claude Code with Opus 5.5, one run per arm):
+
+| Scenario | Plain Claude Code | Product Planner | spec-kit v1.2.1 |
+|---|---|---|---|
+| `todo-cli` (small, 8 hidden tests) | 8/8 · $0.25 · 0.9 min | 8/8 · $1.09 · 3.1 min | 8/8 · $4.04 · 4.7 min |
+| `booking-lib` (medium, 17 hidden tests) | 17/17 · $0.85 · 3.3 min | 17/17 · $3.10 · 11.4 min | 17/17 · $6.77 · 7.7 min |
+
+What this shows, honestly:
+
+- **On precise, fully specified requests, every approach reached 100%**, and plain prompting was cheapest. Planning added cost without adding quality.
+- **Product Planner cost 54–73% less than spec-kit** for the same result. It asked no questions when the request was already precise, and planned on the quick track.
+- **Where Product Planner's extra cost went** (from its own per-task token tracking): writing the planning documents, build turns that carry the planning context, and an independent QA pass (314k tokens). The next optimisation is to build each task in a fresh context fed by `pp task context` and to write lighter quick-track documents.
+- **Not yet shown:** whether planning wins when requests are vague, larger, or change mid-build. That is where clarifying questions, the feature register, acceptance audits and `pp-replan` should matter. Those scenarios and repeated runs are the next step. Until then, use plain prompting for small, precise jobs.
+
 ## Requirements
 
 - Node.js **20 or newer** and npm.
@@ -137,6 +178,22 @@ pp feature set F12 release Later   # change a decision yourself
 pp feature check                   # is the scope ready for requirements and tasks?
 ```
 
+## Quality and token controls
+
+These run as code in the CLI, so they cost no model tokens. The workflows call them at the right moments.
+
+| Control | What it does | Why it matters |
+|---|---|---|
+| `request.md` | The agent saves your original request word for word, plus any later changes, dated | Paraphrasing loses requirements; the final audit checks the build against your exact words |
+| Exact acceptance criteria | Every rule, number, name and error code in your request is copied into a feature's acceptance criteria and gets its own FR ID | Rules you stated become things that get tested |
+| `pp check` | Checks task graph errors, unready features and MVP features without tasks, and warns on FR IDs no task references, vague criteria (“fast”, “user-friendly”, “etc.”) and unfilled template sections | Catches plan gaps before any code is written, without spending tokens |
+| Tests first | The developer writes at least one test per acceptance criterion, named after it, before implementing. QA records evidence for each criterion | Each criterion gets a test, so “done” is checked rather than claimed |
+| Acceptance audit | At the end, QA writes `acceptance.md`: each statement in request.md and each MVP criterion, with evidence and pass/fail. Gaps become tasks | Compares the finished code with what you asked for |
+| `pp task context T#` | A compact brief for one task: acceptance, linked features, the matching PRD lines, dependencies and related decisions | Agents read what the task needs instead of whole documents |
+| Loop warning | When QA sends the same task back 3 times, the CLI warns and logs it, and the agent must change approach or block the task with a reason | Stops the agent spending tokens repeating a failing approach |
+| `risk: high` | The planner marks tasks that touch data deletion, auth, payments or permissions. They are listed at plan approval and flagged on the dashboard | You approve risky work knowingly, before the build runs unattended |
+| `pp usage` | A Claude Code hook (`.claude/settings.json`, merged with your settings) reads the session transcripts and records tokens per task and per phase. The dashboard shows them | Shows what each task actually cost in tokens |
+
 ## Automatic mode and replanning
 
 After `init`, you don't have to type commands. **Automatic mode** is on by default: the instruction file your tool loads every session (CLAUDE.md, AGENTS.md, GEMINI.md, or Cursor/Windsurf rules) tells the agent to pick the workflow from what you say:
@@ -213,7 +270,7 @@ Dedicated integrations are tested for generated-file correctness. The Claude Cod
 
 | Tool | Installed integration |
 |---|---|
-| Claude Code | `.claude/agents/pp-*.md`, `.claude/commands/pp-*.md`, CLAUDE.md block |
+| Claude Code | `.claude/agents/pp-*.md`, `.claude/commands/pp-*.md`, CLAUDE.md block, usage hooks in `.claude/settings.json` |
 | Codex | `.agents/skills/pp-*/SKILL.md`, AGENTS.md block |
 | Gemini CLI | `.gemini/commands/pp/*.toml`, GEMINI.md block |
 | OpenCode | `.opencode/agents/pp-*.md`, `.opencode/commands/pp-*.md` |
@@ -297,6 +354,9 @@ pp task done T1 --agent qa --model claude-sonnet-5-5 --note "Acceptance verified
 pp task block T2 --reason "Provider credentials missing"
 pp task unblock T2
 pp task validate
+pp check                      # whole-plan analysis without a model: coverage, vague criteria, gaps
+pp task context T5            # compact brief an agent reads instead of whole documents
+pp usage                      # tokens per task and phase (Claude Code hook)
 pp task update T5 --json '{"priority":"high"}' --note "replan"
 pp task remove T7 --reason "replan: out of scope"
 pp auto status
@@ -407,6 +467,9 @@ your-product/
 ├── .product-planner/                 ← all project data (commit this)
 │   ├── state.json                    phase, planning steps, options (research, browser, memory…), planned models
 │   ├── config.json                   tools installed, dashboard/research/memory settings
+│   ├── request.md                    your original request(s), verbatim
+│   ├── acceptance.md                 final acceptance audit (requirement → evidence → result)
+│   ├── usage.jsonl                   tokens per task/phase (Claude Code hook)
 │   ├── features.json                 feature register from the interview (scope, decisions, acceptance)
 │   ├── tasks.json                    epics and tasks, incl. features delivered and workedBy agent/model history
 │   ├── plan.json                     task plan written by pp-planner before import

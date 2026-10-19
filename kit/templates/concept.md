@@ -28,9 +28,9 @@
 
 <!-- One primary measurable signal with a target, plus at most two supporting signals. -->
 
-## Constraints
+## Constraints and principles
 
-<!-- Platform, deadline, budget, stack or hosting preferences, compliance, accessibility. -->
+<!-- Platform, deadline, budget, stack or hosting preferences, compliance, accessibility. Then 3–5 numbered project principles (P1…) that architecture and tasks must respect; the architect records any justified exception in decisions.md. -->
 
 ## Key assumptions
 

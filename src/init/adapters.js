@@ -1,6 +1,33 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { KIT_SRC, STATE_DIR, listFiles, readText, writeText, parseFrontmatter, upsertBlock, removeBlock, ensureDir } from '../util/fs.js';
+import { KIT_SRC, STATE_DIR, listFiles, readText, writeText, readJson, writeJson, parseFrontmatter, upsertBlock, removeBlock, ensureDir } from '../util/fs.js';
+
+export const HOOK_COMMAND = 'product-planner usage hook';
+/** Claude Code hooks that record token usage per task (merged into .claude/settings.json). */
+export function installClaudeHooks(cwd) {
+  const file = path.join(cwd, '.claude', 'settings.json');
+  const settings = readJson(file, {}) || {};
+  settings.hooks ??= {};
+  const ours = (e) => e.hooks?.some((h) => h.command === HOOK_COMMAND);
+  for (const [event, matcher] of [['PostToolUse', 'Bash'], ['Stop', undefined]]) {
+    settings.hooks[event] = (settings.hooks[event] || []).filter((e) => !ours(e));
+    settings.hooks[event].push({ ...(matcher ? { matcher } : {}), hooks: [{ type: 'command', command: HOOK_COMMAND }] });
+  }
+  writeJson(file, settings);
+  return file;
+}
+export function removeClaudeHooks(cwd) {
+  const file = path.join(cwd, '.claude', 'settings.json');
+  const settings = readJson(file, null);
+  if (!settings?.hooks) return false;
+  for (const event of Object.keys(settings.hooks)) {
+    settings.hooks[event] = settings.hooks[event].filter((e) => !e.hooks?.some((h) => h.command === HOOK_COMMAND));
+    if (!settings.hooks[event].length) delete settings.hooks[event];
+  }
+  if (!Object.keys(settings.hooks).length) delete settings.hooks;
+  writeJson(file, settings);
+  return true;
+}
 
 export const MARKER = 'product-planner';
 export const TOOLS = {
@@ -52,7 +79,7 @@ export function universalBlock(kit, { autoRun = true } = {}) {
   const ag = kit.agents.map((a) => `- **${a.meta.name}** – ${a.meta.description}`).join('\n');
   return `## Product Planner
 
-This project uses **product-planner**, a multi-agent product planning and build kit. The full operating manual is in \`${STATE_DIR}/kit/README.md\` – read it before doing any planning or build work. Project state (concept, research, PRD, UX, architecture, tasks, dashboard data) lives in \`${STATE_DIR}/\` and is committed to git.
+This project uses **product-planner**, a multi-agent product planning and build kit. Run its CLI as \`product-planner …\`; if that command is not found, use \`npx -y github:sanjuacodez/product-planner …\` with the same arguments instead of skipping the workflow. The full operating manual is in \`${STATE_DIR}/kit/README.md\` – read it before doing any planning or build work. Project state (concept, research, PRD, UX, architecture, tasks, dashboard data) lives in \`${STATE_DIR}/\` and is committed to git.
 
 ### Workflows
 When the user types one of these (as a slash command, or in plain words such as "run pp-plan" / "start planning" / "build the next task"), open the matching file in \`${STATE_DIR}/kit/workflows/\` and follow it step by step.
@@ -90,6 +117,7 @@ const ADAPTERS = {
     }
     upsertBlock(path.join(cwd, 'CLAUDE.md'), MARKER, universalBlock(kit, opts) + `\n\nIn Claude Code the workflows are slash commands (\`/pp-plan\` …) and the agents are sub-agents in \`.claude/agents/\`; delegate with the host's available subagent tool.`);
     files.push(path.join(cwd, 'CLAUDE.md'));
+    files.push(installClaudeHooks(cwd));
     return files;
   },
   codex(cwd, kit, opts = {}) {
@@ -180,6 +208,7 @@ export function uninstallTools(cwd, kit = loadKit()) {
     rm(path.join(cwd, '.windsurf', 'workflows', `${w.meta.name}.md`));
   }
   for (const w of kit.workflows) rm(path.join(cwd, '.gemini', 'commands', 'pp', `${w.meta.name.replace(/^pp-/, '')}.toml`));
+  if (removeClaudeHooks(cwd)) removed.push(path.join(cwd, '.claude', 'settings.json'));
   rm(path.join(cwd, '.cursor', 'rules', 'product-planner.mdc'));
   rm(path.join(cwd, '.windsurf', 'rules', 'product-planner.md'));
   return removed;

@@ -5,11 +5,12 @@ The interview turns a one-line idea into an agreed feature list and a one-page c
 ## Rules for every question
 
 1. **Draft first, then ask.** Before asking anything, write your best guess from the idea, the repository, supplied material and (if done) research. Ask only where your guess is uncertain **and** the answer would change scope, user experience, architecture, cost or acceptance. Everything else becomes a recorded assumption that the user sees at the final review.
-2. **At most 5 questions per round, at most 3 rounds** (2 in the quick track). If more remain, keep the 5 with the biggest impact and record the rest as assumptions.
-3. **Make answering cheap.** Every question offers 2–4 concrete options, marks one *(recommended)* with a short reason, and allows a custom answer. "Use your recommendation" must always be a valid reply. If the host has a structured multiple-choice question tool, use it; otherwise use the numbered format below.
-4. **Never ask what is already known.** Reuse the user's words, earlier answers, README, code, configs and existing planning files. For existing products, read baseline.md first.
-5. **Ask about behaviour, not implementation.** "What happens when a booking conflicts?" is useful. "Which ORM?" is the architect's call unless the user has a preference.
-6. **Record as you go.** Answers go into features.json, concept.md, decisions.md and state options immediately, so an interrupted session resumes without asking again.
+2. **At most 5 questions per round, at most 3 rounds** (2 in the quick track). These are limits, not targets: skip every question the request already answers, and when the request specifies behaviour precisely (interfaces, rules, numbers), ask nothing and go straight to the feature list and concept brief. If more questions remain than fit, keep the 5 with the biggest impact and record the rest as assumptions.
+3. **Keep the user's words.** Save the original request verbatim to `.product-planner/request.md` before anything else, and append later messages that add or change requirements (dated). Copy every explicit rule, name, number, error code and interface from it into the acceptance criteria of the matching feature with the exact values. Paraphrasing loses requirements; the final acceptance audit checks the build against request.md.
+4. **Make answering cheap.** Every question offers 2–4 concrete options, marks one *(recommended)* with a short reason, and allows a custom answer. "Use your recommendation" must always be a valid reply. If the host has a structured multiple-choice question tool, use it; otherwise use the numbered format below.
+5. **Never ask what is already known.** Reuse the user's words, earlier answers, README, code, configs and existing planning files. For existing products, read baseline.md first.
+6. **Ask about behaviour, not implementation.** "What happens when a booking conflicts?" is useful. "Which ORM?" is the architect's call unless the user has a preference.
+7. **Record as you go.** Answers go into features.json, concept.md, decisions.md and state options immediately, so an interrupted session resumes without asking again.
 
 Numbered format when no question tool exists:
 
@@ -52,7 +53,7 @@ Propose a track from the idea and repository, and confirm it with the first roun
 | Integrations (email, payments, auth providers, APIs) | Any external service is involved |
 | "Done looks like" — observable acceptance | You cannot write a testable criterion yourself |
 
-**Round 3: constraints and setup** (standard and existing tracks; in quick, show defaults to confirm in one line). Deadline, budget and paid-service limits, stack/hosting preferences, design style and accessibility, then the setup options in one batch with defaults: research and web access, browser access (`guides/browser-policy.md`), project memory, models per agent, commit-per-task and push/deploy permission, dashboard sections and auto-open.
+**Round 3: constraints, principles and setup** (standard and existing tracks; in quick, show defaults to confirm in one line). Deadline, budget and paid-service limits, stack/hosting preferences, design style and accessibility, 3–5 project principles the plan must respect (for example "no new runtime dependencies", "tests first for business rules", "accessible to WCAG AA"; propose defaults), then the setup options in one batch with defaults: research and web access, browser access (`guides/browser-policy.md`), project memory, models per agent, commit-per-task and push/deploy permission, dashboard sections and auto-open.
 
 ## Step 3: stop when the scope is ready
 

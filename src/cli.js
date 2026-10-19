@@ -4,11 +4,13 @@ import { PKG_ROOT, STATE_DIR, readJson, nowIso } from './util/fs.js';
 import { init } from './init/index.js';
 import { TOOLS, uninstallTools, installTools } from './init/adapters.js';
 import { loadState, saveState, loadConfig, setByPath, appendLog, PHASES, PLANNING_STEPS, isInitialised, configPath } from './state.js';
-import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, agentName, updateTask, removeTask, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
+import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, agentName, updateTask, removeTask, LOOP_LIMIT, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
 import { buildDashboard, openInBrowser, watchDashboard } from './dashboard/index.js';
 import { search, fetchPage, SETUP_OPTIONS } from './research/index.js';
 import { buildIndex, searchMemory, setupVector, memoryStatus } from './memory/index.js';
 import { doctor } from './doctor.js';
+import { runHook, readUsage, summarizeUsage } from './usage.js';
+import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature } from './features.js';
 import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
 import { writeJson } from './util/fs.js';
@@ -28,7 +30,9 @@ Usage: product-planner <command> [options]
   task add --json '{…}' | --file f    Add one task (or {"epics":[],"tasks":[]} file to merge)
   task update <id> --json '{…}' [--note "…"]   Replanning: revise a task that is not done
   task remove <id> --reason "…"       Replanning: drop a todo/blocked task nobody depends on
+  task context <id>                   Compact brief for one task (acceptance, features, requirements, deps)
   task validate                       Check tasks.json for errors and feature coverage
+  check [--json]                      Analyse the whole plan without a model: coverage, vague criteria, gaps (exit 1 on errors)
   feature list [--json] | show <id>   The feature register (agreed scope) from the planning interview
   feature add --json '{…}' | --file f Add/update features ({"features":[…]} or one feature)
   feature set <id> <status|priority|release|title|story> <value>
@@ -44,6 +48,7 @@ Usage: product-planner <command> [options]
   browser setup [--tools a,b] [--engine chromium] [--headless] [--version x] [--skip-install] [--force]
                                       After user approval: install free Playwright MCP + Chromium and register it
   browser remove                      Remove the Playwright MCP entry from this project's tool configs
+  usage [summary] | hook              Token usage per task/phase (recorded by the Claude Code hook)
   auto on|off|status                  Automatic mode: agents start pp-plan/pp-replan/pp-resume from plain requests
   doctor                              Environment checks (node, git, web, memory)
   version | help
@@ -63,6 +68,8 @@ export async function main(argv) {
     case 'task': return cmdTask(cwd, rest);
     case 'feature': return cmdFeature(cwd, rest);
     case 'auto': return cmdAuto(cwd, rest);
+    case 'usage': return cmdUsage(cwd, rest);
+    case 'check': { requireInit(cwd); const r = checkPlan(cwd); if (rest.includes('--json')) console.log(JSON.stringify(r, null, 2)); else { for (const e of r.errors) console.log(`error: ${e}`); for (const w of r.warnings) console.log(`warning: ${w}`); console.log(`${r.errors.length ? 'not ready' : 'ok'}: ${r.stats.tasks} tasks, ${r.stats.features} features, ${r.stats.requirements} requirement IDs (${r.stats.uncoveredRequirements} without tasks)${r.stats.highRisk.length ? `, high-risk: ${r.stats.highRisk.join(', ')}` : ''}`); } if (r.errors.length) process.exitCode = 1; return; }
     case 'state': return cmdState(cwd, rest);
     case 'log': return cmdLog(cwd, rest);
     case 'research': return cmdResearch(cwd, rest);
@@ -136,12 +143,14 @@ function cmdTask(cwd, rest) {
       show(n); return;
     }
     case 'show': show(getTask(t, id)); return;
+    case 'context': { if (!id) throw new Error('task id required'); console.log(taskContext(cwd, id)); return; }
     case 'start': case 'review': case 'done': case 'block': case 'unblock': case 'reopen': {
       if (!id) throw new Error('task id required');
       const map = { start: 'in_progress', review: 'review', done: 'done', block: 'blocked', unblock: 'todo', reopen: 'todo' };
       if (sub === 'block' && !values.reason) throw new Error('--reason "…" is required when blocking');
       const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent, model: values.model });
       console.log(`${task.id} → ${task.status}`);
+      if ((task.qaReturns || 0) >= LOOP_LIMIT && task.status === 'in_progress') { console.log(`warning: QA has returned ${task.id} ${task.qaReturns} times. Possible loop: change approach, or block it with a precise reason and continue with other work.`); appendLog(cwd, { type: 'note', task: task.id, message: `possible loop: QA returned ${task.id} ${task.qaReturns} times` }); }
       const current = loadState(cwd);
       if (current.phase === 'done' && sub === 'reopen') { current.phase = 'build'; saveState(cwd, current); appendLog(cwd, { type: 'phase', from: 'done', to: 'build', message: 'Task reopened' }); }
       const out = refreshDashboard(cwd); if (out) console.log(`dashboard updated: ${path.relative(cwd, out)}`);
@@ -176,7 +185,7 @@ function cmdTask(cwd, rest) {
       console.log(`${task.id} removed (${values.reason})`); refreshDashboard(cwd); return;
     }
     case 'validate': { const fx = loadFeatures(cwd); const errors = [...validateTasks(t), ...(fx.features.length ? [...validateFeatures(fx), ...coverage(fx, t).errors] : [])]; if (errors.length) { console.log(errors.join('\n')); process.exitCode = 1; } else console.log(`ok: ${t.tasks.length} tasks, ${t.epics.length} epics, ${readyTasks(t).length} ready`); return; }
-    default: throw new Error(`unknown task subcommand "${sub}" (list, next, show, start, review, done, block, unblock, reopen, add, update, remove, validate)`);
+    default: throw new Error(`unknown task subcommand "${sub}" (list, next, show, context, start, review, done, block, unblock, reopen, add, update, remove, validate)`);
   }
 }
 
@@ -187,7 +196,7 @@ function cmdState(cwd, rest) {
   switch (sub) {
     case undefined: case 'get': { if (!key) { console.log(JSON.stringify(st, null, 2)); return; } const v = key.split('.').reduce((o, k) => o?.[k], st); console.log(typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)); return; }
     case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); refreshDashboard(cwd); return; }
-    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); const from = st.phase; st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
+    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
     case 'step': { const status = vals[0]; if (!PLANNING_STEPS.includes(key)) throw new Error(`step must be one of ${PLANNING_STEPS.join(', ')}`); if (!['pending', 'in_progress', 'done', 'skipped'].includes(status)) throw new Error('status must be pending|in_progress|done|skipped'); st.planning[key] = status; if (st.phase === 'init') st.phase = 'planning'; saveState(cwd, st); appendLog(cwd, { type: 'planning', step: key, to: status }); console.log(`planning.${key} = ${status}`); refreshDashboard(cwd); return; }
     case 'product': { const { values } = args([key, ...vals].filter(Boolean), { name: { type: 'string' }, tagline: { type: 'string' }, summary: { type: 'string' } }); Object.assign(st.product, Object.fromEntries(Object.entries(values).filter(([, v]) => v != null))); saveState(cwd, st); console.log(JSON.stringify(st.product, null, 2)); refreshDashboard(cwd); return; }
     default: throw new Error(`unknown state subcommand "${sub}"`);
@@ -328,4 +337,21 @@ function cmdAuto(cwd, rest) {
   writeJson(configPath(cwd), config);
   installTools(cwd, config.tools, undefined, { autoRun: config.autoRun });
   console.log(`automatic mode ${sub}: ${config.autoRun ? 'agents start pp-plan, pp-replan and pp-resume from plain requests' : 'use the /pp-* commands (or say "run pp-plan")'}.\nInstructions refreshed for: ${config.tools.join(', ')}. Start a new chat session so the agent reloads them.`);
+}
+
+async function cmdUsage(cwd, rest) {
+  const [sub] = rest;
+  if (sub === 'hook') {
+    // Called by the host's hooks; never fail the host's turn.
+    try { if (isInitialised(cwd)) { let input = ''; for await (const c of process.stdin) input += c; runHook(cwd, input); } } catch (e) { if (process.env.PP_DEBUG) console.error(e); }
+    return;
+  }
+  requireInit(cwd);
+  const s = summarizeUsage(readUsage(cwd));
+  if (!s.all) { console.log('no usage recorded yet (Claude Code records it through the hook installed by init --tools claude)'); return; }
+  const fmt = (t) => `${s.sum(t).toLocaleString()} tokens (output ${t.output.toLocaleString()}, cache read ${t.cacheRead.toLocaleString()})`;
+  console.log(`Total: ${fmt(s.total)}`);
+  for (const [k, v] of Object.entries(s.byPhase)) console.log(`  ${k.padEnd(10)} ${fmt(v)}`);
+  for (const [k, v] of Object.entries(s.byTask).sort((a, b) => natural(a[0], b[0]))) console.log(`  ${k.padEnd(10)} ${fmt(v)}`);
+  for (const [k, v] of Object.entries(s.byModel)) console.log(`  model ${k}: ${fmt(v)}`);
 }

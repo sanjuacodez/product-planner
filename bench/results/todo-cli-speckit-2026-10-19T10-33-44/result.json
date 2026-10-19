@@ -1,0 +1,25 @@
+{
+  "scenario": "todo-cli",
+  "arm": "speckit",
+  "model": "opus",
+  "date": "2026-10-19T10:38:31.678Z",
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8
+  },
+  "costUsd": 4.0405,
+  "minutes": 4.7,
+  "messages": 4,
+  "scriptedReplies": 0,
+  "agentTurns": 39,
+  "tokens": {
+    "input": 54,
+    "cacheWrite": 80937,
+    "cacheRead": 1616747,
+    "output": 26617,
+    "total": 1724355
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-todo-cli-speckit-zLgS4i"
+}

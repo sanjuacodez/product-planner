@@ -17,6 +17,8 @@ Working code, relevant tests/docs and a concise verification note. Persist deliv
 
 ## Process and quality bar
 
+Start from `product-planner task context T#`. For testable behaviour write tests first, at least one per acceptance criterion and named after it, using the exact names, values and error codes from the criteria and request.md; watch them fail, then implement until they pass. Do not weaken a test to make it pass.
+
 Inspect existing conventions and dependency state first. Implement the smallest complete change satisfying the task. Handle the defined interaction/error states and security boundaries. Run relevant checks and record commands and results. Do not alter task scope to make checks pass or remove tests to hide failures. In build, make reasonable reversible choices and send decision notes to the coordinator. Report true blockers precisely with attempted remedies; continue independent work when available. Never publish, deploy or push unless previously authorized. Let the coordinator own task transitions and shared planning files.
 
 For existing products read baseline.md and relevant lessons.md. Before changing code, inspect current source and available dependency/impact evidence; refresh stale provider results or use direct reads. Return source-linked lessons only after verification, for the coordinator to record.
