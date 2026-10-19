@@ -1,0 +1,26 @@
+{
+  "epics": [
+    {
+      "id": "E1",
+      "title": "Foundation",
+      "description": "Replace with a delivery milestone",
+      "order": 1
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "epic": "E1",
+      "title": "Create the project foundation",
+      "description": "Replace with implementation details and traced requirement IDs.",
+      "acceptance": [
+        "The documented setup command starts the application successfully."
+      ],
+      "agent": "developer",
+      "priority": "high",
+      "estimate": "S",
+      "dependsOn": [],
+      "status": "todo"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+// Generate a fictional project to preview the self-contained dashboard.
+// node examples/demo.js [output-directory]
+import path from 'node:path';
+import { init } from '../src/init/index.js';
+import { writeJson, writeText } from '../src/util/fs.js';
+import { defaultState, defaultConfig, appendLog } from '../src/state.js';
+import { buildDashboard } from '../src/dashboard/index.js';
+const cwd = path.resolve(process.argv[2] || 'output/demo');
+await init(cwd, { tools: 'generic', yes: true });
+const dir = path.join(cwd, '.product-planner');
+const state = defaultState();
+state.product = { name: 'Fieldnotes', tagline: 'Turn customer conversations into product decisions', summary: 'A fictional software project demonstrating planning documents, dependency tracking and delivery progress.' };
+state.phase = 'build'; for (const key of Object.keys(state.planning)) state.planning[key] = ['marketing'].includes(key) ? 'skipped' : 'done';
+state.options.autoOpenDashboard = false;
+writeJson(path.join(dir, 'state.json'), state);
+const config = defaultConfig(); config.dashboard.autoRefreshSeconds = 0;
+writeJson(path.join(dir, 'config.json'), config);
+const epics = [{ id: 'E1', title: 'Workspace foundation', order: 1 }, { id: 'E2', title: 'Research workflow', order: 2 }, { id: 'E3', title: 'Delivery and release', order: 3 }];
+const descriptions = ['Initialize application and test commands', 'Implement session authentication', 'Add workspace permissions', 'Capture customer interview notes', 'Tag and search insights', 'Connect the demo import provider', 'Export a decision brief', 'Verify accessibility and responsive layouts', 'Document setup and prepare release'];
+const states = ['done', 'done', 'done', 'done', 'in_progress', 'blocked', 'todo', 'review', 'todo'];
+const tasks = descriptions.map((title, i) => ({ id: `T${i + 1}`, epic: `E${Math.floor(i / 3) + 1}`, title, description: 'Implement the approved requirement and verify its user-facing behavior.', acceptance: ['The documented user journey works in the local environment.', 'Relevant automated checks pass.'], agent: i === 7 ? 'qa' : 'developer', priority: i < 3 ? 'high' : 'medium', estimate: 'S', dependsOn: i > 2 ? ['T1'] : [], status: states[i], notes: [], ...(states[i] === 'blocked' ? { blockedReason: 'Demo import provider credentials unavailable; local import remains usable.' } : {}) }));
+writeJson(path.join(dir, 'tasks.json'), { version: 1, epics, tasks });
+writeText(path.join(dir, 'log.jsonl'), '');
+for (const task of tasks) appendLog(cwd, { ts: '2026-10-15T08:00:00Z', type: 'task', task: task.id, from: null, to: 'todo' });
+for (let i = 0; i < 4; i++) appendLog(cwd, { ts: `2026-10-${16 + i}T10:00:00Z`, type: 'task', task: tasks[i].id, from: 'review', to: 'done', note: 'Acceptance checks passed', agent: 'qa' });
+writeText(path.join(dir, 'roadmap.md'), '# Release roadmap\n\n## MVP\nWorkspace, interviews, tags and decision briefs.\n\n## Next release\nTeam review and saved filters.\n\n## Later\nExplore integrations after validating the core workflow.\n');
+writeText(path.join(dir, 'risks.md'), '| Risk | Mitigation |\n|---|---|\n| Import provider credentials | Use local fixtures until provisioned |\n');
+writeText(path.join(dir, 'decisions.md'), '# Decisions\n\nUse session cookies and workspace-scoped permissions. Keep external imports behind a provider interface.\n');
+writeText(path.join(dir, 'concept.md'), '# Product concept\n\nHelp small product teams organize customer evidence and write traceable decisions.\n\nThis dashboard contains fictional demonstration data.\n');
+writeJson(path.join(dir, 'dashboard', 'endpoints.json'), { title: 'API endpoints', order: 10, type: 'table', columns: ['Endpoint', 'Method', 'Status'], rows: [['/sessions', 'POST', 'Done'], ['/interviews', 'POST', 'Done'], ['/insights/search', 'GET', 'In progress'], ['/briefs/export', 'POST', 'Planned']] });
+console.log(buildDashboard(cwd));

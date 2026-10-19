@@ -1,0 +1,17 @@
+{
+  "title": "API endpoints",
+  "order": 20,
+  "type": "table",
+  "columns": [
+    "Endpoint",
+    "Method",
+    "Status"
+  ],
+  "rows": [
+    [
+      "/users",
+      "GET",
+      "planned"
+    ]
+  ]
+}

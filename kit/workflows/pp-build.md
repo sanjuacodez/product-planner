@@ -1,0 +1,14 @@
+---
+name: pp-build
+description: Execute the approved plan autonomously with per-task QA and dashboard updates.
+---
+
+# Build
+
+1. Read the manual, pp-orchestrator persona and `product-planner status --json`. Require an approved handoff (planning.handoff = done); if absent return to pp-plan's final review. Read PRD, UX, architecture, decisions and task graph. Validate the plan before execution. Respect the user's existing deployment/push/commit choices and host permissions.
+2. Recover in_progress and review tasks first: inspect their files and notes, adopt or delegate their assigned persona, and finish implementation/QA rather than leaving them orphaned. Recheck blocked tasks whose external cause may have changed; unblock only with evidence. Keep one coordinator writing shared state. Default to one task at a time; independent specialist analysis can be delegated without shared file writes.
+3. Run `product-planner task next`. Read the entire task, required docs and completed dependency outputs. Start with `task start T# --agent <persona>`. Delegate with a concrete brief (goal, input paths, owned output paths, acceptance criteria); otherwise announce and adopt the pp-<agent> persona. Implement fully and record decisions through the coordinator.
+4. Move to review with `task review T#`. Use pp-qa to verify every acceptance criterion and relevant regressions. If QA finds defects, fix and recheck; do not mark done because time or context is low. Record actual checks/results using `--note`, then `task done T# --agent qa`. Update requested dashboard data. If commitPerTask is true and this is a git repo, commit only intended task files and state/docs; avoid including unrelated user changes. Never push unless already authorized.
+5. If blocked, try reasonable remedies within the approved scope. Record a precise reason with `task block T# --reason "..."`, including missing prerequisite and what resolves it. Choose other ready work without interrupting the human. Do not ask routine design/implementation questions during build: document reasonable decisions. Host-enforced approvals and the user's explicit steering still apply.
+6. Repeat until ALL_DONE or ALL_BLOCKED. NONE_READY means inspect active/review work and the dependency graph, not success: resume active tasks, repair invalid dependencies, or explain transitive blockers. Do not wait on a todo task whose prerequisite is blocked. For ALL_BLOCKED provide a consolidated list of unresolved prerequisites and the dashboard path.
+7. On ALL_DONE run final integration QA for the main journeys, setup documentation and relevant checks. If defects remain, create concrete corrective tasks and continue. Once all checks pass set phase done if not already automatic, update roadmap/risks and any enabled memory, regenerate dashboard and report delivered behavior, verification and remaining limitations. An empty task list requires returning to planning, not declaring a finished product.

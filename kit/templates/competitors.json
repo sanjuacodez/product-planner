@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Replace with verified competitor",
+    "url": "https://example.com",
+    "positioning": "Observed audience and value proposition",
+    "pricing": "Verified price, currency and observation date; or unknown",
+    "strengths": [
+      "Evidence-backed strength"
+    ],
+    "weaknesses": [
+      "Evidence-backed weakness"
+    ],
+    "sources": [
+      "https://example.com"
+    ],
+    "accessedAt": "YYYY-MM-DD"
+  }
+]
