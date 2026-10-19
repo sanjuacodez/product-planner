@@ -31,7 +31,23 @@ export function installKit(cwd) {
   return dest;
 }
 
-export function universalBlock(kit) {
+/** Intent routing that lets the agent start workflows without slash commands (automatic mode). */
+export function autoRunSection() {
+  return `### Automatic mode (on)
+Do not wait for a slash command. At the start of each request, match the user's intent and run the matching workflow, announcing it in one line ("Starting pp-plan; say stop to skip"):
+
+| The user… | Run |
+|---|---|
+| describes a product, app or feature to build and no approved plan covers it | \`pp-plan\` |
+| wants to add, change, remove or defer a feature, or change users, platform, stack, design or deadline after the plan was approved ("replan", "change the plan", "also add…", "drop…") | \`pp-replan\` |
+| says build, continue, next task, keep going, or opens a new session to carry on | \`pp-resume\` (it continues pp-plan or pp-build from saved state) |
+| asks for status, progress or the dashboard | \`pp-status\` |
+| asks a question about the plan, decisions or code | \`pp-ask\` |
+
+Do not start a workflow for small work that does not change the agreed scope (a bug fix, a typo, a question about code, a one-off script): just do it, and if it belongs to a task, note it on that task. When unsure whether a request changes scope, ask one short question instead of starting a workflow. The user can turn this off with \`product-planner auto off\`.`;
+}
+
+export function universalBlock(kit, { autoRun = true } = {}) {
   const wf = kit.workflows.map((w) => `| \`/${w.meta.name}\` | ${w.meta.description} |`).join('\n');
   const ag = kit.agents.map((a) => `- **${a.meta.name}** – ${a.meta.description}`).join('\n');
   return `## Product Planner
@@ -45,7 +61,7 @@ When the user types one of these (as a slash command, or in plain words such as 
 |---|---|
 ${wf}
 
-### Agents
+${autoRun ? autoRunSection() + '\n\n' : ''}### Agents
 Specialist personas live in \`${STATE_DIR}/kit/agents/\`. If this tool supports sub-agents, delegate to them by name; otherwise adopt the persona file yourself for that step.
 
 ${ag}
@@ -60,7 +76,7 @@ const PREAMBLE = (w) => `${w.meta.description}\n\nThis is the \`${w.meta.name}\`
 const toolsList = (a) => Array.isArray(a.meta.tools) ? a.meta.tools : (a.meta.tools ? String(a.meta.tools).split(',').map((s) => s.trim()) : []);
 
 const ADAPTERS = {
-  claude(cwd, kit) {
+  claude(cwd, kit, opts = {}) {
     const files = [];
     for (const a of kit.agents) {
       const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
@@ -72,11 +88,11 @@ const ADAPTERS = {
       writeText(p, `---\ndescription: ${w.meta.description}\n---\n\n${PREAMBLE(w)}${w.body}\n`);
       files.push(p);
     }
-    upsertBlock(path.join(cwd, 'CLAUDE.md'), MARKER, universalBlock(kit) + `\n\nIn Claude Code the workflows are slash commands (\`/pp-plan\` …) and the agents are sub-agents in \`.claude/agents/\`; delegate with the host's available subagent tool.`);
+    upsertBlock(path.join(cwd, 'CLAUDE.md'), MARKER, universalBlock(kit, opts) + `\n\nIn Claude Code the workflows are slash commands (\`/pp-plan\` …) and the agents are sub-agents in \`.claude/agents/\`; delegate with the host's available subagent tool.`);
     files.push(path.join(cwd, 'CLAUDE.md'));
     return files;
   },
-  codex(cwd, kit) {
+  codex(cwd, kit, opts = {}) {
     const files = [];
     for (const w of kit.workflows) {
       const p = path.join(cwd, '.agents', 'skills', w.meta.name, 'SKILL.md');
@@ -85,7 +101,7 @@ const ADAPTERS = {
     }
     return files; // AGENTS.md block is written by the universal step
   },
-  gemini(cwd, kit) {
+  gemini(cwd, kit, opts = {}) {
     const files = [];
     for (const w of kit.workflows) {
       const short = w.meta.name.replace(/^pp-/, '');
@@ -94,11 +110,11 @@ const ADAPTERS = {
       writeText(p, `description = ${JSON.stringify(w.meta.description)}\nprompt = """\n${prompt}\n"""\n`);
       files.push(p);
     }
-    upsertBlock(path.join(cwd, 'GEMINI.md'), MARKER, universalBlock(kit) + `\n\nIn Gemini CLI the workflows are custom commands: \`/pp:plan\`, \`/pp:build\`, \`/pp:status\`, \`/pp:ask\`, \`/pp:resume\`.`);
+    upsertBlock(path.join(cwd, 'GEMINI.md'), MARKER, universalBlock(kit, opts) + `\n\nIn Gemini CLI the workflows are custom commands: ${kit.workflows.map((w) => `\`/pp:${w.meta.name.replace(/^pp-/, '')}\``).join(', ')}.`);
     files.push(path.join(cwd, 'GEMINI.md'));
     return files;
   },
-  opencode(cwd, kit) {
+  opencode(cwd, kit, opts = {}) {
     const files = [];
     for (const a of kit.agents) {
       const p = path.join(cwd, '.opencode', 'agents', `${a.meta.name}.md`);
@@ -112,10 +128,10 @@ const ADAPTERS = {
     }
     return files;
   },
-  cursor(cwd, kit) {
+  cursor(cwd, kit, opts = {}) {
     const files = [];
     const p = path.join(cwd, '.cursor', 'rules', 'product-planner.mdc');
-    writeText(p, `---\ndescription: Product Planner multi-agent planning and build kit – how to run /pp-plan, /pp-build and friends\nalwaysApply: true\n---\n\n${universalBlock(kit)}\n`);
+    writeText(p, `---\ndescription: Product Planner multi-agent planning and build kit – how to run /pp-plan, /pp-build and friends\nalwaysApply: true\n---\n\n${universalBlock(kit, opts)}\n`);
     files.push(p);
     for (const w of kit.workflows) {
       const c = path.join(cwd, '.cursor', 'commands', `${w.meta.name}.md`);
@@ -124,10 +140,10 @@ const ADAPTERS = {
     }
     return files;
   },
-  windsurf(cwd, kit) {
+  windsurf(cwd, kit, opts = {}) {
     const files = [];
     const p = path.join(cwd, '.windsurf', 'rules', 'product-planner.md');
-    writeText(p, `---\ntrigger: always_on\n---\n\n${universalBlock(kit)}\n`);
+    writeText(p, `---\ntrigger: always_on\n---\n\n${universalBlock(kit, opts)}\n`);
     files.push(p);
     for (const w of kit.workflows) {
       const c = path.join(cwd, '.windsurf', 'workflows', `${w.meta.name}.md`);
@@ -139,14 +155,14 @@ const ADAPTERS = {
   generic() { return []; },
 };
 
-export function installTools(cwd, tools, kit = loadKit()) {
+export function installTools(cwd, tools, kit = loadKit(), opts = {}) {
   const written = [];
   installKit(cwd);
-  upsertBlock(path.join(cwd, 'AGENTS.md'), MARKER, universalBlock(kit));
+  upsertBlock(path.join(cwd, 'AGENTS.md'), MARKER, universalBlock(kit, opts));
   written.push(path.join(cwd, 'AGENTS.md'));
   for (const t of tools) {
     if (!ADAPTERS[t]) throw new Error(`unknown tool "${t}" (known: ${Object.keys(TOOLS).join(', ')})`);
-    written.push(...ADAPTERS[t](cwd, kit));
+    written.push(...ADAPTERS[t](cwd, kit, opts));
   }
   return written;
 }

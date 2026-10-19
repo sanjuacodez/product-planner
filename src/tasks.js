@@ -143,6 +143,39 @@ export function addTask(cwd, task) {
   appendLog(cwd, { type: 'task', task: task.id, from: null, to: task.status, note: `added: ${task.title}` });
   return task;
 }
+const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features'];
+
+/** Replanning: revise a task that has not been completed. Done work is never rewritten; add a follow-up task instead. */
+export function updateTask(cwd, id, changes, note) {
+  const t = loadTasks(cwd);
+  const task = getTask(t, id);
+  if (task.status === 'done') throw new Error(`${id} is done; add a follow-up task instead of rewriting completed work`);
+  const bad = Object.keys(changes).filter((k) => !EDITABLE.includes(k));
+  if (bad.length) throw new Error(`cannot update ${bad.join(', ')} (editable: ${EDITABLE.join(', ')})`);
+  const before = Object.fromEntries(Object.keys(changes).map((k) => [k, task[k]]));
+  Object.assign(task, changes);
+  normalise(t);
+  const errors = validateTasks(t);
+  if (errors.length) throw new Error(errors.join('; '));
+  saveTasks(cwd, t);
+  appendLog(cwd, { type: 'task', task: id, from: task.status, to: task.status, note: `updated ${Object.keys(changes).join(', ')}${note ? `: ${note}` : ''}`, changes: { before, after: changes } });
+  return task;
+}
+
+/** Replanning: drop a task that never started. Dependents must be updated first. */
+export function removeTask(cwd, id, reason) {
+  if (!reason?.trim()) throw new Error('removing a task requires --reason');
+  const t = loadTasks(cwd);
+  const task = getTask(t, id);
+  if (!['todo', 'blocked'].includes(task.status)) throw new Error(`${id} is ${task.status}; only todo or blocked tasks can be removed (finish or reopen it first)`);
+  const dependents = t.tasks.filter((x) => x.dependsOn.includes(id)).map((x) => x.id);
+  if (dependents.length) throw new Error(`${dependents.join(', ')} depend on ${id}; update their dependsOn first`);
+  t.tasks = t.tasks.filter((x) => x.id !== id);
+  saveTasks(cwd, t);
+  appendLog(cwd, { type: 'task', task: id, from: task.status, to: 'removed', note: `removed: ${task.title} (${reason})` });
+  return task;
+}
+
 export function nextId(items, prefix) {
   const nums = items.map((x) => Number(String(x.id).replace(/^\D+/, ''))).filter((n) => !Number.isNaN(n));
   return `${prefix}${(nums.length ? Math.max(...nums) : 0) + 1}`;

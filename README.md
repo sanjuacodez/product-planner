@@ -137,6 +137,47 @@ pp feature set F12 release Later   # change a decision yourself
 pp feature check                   # is the scope ready for requirements and tasks?
 ```
 
+## Automatic mode and replanning
+
+After `init`, you don't have to type commands. **Automatic mode** is on by default: the instruction file your tool loads every session (CLAUDE.md, AGENTS.md, GEMINI.md, or Cursor/Windsurf rules) tells the agent to pick the workflow from what you say:
+
+| You say something like… | The agent runs |
+|---|---|
+| “I want to build a habit tracker for students” | `pp-plan`: the planning interview starts |
+| “Also add a weekly email summary”, “drop payments”, “switch to mobile”, “replan” (after the plan was approved) | `pp-replan`: the change is analysed, then applied after your approval |
+| “continue”, “keep going”, or a new session on a planned project | `pp-resume`: continues planning or the build from saved state |
+| “how far along are we?”, “open the dashboard” | `pp-status` |
+| “why did we pick SQLite?” | `pp-ask` |
+| “fix this typo”, “write a quick script” | Nothing: small work outside the plan is done directly, with no planning overhead |
+
+The agent announces the workflow in one line (“Starting pp-plan; say stop to skip”). The slash commands still work. Turn automatic mode off or back on per project:
+
+```sh
+pp auto off      # only /pp-* commands or "run pp-plan" start workflows
+pp auto on
+pp auto status
+```
+
+### Replanning an approved plan
+
+You don't need to plan again from scratch. `pp-replan`:
+1. Lets the task in progress finish, or parks it.
+2. Shows the impact: features added, changed or dropped; tasks affected; documents to edit; new risks and costs.
+3. Asks at most 5 questions, only about the change.
+4. **Writes nothing until you approve the change summary.**
+
+Then it applies the change: it edits only the affected document sections, revises tasks that haven't started (`pp task update`), removes obsolete ones (`pp task remove`), and adds follow-up tasks for completed work instead of rewriting it. Finally it validates, logs the replan in decisions.md and continues the build.
+
+```sh
+pp task update T5 --json '{"acceptance":["…","Can reschedule"]}' --note "replan: reschedule"
+pp task remove T7 --reason "replan: payments deferred"
+```
+
+*Tested with Claude Code (Opus 5.5) in scratch projects:*
+- *A plain idea, with no `/pp-plan`, started the interview: about $0.27.*
+- *“Write a tiny hello.js” was done directly without a workflow: about $0.12.*
+- *“Also add a weekly email summary” on an approved plan produced the impact analysis and 5 questions: about $0.27.*
+
 ## Start with your AI coding tool
 
 Open the initialized product repository and invoke `pp-plan` with your idea (see the table above for each tool's syntax). The planning workflow gathers concept, audience, business goals, constraints, MVP boundaries, design preferences, research inputs and access, browser access, optional marketing, memory, which AI model should run each agent, git choices and dashboard preferences. It generates the plan and dashboard for one final review. After approval it opens the dashboard by default and continues the build. You can ask it to stop after planning or disable auto-open.
@@ -148,6 +189,7 @@ Open the initialized product repository and invoke `pp-plan` with your idea (see
 | `pp-resume` | Recover context and continue after an interrupted session |
 | `pp-status` | Inspect progress; open the dashboard when requested |
 | `pp-ask` | Answer questions or add requested dashboard information |
+| `pp-replan` | Change an approved plan: impact, a few questions, one approval, synced tasks |
 
 ## Supported IDEs, coding tools and models
 
@@ -255,6 +297,9 @@ pp task done T1 --agent qa --model claude-sonnet-5-5 --note "Acceptance verified
 pp task block T2 --reason "Provider credentials missing"
 pp task unblock T2
 pp task validate
+pp task update T5 --json '{"priority":"high"}' --note "replan"
+pp task remove T7 --reason "replan: out of scope"
+pp auto status
 pp feature list
 pp feature check
 pp dashboard --open
@@ -451,4 +496,4 @@ npm run check
 npm pack --dry-run
 ```
 
-Tests use temporary directories and cover all adapter outputs, repeat installation, removal preservation, task dependency/cycle checks, CLI import and lifecycle, agent/model recording, feature readiness and coverage, dashboard tabs/views/escaping/custom data, delivery-order and roadmap parsing, browser MCP registration, research parsing, memory retrieval and state-path validation. No network is needed for the test suite. Editor command loading and actual LLM execution require a session in each host; generated-file checks do not replace that integration testing. Optional vector and browser downloads are not part of the core tests.
+Tests use temporary directories and cover all adapter outputs, repeat installation, removal preservation, task dependency/cycle checks, CLI import and lifecycle, agent/model recording, feature readiness and coverage, automatic-mode routing on/off, replanning task updates/removals, dashboard tabs/views/escaping/custom data, delivery-order and roadmap parsing, browser MCP registration, research parsing, memory retrieval and state-path validation. No network is needed for the test suite. Editor command loading and actual LLM execution require a session in each host; generated-file checks do not replace that integration testing. Optional vector and browser downloads are not part of the core tests.

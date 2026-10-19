@@ -2,9 +2,9 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { PKG_ROOT, STATE_DIR, readJson, nowIso } from './util/fs.js';
 import { init } from './init/index.js';
-import { TOOLS, uninstallTools } from './init/adapters.js';
+import { TOOLS, uninstallTools, installTools } from './init/adapters.js';
 import { loadState, saveState, loadConfig, setByPath, appendLog, PHASES, PLANNING_STEPS, isInitialised, configPath } from './state.js';
-import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, agentName, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
+import { loadTasks, saveTasks, validateTasks, summary, nextTask, readyTasks, transition, addTask, getTask, agentName, updateTask, removeTask, STATUSES, natural, normalise as saveNormalised } from './tasks.js';
 import { buildDashboard, openInBrowser, watchDashboard } from './dashboard/index.js';
 import { search, fetchPage, SETUP_OPTIONS } from './research/index.js';
 import { buildIndex, searchMemory, setupVector, memoryStatus } from './memory/index.js';
@@ -26,6 +26,8 @@ Usage: product-planner <command> [options]
   task show <id>                      Show one task
   task start|review|done|block|unblock|reopen <id> [--note "…"] [--reason "…"] [--agent name] [--model id]
   task add --json '{…}' | --file f    Add one task (or {"epics":[],"tasks":[]} file to merge)
+  task update <id> --json '{…}' [--note "…"]   Replanning: revise a task that is not done
+  task remove <id> --reason "…"       Replanning: drop a todo/blocked task nobody depends on
   task validate                       Check tasks.json for errors and feature coverage
   feature list [--json] | show <id>   The feature register (agreed scope) from the planning interview
   feature add --json '{…}' | --file f Add/update features ({"features":[…]} or one feature)
@@ -42,6 +44,7 @@ Usage: product-planner <command> [options]
   browser setup [--tools a,b] [--engine chromium] [--headless] [--version x] [--skip-install] [--force]
                                       After user approval: install free Playwright MCP + Chromium and register it
   browser remove                      Remove the Playwright MCP entry from this project's tool configs
+  auto on|off|status                  Automatic mode: agents start pp-plan/pp-replan/pp-resume from plain requests
   doctor                              Environment checks (node, git, web, memory)
   version | help
 
@@ -59,6 +62,7 @@ export async function main(argv) {
     case 'dashboard': return cmdDashboard(cwd, rest);
     case 'task': return cmdTask(cwd, rest);
     case 'feature': return cmdFeature(cwd, rest);
+    case 'auto': return cmdAuto(cwd, rest);
     case 'state': return cmdState(cwd, rest);
     case 'log': return cmdLog(cwd, rest);
     case 'research': return cmdResearch(cwd, rest);
@@ -113,7 +117,7 @@ function cmdDashboard(cwd, rest) {
 function cmdTask(cwd, rest) {
   requireInit(cwd);
   const [sub, id] = rest;
-  const { values, positionals } = args(rest.slice(1), { status: { type: 'string' }, json: { type: sub === 'add' ? 'string' : 'boolean' }, note: { type: 'string' }, reason: { type: 'string' }, agent: { type: 'string' }, model: { type: 'string' }, file: { type: 'string' } });
+  const { values, positionals } = args(rest.slice(1), { status: { type: 'string' }, json: { type: ['add', 'update'].includes(sub) ? 'string' : 'boolean' }, note: { type: 'string' }, reason: { type: 'string' }, agent: { type: 'string' }, model: { type: 'string' }, file: { type: 'string' } });
   const t = loadTasks(cwd);
   const show = (task) => console.log(`${task.id}  [${task.status}] ${task.title}\n  epic: ${task.epic || '-'} · agent: ${task.agent}${task.model ? ' · planned model: ' + task.model : ''} · priority: ${task.priority}${task.estimate ? ' · estimate: ' + task.estimate : ''}${task.dependsOn.length ? '\n  depends on: ' + task.dependsOn.join(', ') : ''}${task.description ? '\n  ' + task.description.replace(/\n/g, '\n  ') : ''}${task.acceptance.length ? '\n  acceptance:\n' + task.acceptance.map((a) => '   - ' + a).join('\n') : ''}${task.workedBy.length ? '\n  worked by: ' + task.workedBy.map((w) => `${w.agent}${w.model ? ' (' + w.model + ')' : ''}`).join(', ') : ''}${task.blockedReason ? '\n  BLOCKED: ' + task.blockedReason : ''}${task.notes.length ? '\n  notes:\n' + task.notes.map((n) => `   - ${n.ts.slice(0, 16)} ${n.agent ? n.agent + (n.model ? ' (' + n.model + ')' : '') + ': ' : ''}${n.text}`).join('\n') : ''}`);
   switch (sub) {
@@ -160,8 +164,19 @@ function cmdTask(cwd, rest) {
       } else { const task = addTask(cwd, src); console.log(`added ${task.id}: ${task.title}`); }
       refreshDashboard(cwd); return;
     }
+    case 'update': {
+      if (!id) throw new Error('task id required');
+      const changes = JSON.parse(values.json || positionals[1] || '{}');
+      const task = updateTask(cwd, id, changes, values.note);
+      console.log(`${task.id} updated: ${Object.keys(changes).join(', ')}`); refreshDashboard(cwd); return;
+    }
+    case 'remove': {
+      if (!id) throw new Error('task id required');
+      const task = removeTask(cwd, id, values.reason);
+      console.log(`${task.id} removed (${values.reason})`); refreshDashboard(cwd); return;
+    }
     case 'validate': { const fx = loadFeatures(cwd); const errors = [...validateTasks(t), ...(fx.features.length ? [...validateFeatures(fx), ...coverage(fx, t).errors] : [])]; if (errors.length) { console.log(errors.join('\n')); process.exitCode = 1; } else console.log(`ok: ${t.tasks.length} tasks, ${t.epics.length} epics, ${readyTasks(t).length} ready`); return; }
-    default: throw new Error(`unknown task subcommand "${sub}" (list, next, show, start, review, done, block, unblock, reopen, add, validate)`);
+    default: throw new Error(`unknown task subcommand "${sub}" (list, next, show, start, review, done, block, unblock, reopen, add, update, remove, validate)`);
   }
 }
 
@@ -301,4 +316,16 @@ function cmdFeature(cwd, rest) {
     }
     default: throw new Error('usage: feature list | show <id> | add --json/--file | set <id> <field> <value> | check');
   }
+}
+
+function cmdAuto(cwd, rest) {
+  requireInit(cwd);
+  const [sub] = rest;
+  const config = loadConfig(cwd);
+  if (sub === 'status' || sub === undefined) { console.log(`automatic mode: ${config.autoRun !== false ? 'on' : 'off'}`); return; }
+  if (!['on', 'off'].includes(sub)) throw new Error('usage: auto on|off|status');
+  config.autoRun = sub === 'on';
+  writeJson(configPath(cwd), config);
+  installTools(cwd, config.tools, undefined, { autoRun: config.autoRun });
+  console.log(`automatic mode ${sub}: ${config.autoRun ? 'agents start pp-plan, pp-replan and pp-resume from plain requests' : 'use the /pp-* commands (or say "run pp-plan")'}.\nInstructions refreshed for: ${config.tools.join(', ')}. Start a new chat session so the agent reloads them.`);
 }

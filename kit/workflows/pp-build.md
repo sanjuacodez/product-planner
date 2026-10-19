@@ -1,6 +1,6 @@
 ---
 name: pp-build
-description: Execute the approved plan autonomously with per-task QA and dashboard updates.
+description: Build the approved plan task by task with QA and dashboard updates, without stopping for questions. Use when the user says build, start building or next task after approval.
 ---
 
 # Build

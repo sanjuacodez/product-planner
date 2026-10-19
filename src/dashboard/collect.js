@@ -54,6 +54,7 @@ export function burnupSeries(log, tasks) {
   const doneSet = new Set();
   const seen = new Set();
   for (const e of events) {
+    if (e.to === 'removed') { if (seen.delete(e.task)) scope--; if (doneSet.delete(e.task)) done--; days.set(day(e.ts), { date: day(e.ts), scope, done }); continue; }
     if (!seen.has(e.task)) { seen.add(e.task); scope++; }
     if (e.to === 'done' && !doneSet.has(e.task)) { doneSet.add(e.task); done++; }
     if (e.from === 'done' && e.to !== 'done' && doneSet.has(e.task)) { doneSet.delete(e.task); done--; }

@@ -1,6 +1,6 @@
 ---
 name: pp-status
-description: Show current planning/build progress and optionally open the dashboard.
+description: Report planning and build progress and open the dashboard on request. Use when the user asks for status, progress or the dashboard.
 ---
 
 # Status

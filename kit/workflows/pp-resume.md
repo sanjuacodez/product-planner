@@ -1,6 +1,6 @@
 ---
 name: pp-resume
-description: Recover project context and continue unfinished planning or build work.
+description: Recover saved project context and continue unfinished planning or building. Use when the user says continue or keep going, or starts a new session on a planned project.
 ---
 
 # Resume

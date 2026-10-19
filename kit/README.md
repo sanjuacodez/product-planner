@@ -57,6 +57,8 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Plan models per persona | `product-planner state set models.<agent> <model-id>` (or `models.default`) |
 | Browser access | `product-planner browser status`, `browser use host|none`, `browser setup` (after approval) |
 | Validate the plan | `product-planner task validate` (also checks every accepted MVP feature has tasks) |
+| Replan tasks | `product-planner task update T# --json '{…}' --note "…"` (not done tasks), `task remove T# --reason "…"` (todo/blocked, no dependents) |
+| Automatic mode | `product-planner auto on|off|status` |
 | Feature register | `product-planner feature list|show|add|set|check` |
 | Note something | `product-planner log "message" [--agent name] [--task id]` |
 | Regenerate dashboard | `product-planner dashboard [--open]` (task commands already do this automatically) |
@@ -104,7 +106,11 @@ The **orchestrator** (`pp-orchestrator`) owns the sequence and the state; specia
 2. **build** (`/pp-build`): fully autonomous. Loop over `task next` → implement → QA → done. Never ask the human a question. If a task cannot proceed, block it with a precise reason and move on to other ready tasks. Stop only when `task next` reports `ALL_DONE` or `ALL_BLOCKED`.
 3. **done**: everything complete; the dashboard shows the final state and the roadmap for what comes next.
 
-`/pp-status`, `/pp-ask` and `/pp-resume` work in any phase.
+`/pp-status`, `/pp-ask` and `/pp-resume` work in any phase. `/pp-replan` changes an approved plan at any time: impact analysis, at most one round of questions about the change, surgical document edits, `task update`/`task remove`/follow-up tasks (done work is never rewritten), and one approval for the change.
+
+## Automatic mode
+
+With automatic mode on (the default; `product-planner auto on|off`), the instruction block tells the agent to start workflows from plain requests: an idea to build starts pp-plan, a scope change after approval starts pp-replan, "continue" starts pp-resume, a status question starts pp-status. Announce the workflow in one line so the user can stop it. Small work that does not change agreed scope is done directly without a workflow.
 
 ## Existing products and future roadmaps
 

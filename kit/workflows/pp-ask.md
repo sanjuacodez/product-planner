@@ -1,6 +1,6 @@
 ---
 name: pp-ask
-description: Answer project questions from saved plans, decisions and implementation.
+description: Answer questions about the plan, decisions and implementation from saved files, and add requested dashboard sections. Use for questions about the project.
 ---
 
 # Ask

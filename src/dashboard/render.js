@@ -355,7 +355,8 @@ function activityList(log) {
   const items = log.slice().reverse().map((e) => {
     const when = esc((e.ts || '').slice(0, 16).replace('T', ' '));
     let text = '';
-    if (e.type === 'task') text = `<strong>${esc(e.task)}</strong> ${esc(e.from || 'new')} → ${esc(e.to)}${e.note ? ` · ${esc(e.note)}` : ''}`;
+    if (e.type === 'task' && e.from && e.from === e.to) text = `<strong>${esc(e.task)}</strong> ${esc(e.note || 'updated')}`;
+    else if (e.type === 'task') text = `<strong>${esc(e.task)}</strong> ${esc(e.from || 'new')} → ${esc(e.to)}${e.note ? ` · ${esc(e.note)}` : ''}`;
     else text = `${e.message ? inline(e.message) : esc(JSON.stringify(e))}`;
     const who = [e.agent, e.model].filter(Boolean).map(esc).join(' · ');
     return `<li><span class="when">${when}</span>${who ? `<span class="who">${who}</span>` : ''}<span>${text}</span></li>`;

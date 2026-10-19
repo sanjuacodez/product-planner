@@ -33,6 +33,7 @@ export function defaultConfig() {
   return {
     version: 1,
     tools: [],
+    autoRun: true,
     dashboard: { output: 'product-dashboard.html', autoRefreshSeconds: 30, title: '' },
     research: { engine: 'duckduckgo', maxResults: 8 },
     memory: { backend: 'auto', include: ['.product-planner/**/*.md', 'docs/**/*.md', 'README.md'] },

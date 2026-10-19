@@ -32,7 +32,7 @@ export async function init(cwd, opts = {}) {
   const gi = path.join(cwd, STATE_DIR, '.gitignore');
   if (!exists(gi)) writeText(gi, '# keep everything in git except heavy local memory artefacts\nmemory/node_modules/\nmemory/lancedb/\nmemory/models/\n');
   for (const d of ['research', 'dashboard']) { const keep = path.join(cwd, STATE_DIR, d, '.gitkeep'); if (!exists(keep)) writeText(keep, ''); }
-  const written = installTools(cwd, tools);
+  const written = installTools(cwd, tools, undefined, { autoRun: config.autoRun !== false });
   return { tools, detected, fresh, written };
 }
 

@@ -25,9 +25,9 @@ const plan = () => ({ epics: [{ id: 'E1', title: 'Core' }], tasks: [
 
 test('all adapters install complete kit, update idempotently and preserve user instructions/data', async (t) => {
   const cwd = project(t); fs.writeFileSync(path.join(cwd, 'AGENTS.md'), '# User instructions\n');
-  const kit = loadKit(); assert.equal(kit.agents.length, 10); assert.equal(kit.workflows.length, 5);
+  const kit = loadKit(); assert.equal(kit.agents.length, 10); assert.equal(kit.workflows.length, 6);
   await init(cwd, { tools: 'all', yes: true });
-  for (const f of ['.claude/agents/pp-qa.md', '.claude/commands/pp-plan.md', '.agents/skills/pp-plan/SKILL.md', '.gemini/commands/pp/plan.toml', '.opencode/agents/pp-developer.md', '.opencode/commands/pp-build.md', '.cursor/commands/pp-plan.md', '.windsurf/workflows/pp-build.md', '.product-planner/kit/templates/task-plan.json']) assert.ok(fs.existsSync(path.join(cwd, f)), f);
+  for (const f of ['.claude/agents/pp-qa.md', '.claude/commands/pp-plan.md', '.claude/commands/pp-replan.md', '.gemini/commands/pp/replan.toml', '.agents/skills/pp-plan/SKILL.md', '.gemini/commands/pp/plan.toml', '.opencode/agents/pp-developer.md', '.opencode/commands/pp-build.md', '.cursor/commands/pp-plan.md', '.windsurf/workflows/pp-build.md', '.product-planner/kit/templates/task-plan.json']) assert.ok(fs.existsSync(path.join(cwd, f)), f);
   const state = loadState(cwd); await init(cwd, { tools: 'all', yes: true }); assert.equal(loadState(cwd).createdAt, state.createdAt);
   const instructions = fs.readFileSync(path.join(cwd, 'AGENTS.md'), 'utf8'); assert.equal(instructions.match(/product-planner:start/g).length, 1); assert.match(instructions, /User instructions/);
   fs.writeFileSync(path.join(cwd, '.gemini/commands/pp/custom.toml'), 'description="mine"');
@@ -141,4 +141,33 @@ test('feature register gates readiness and task validation checks MVP feature co
   ok(cwd, 'task', 'add', '--json', JSON.stringify({ title: 'Booking flow', features: ['F1'], acceptance: ['Booking works'] })); ok(cwd, 'task', 'validate');
   ok(cwd, 'task', 'add', '--json', JSON.stringify({ title: 'Bad ref', features: ['F9'], acceptance: ['x'] })); assert.match(run(cwd, 'task', 'validate').stdout, /unknown feature F9/);
   const html = fs.readFileSync(buildDashboard(cwd), 'utf8'); assert.match(html, /Features and scope/); assert.match(html, /Cancellation is out of scope/);
+});
+
+test('automatic mode routes plain requests and can be switched off and on', async (t) => {
+  const cwd = project(t); ok(cwd, 'init', '--tools', 'claude,cursor', '--yes');
+  const read = (f) => fs.readFileSync(path.join(cwd, f), 'utf8');
+  for (const f of ['CLAUDE.md', 'AGENTS.md', '.cursor/rules/product-planner.mdc']) assert.match(read(f), /Automatic mode \(on\)[\s\S]*`pp-replan`/, f);
+  assert.match(ok(cwd, 'auto', 'off'), /automatic mode off/);
+  assert.doesNotMatch(read('CLAUDE.md'), /Automatic mode/); assert.equal(read('CLAUDE.md').match(/product-planner:start/g).length, 1);
+  ok(cwd, 'init', '--tools', 'claude', '--yes'); assert.doesNotMatch(read('AGENTS.md'), /Automatic mode/);
+  ok(cwd, 'auto', 'on'); assert.match(read('AGENTS.md'), /Automatic mode \(on\)/); assert.match(ok(cwd, 'auto'), /on/);
+});
+
+test('replanning updates unfinished tasks, removes unneeded ones and never rewrites done work', async (t) => {
+  const cwd = project(t); ok(cwd, 'init', '--tools', 'generic', '--yes');
+  fs.writeFileSync(path.join(cwd, 'plan.json'), JSON.stringify({ epics: [{ id: 'E1', title: 'Core' }], tasks: [
+    { id: 'T1', epic: 'E1', title: 'Foundation', acceptance: ['Starts'] },
+    { id: 'T2', epic: 'E1', title: 'Journey', acceptance: ['Works'], dependsOn: ['T1'] },
+    { id: 'T3', epic: 'E1', title: 'Old idea', acceptance: ['x'], dependsOn: ['T1'] },
+  ] })); ok(cwd, 'task', 'add', '--file', 'plan.json');
+  for (const s of ['start', 'review', 'done']) ok(cwd, 'task', s, 'T1');
+  assert.match(run(cwd, 'task', 'update', 'T1', '--json', '{"title":"x"}').stderr, /follow-up task/);
+  assert.match(run(cwd, 'task', 'update', 'T2', '--json', '{"status":"done"}').stderr, /cannot update status/);
+  ok(cwd, 'task', 'update', 'T2', '--json', JSON.stringify({ title: 'Journey with reschedule', acceptance: ['Works', 'Can reschedule'] }), '--note', 'replan: reschedule');
+  assert.equal(loadTasks(cwd).tasks[1].acceptance.length, 2);
+  assert.equal(run(cwd, 'task', 'update', 'T2', '--json', '{"dependsOn":["T9"]}').status, 1);
+  assert.equal(run(cwd, 'task', 'remove', 'T3').status, 1);
+  ok(cwd, 'task', 'remove', 'T3', '--reason', 'replan: dropped'); assert.equal(loadTasks(cwd).tasks.length, 2);
+  assert.match(run(cwd, 'task', 'remove', 'T1', '--reason', 'x').stderr, /only todo or blocked/);
+  const html = fs.readFileSync(buildDashboard(cwd), 'utf8'); assert.match(html, /removed: Old idea/); assert.match(html, /updated title, acceptance: replan: reschedule/);
 });
