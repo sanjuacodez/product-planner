@@ -99,7 +99,25 @@ The planning workflow gathers concept, audience, business goals, constraints, MV
 | `pp-status` | Inspect progress; open the dashboard when requested |
 | `pp-ask` | Answer questions or add requested dashboard information |
 
-## Tool adapters and delegation
+## Supported IDEs, coding tools and models
+
+The package supplies workflow instructions; your chosen coding tool supplies the model and execution environment. It does not bundle a model or require a specific model vendor.
+
+| IDE / tool | Support path today | How to start |
+|---|---|---|
+| Claude Code CLI / IDE integration | Dedicated agent and slash-command files | `/pp-plan` |
+| OpenAI Codex | Dedicated workflow skills and AGENTS.md | Invoke `pp-plan` or say “run pp-plan” |
+| Gemini CLI | Dedicated TOML custom commands and GEMINI.md | `/pp:plan` |
+| OpenCode | Dedicated agents and commands | `/pp-plan` or plain-language workflow request |
+| Cursor | Dedicated rules and commands | `/pp-plan` or plain-language workflow request |
+| Windsurf | Dedicated rules and workflows | `/pp-plan` or plain-language workflow request |
+| Monocode, T3 Code | Universal file-based instructions; no dedicated adapter | Explicitly read AGENTS.md and request pp-plan |
+| VS Code with Cline, Roo Code, Kilo Code, or other coding extensions | Universal file-based instructions; loading depends on the extension | Explicitly read AGENTS.md and the installed workflow |
+| Zed, Aider and other shell-capable coding tools | Universal file-based instructions; loading depends on the tool | Explicitly read the installed manual/workflow |
+
+Dedicated integrations are tested for generated-file correctness; end-to-end execution in every editor/version is not yet verified. Universal support requires local file access, editing and shell execution; it does not promise native slash commands or subagents. Use native delegation only when the host exposes it. Model effectiveness depends on its ability to follow instructions, use tools and verify changes.
+
+## Tool adapter files and delegation
 
 | Tool | Installed integration |
 |---|---|
@@ -114,6 +132,30 @@ The planning workflow gathers concept, audience, business goals, constraints, MV
 Ten personas cover orchestration, analysis, research, product management, UX, architecture, task planning, development, QA and optional marketing. When the host exposes delegation, the coordinator assigns specialists concrete input/output files and acceptance criteria. Otherwise it adopts those same personas sequentially. A single coordinator owns state writes; no agent framework, server or paid orchestration service is required. Compatibility depends on the host reading the installed instructions; native command availability varies by editor version.
 
 Adapter references: [OpenCode agents](https://opencode.ai/docs/agents/), [OpenCode commands](https://opencode.ai/docs/commands/), [Gemini custom commands](https://geminicli.com/docs/cli/custom-commands/).
+
+## Planning an existing product
+
+Initialize Product Planner inside the existing product repository, then ask:
+
+> Run pp-plan for this existing product. First inspect its current features, architecture, data model and tests. Compare what exists with our goal of adding team workspaces, then propose an incremental roadmap. Cite the code evidence, reuse existing modules and preserve completed work.
+
+The workflow now instructs agents to produce `.product-planner/baseline.md` before revising the PRD, architecture or roadmap. That report maps capabilities to source files, records verification and unknowns, and explains the gap to the desired outcome. Tasks should name affected components, dependencies and acceptance checks. Verified lessons go in lessons.md and can be retrieved through enabled document memory.
+
+**Available now:** direct-inspection discovery guidance, baseline/lessons templates, existing document memory and manually maintained custom dashboard sections. This is agent-led execution, not an automatic code scan performed by init.
+
+**Planned:** one optional SocratiCode integration for semantic code search and graph analysis, automatic source freshness checks, and better task-specific memory retrieval. GraphCode is an alternative under evaluation. Optional LanceDB remains for project documents/lessons; the design avoids duplicating the provider's entire code index. Nothing installs all these tools by default.
+
+Read the [existing-product guide](kit/guides/existing-products.md) and [implementation stages and acceptance criteria](kit/guides/code-intelligence-plan.md).
+
+## Browser setup
+
+Product Planner **does not install a default browser**. The dashboard opens in your existing OS default browser and works offline.
+
+- **Research:** use available native host browser/search tools, then the agreed CLI search/fetch fallback. The CLI does not render interactive JavaScript pages.
+- **UI testing:** reuse existing project/host tooling. Optional Playwright with **Chromium** is the recommended first automation setup when selected during planning.
+- **Cross-browser testing:** add Firefox or WebKit only when the product's compatibility requirements call for them.
+
+There is no automatic Playwright/browser setup command in the current CLI. Browser downloads and any system prerequisites are agreed up front. Routine approved tests then run during build. See the [browser policy and illustrative setup](kit/guides/browser-policy.md).
 
 ## CLI examples
 
@@ -151,6 +193,36 @@ Preview fictional demo data without initializing this source repository:
 node examples/demo.js
 # Open output/demo/product-dashboard.html in a browser
 ```
+
+## Screenshots: following the work
+
+These are screenshots of the current dashboard using **fictional Fieldnotes demo data**, not screenshots of integrations that have yet to be implemented. They show the output you can follow while the coding agent executes in your editor.
+
+### 1. See overall delivery progress
+
+The dashboard shows phase, completed tasks, ready work, blockers, status distribution, progress per epic and burn-up history.
+
+![Light dashboard showing progress metrics, task status, epic breakdown and burn-up history](docs/screenshots/dashboard-overview.png)
+
+### 2. Inspect tasks and acceptance details
+
+Filter or search the task table and expand a task to see acceptance criteria and dependencies. Blocked work records its reason so the agent can continue with other available tasks.
+
+![Task board showing task statuses and an expanded task with acceptance criteria](docs/screenshots/task-board.png)
+
+### 3. Track the planning phase
+
+During planning, the same dashboard shows interview/document milestones. For existing products, agents add the current capability baseline and evidence gaps as custom sections, then present the roadmap at the final review.
+
+![Planning dashboard showing planning milestones and product progress](docs/screenshots/planning-progress.png)
+
+### 4. Use dark mode
+
+Theme selection and optional chart patterns support different viewing preferences. Source data is available in chart tables.
+
+![Dark dashboard showing the same progress data and charts](docs/screenshots/dashboard-dark.png)
+
+To reproduce the delivery demo, run `node examples/demo.js` and open `output/demo/product-dashboard.html`. For the planning fixture, run `node examples/planning-demo.js` and open `output/planning-demo/product-dashboard.html`. No connected editor or code-intelligence provider is depicted.
 
 ## Research and memory
 

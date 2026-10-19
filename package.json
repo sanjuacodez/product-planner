@@ -13,7 +13,8 @@
     "src",
     "kit",
     "README.md",
-    "examples"
+    "examples",
+    "docs/screenshots"
   ],
   "engines": {
     "node": ">=20"

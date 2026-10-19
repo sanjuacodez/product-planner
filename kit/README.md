@@ -14,6 +14,8 @@ A human describes a product idea. During a single **planning phase** the agents 
   config.json          tools installed, dashboard + research + memory settings
   tasks.json           epics and tasks (the single source of truth for work)
   log.jsonl            activity log (append-only; feeds the dashboard)
+  baseline.md          existing-product capabilities, source evidence and roadmap gaps
+  lessons.md           verified project lessons with task/source/QA evidence
   concept.md           product concept (analyst)
   research/
     market.md          market overview, trends, sizing, positioning (researcher)
@@ -91,6 +93,16 @@ The **orchestrator** (`pp-orchestrator`) owns the sequence and the state; specia
 3. **done**: everything complete; the dashboard shows the final state and the roadmap for what comes next.
 
 `/pp-status`, `/pp-ask` and `/pp-resume` work in any phase.
+
+## Existing products and future roadmaps
+
+When a repository already contains a product, follow [guides/existing-products.md](guides/existing-products.md) before producing new requirements and the roadmap. Create baseline.md from the installed template, covering current features, modules/data/flows, tests, constraints and evidence gaps. The PM and planner compare that baseline with the user's goals, preserve completed work and propose incremental changes with acceptance checks. Revisit the baseline on subsequent planning and before affected build work. Save verified source-linked lessons after QA.
+
+Use one optional available code-intelligence provider. The chosen first integration is SocratiCode; GraphCode remains an alternative to evaluate. Core discovery uses direct inspection when neither is available. The [implementation plan](guides/code-intelligence-plan.md) distinguishes shipped agent guidance from planned provider setup, source indexing, freshness enforcement and hybrid retrieval. Do not invent new CLI commands or describe planned integrations as working today.
+
+## Browser policy
+
+Read [guides/browser-policy.md](guides/browser-policy.md). No browser is installed by init. Dashboard opening uses the OS default browser. Research uses available host tools or the search/fetch CLI. Interactive QA can reuse existing tools or add Playwright with Chromium when chosen during planning; additional engines follow product needs. Record choices, downloads and coverage expectations up front, then run agreed checks during build without routine approval gates.
 
 ## Research
 
