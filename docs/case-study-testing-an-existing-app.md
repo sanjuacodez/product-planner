@@ -69,8 +69,8 @@ Things a first-time user of the kit hits, recorded so they can be fixed or docum
 
 - One run, one model, one small app. No comparison with plain prompting was made for this task.
 - The "AI" in the tested app was its offline rule-based stand-in, so the tests prove the flows and permissions, not the quality of real drafts.
-- The browser scripts live under `.product-planner/verification/e2e/` and need Chrome and `playwright-core` from outside the app (adding Playwright to the app is a pending decision there); they are evidence of this run, not yet part of the app's CI.
-- Everything was done by the host session itself; no sub-agents were delegated, so the "QA · Fable 5.1" attribution means the same session adopting the persona.
+- The browser scripts live under `.product-planner/verification/e2e/`, use the installed Chrome and the app’s `playwright-core` devDependency, and run through `pnpm e2e` with `TACIT_URL` and `CHROME`. This run does not establish a separate CI pipeline.
+- For the original T1–T5 pass, the host session adopted the QA persona without delegating. Later dashboard work used delegated developer/QA agents; follow-up documentation and audits used GPT-6 Luna.
 
 ## Files
 
@@ -92,7 +92,7 @@ That is a scope change after approval, so the agent ran **pp-replan** instead of
 |---|---|---|
 | F6 · T6 | The job page and editor are simple to understand: editor in three explained sections with example placeholders and live list previews, ⌘S to save, a summary line on the published page, level and people counts on the Jobs tab and Home | 8/8 browser checks (t6-job-ux.mjs), 2 min 9 s, $1.25 |
 | F7 · T7 | A test for every module and API route: tenancy, insights, 7 route tests, job and account actions (session and Next internals stubbed) | `pnpm test` 87 → **124 tests**, 25 files; 5 min 30 s, $2.63 |
-| F7 · T8 | The browser suite as one command: `pnpm e2e` reseeds the test database and runs 7 scripts in order; two new scripts (transcript upload, "Add information" → v2, overdue assignment; team rename/delete, deactivation ends the session, AI engine test, connect an AI app and call the MCP endpoint, Insights); a coverage map of all 31 pilot stories; `playwright-core` as a devDependency | **7/7 scripts, 49 checks, 0 console errors**; two script flakes fixed; done 11:44Z, $1.79 |
+| F7 · T8 | The browser suite as one command: `pnpm e2e` reseeds the test database and runs 7 scripts in order; two new scripts (transcript upload, "Add information" → v2, overdue assignment; team rename/delete, deactivation ends the session, AI engine test, connect an AI app and call the MCP endpoint, Insights); a coverage map of all 30 pilot stories; `playwright-core` as a devDependency | **7/7 scripts, 49 checks, 0 console errors**; two script flakes fixed; done 11:44Z, $1.79 |
 | F8 · T9 | Dashboard restyle in the kit repository, delegated to the **pp-developer sub-agent** while T7/T8 ran: type scale, one accent, five status colours used identically everywhere, AA muted text, card layout, warm dark theme, print | CSS-only plus one class hook; 44/44 kit tests; reviewed by the pp-qa sub-agent; pushed as `c075a41`; 12 min 29 s in parallel, $4.12 |
 | F5 · T10 | This section | — |
 
@@ -119,4 +119,20 @@ Three tasks had **medium** risk (T5, T9, T10), and the kit's policy for those re
 
 ### Updated totals
 
-Ten tasks, all done. Build-stage attribution $14.87 plus QA $2.88 (T1–T9 from the table above, T10 still running when written), 48.4 M tokens of which 97 % were cache reads. The "init" bucket is unchanged at $27.13 and still mostly pre-install session work (see finding 5). Wall clock for part 2: replan approved 11:28 Z → T9 done 11:43 Z, with T6, T7, T8 and T9 overlapping.
+Ten tasks were listed in that original write-up. Later review found T10 still in progress, so this was not a completed acceptance audit. Build-stage attribution $14.87 plus QA $2.88 (T1–T9 from the table above, T10 still running when written), 48.4 M tokens of which 97 % were cache reads. The "init" bucket is unchanged at $27.13 and still mostly pre-install session work (see finding 5). Wall clock for part 2: replan approved 11:28 Z → T9 done 11:43 Z, with T6, T7, T8 and T9 overlapping.
+
+
+## Follow-up: evidence refresh and existing-product discovery
+
+A later source and acceptance review retained the original history above while separating test-task completion from pilot readiness. Tacit is an industry-neutral SOP, job-description and staff-knowledge product for service businesses (including restaurants, cafés and workshops); IT onboarding is its first recorded pilot.
+
+- `pnpm test` passed 124 tests in 25 files; typecheck and production build passed before the documentation-only review. The latest saved production browser run completed **7 scripts / 50 checks**, including a real authenticated MCP `search_guides` call. The runner now includes an eighth T5 documentation script; that full eight-script version has **not** been run.
+- The guide access audit found that the earlier not-found screen used a streamed HTTP 200. T11 scoped loading boundaries to non-guide sections and tightened the outsider assertion: production verification now returns **HTTP 404** with no guide content. The expected browser resource-404 message is recorded separately; unexpected console errors still fail.
+- A separate static dashboard audit passed **15 checks** covering all five tabs in both themes, row hover and printing. It predates later CLI upgrades; it is historical evidence, not a current visual audit of those upgrades.
+- The source story catalog contains **30 Pilot stories and six Later stories**. Tests mapped to a story do not prove every acceptance clause. Missing or partial work includes confirmed capture/provenance, expert capture requests, owner-only publication, notifications, gap closure, company SSO and CSV reporting. The owner selected completion of all original Pilot stories before the IT pilot rollout.
+- Updated repository discovery, capabilities, requirements, UX, architecture, feature audit and proposed roadmap are saved under Tacit’s `.product-planner/`. Existing feature/task history is preserved. Implementation is stopped for review; the broader roadmap is not an approved build plan.
+- Historical usage collection reports **50,799,815 tokens** and an estimated **$46.12**. These figures include pre-install work and historical Claude attribution; uncollected current-host usage is not zero. They are not a controlled cost benchmark.
+
+The case-study images below were refreshed from the invented-data verification evidence. The final product acceptance audit remains **pending**; publishing this documentation does not mark T10 or the product complete.
+
+![Dashboard Tasks after the restyle, light theme](screenshots/tacit-qa/dashboard-tasks-light-after.png)
