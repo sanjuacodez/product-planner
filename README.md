@@ -78,9 +78,9 @@ What this shows, honestly:
 
 ### A real session on an existing app
 
-Besides the scripted benchmark, one real `pp-direct` run is written up with its files, screenshots and token data: [testing an existing app through pp-direct](docs/case-study-testing-an-existing-app.md) (2026-10-20). An 18-route Next.js app was tested end to end with 31 browser checks in 5 tasks, about 11 minutes of build time and about $3.8 of build-stage tokens; it found one app defect and six things to improve in the kit, including how the usage hook attributes pre-install session tokens.
+Besides the scripted benchmark, one real `pp-direct` run is written up with its files, screenshots and token data: [testing an existing app through pp-direct](docs/case-study-testing-an-existing-app.md) (2026-10-20). An 18-route Next.js app was tested end to end: 5 tasks, 31 browser checks, about 11 minutes of build time and about $3.8 of build-stage tokens; one app defect and six kit findings. A scope change then arrived mid-build and went through `pp-replan`: 5 more tasks (a UX rework, 87 → 124 unit tests, a 49-check browser suite as one command, and the dashboard restyle you see below, delegated to the pp-developer sub-agent and reviewed by pp-qa), with twelve kit findings in total, including how the usage hook attributes pre-install and sub-agent tokens.
 
-![Tasks tab of the dashboard at the end of that run](docs/screenshots/tacit-qa/dashboard-tasks.png)
+![Tasks tab of the restyled dashboard at the end of that run, dark theme](docs/screenshots/tacit-qa/dashboard-tasks-dark-after.png)
 
 ## Requirements
 
