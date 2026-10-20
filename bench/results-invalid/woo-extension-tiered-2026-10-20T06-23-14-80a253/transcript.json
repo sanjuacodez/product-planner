@@ -1,0 +1,17 @@
+[
+  {
+    "message": "I want a WooCommerce extension that sets a minimum order amount per customer role. We will sell it on the WooCommerce Marketplace, so it must meet the marketplace's quality, security and coding expect",
+    "result": "You've hit your session limit · resets 3:50pm (Asia/Calcutta)",
+    "cost": 3.990069025,
+    "ms": 1199499,
+    "turns": 22,
+    "error": true,
+    "subtype": "success",
+    "tokens": {
+      "input": 32,
+      "cacheWrite": 28158,
+      "cacheRead": 1835893,
+      "output": 15589
+    }
+  }
+]

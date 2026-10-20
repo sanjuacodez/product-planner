@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: original API: stock defaults to zero and add accumulates quantities
+ok 1 - original API: stock defaults to zero and add accumulates quantities
+  ---
+  duration_ms: 0.401042
+  type: 'test'
+  ...
+# Subtest: original API: reserve subtracts and quantities stay nonnegative
+ok 2 - original API: reserve subtracts and quantities stay nonnegative
+  ---
+  duration_ms: 0.521667
+  type: 'test'
+  ...
+# Subtest: original API: invalid inputs retain their exact error code
+ok 3 - original API: invalid inputs retain their exact error code
+  ---
+  duration_ms: 0.248917
+  type: 'test'
+  ...
+# Subtest: original API: instances and SKUs stay isolated
+ok 4 - original API: instances and SKUs stay isolated
+  ---
+  duration_ms: 0.046583
+  type: 'test'
+  ...
+# Subtest: original API: failed reserve is atomic, including unknown SKU
+ok 5 - original API: failed reserve is atomic, including unknown SKU
+  ---
+  duration_ms: 0.055875
+  type: 'test'
+  ...
+# Subtest: change: release returns reserved stock and reports new quantity
+ok 6 - change: release returns reserved stock and reports new quantity
+  ---
+  duration_ms: 0.037875
+  type: 'test'
+  ...
+# Subtest: change: excessive release is atomic for stock and reservation
+ok 7 - change: excessive release is atomic for stock and reservation
+  ---
+  duration_ms: 0.047542
+  type: 'test'
+  ...
+# Subtest: change: reservations accumulate and remain SKU-specific
+ok 8 - change: reservations accumulate and remain SKU-specific
+  ---
+  duration_ms: 0.043667
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 41.723375

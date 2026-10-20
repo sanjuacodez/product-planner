@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "The inventory core is built and tested, and the public API is documented. All 14 tests pass, and the final acceptance audit passed.\n\n**What was built**\n- **`inventory.js`**: a plain JavaScript ES module with no dependencies that exports `createInventory()`. Each call gets its own in-memory store, so separate inventories never share stock.\n  - `add(sku, quantity)` creates or increases stock and returns the new quantity.\n  - `reserve(sku, quantity)` subtracts stock and returns the new quantity.\n  - `stock(sku)` returns the current quantity, or 0 for an unknown SKU.\n  - Errors are `Error` objects with a `code` of `INVALID_INPUT` or `INSUFFICIENT_STOCK`. Input is checked before anything changes, so a failed call never alters stock and quantities can't go negative.\n- **`README.md`**: documents the API, the validation rules, the two error codes, the guarantees and how to run the tests.\n- **`package.json`**: marks the project as an ES module, adds `npm test` (Node's built-in test runner, Node 18 or later), and lists no dependencies.\n\n**Choices I made where you didn't specify**\n- A SKU made only of spaces counts as invalid. SKUs are case-sensitive and are not trimmed.\n- `stock()` also checks the SKU, so an invalid one throws `INVALID_INPUT`.\n- Quantities must be whole numbers no larger than JavaScript's largest exact integer (`Number.MAX_SAFE_INTEGER`). An `add` that would go past that limit throws `INVALID_INPUT`.\n- If a call has bad input and would also exceed stock, the bad input wins: it throws `INVALID_INPUT`.\n- Reserving down to exactly 0 is allowed. A failed reserve on an unknown SKU does not create it.\n\n**How it was verified**\n- `test/inventory.test.js` has 9 tests, one per requirement, using exact values (adding 10 then 5 gives 15, and reserving 4 then leaves 11).\n- `test/readme.test.js` has 5 tests. They check that the README covers every method and both error codes, and they run the README's usage example against the real module.\n- Two separate review passes also checked the behaviour and every README claim against the code, and found no problems.\n\n**Limitations**\n- Stock lives only in memory and is lost when the process ends.\n- There is no way to release a reservation; that would be a natural next addition if you need it.\n- The \"no dependencies\" check is a simple text check of the source and `package.json`, not a full dependency audit.\n- Nothing is committed yet.",
+    "cost": 1.017892155,
+    "ms": 248950,
+    "turns": 27,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 46,
+      "cacheWrite": 45099,
+      "cacheRead": 870922,
+      "output": 13053
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I've added `release(sku, quantity)` with reservation tracking, and updated the tests and README. All 26 tests pass, and the final acceptance audit passed.\n\n**What changed**\n- **Reservations:** each inventory now keeps its own count of outstanding reservations per SKU. A successful `reserve` increases it. `reserve` still subtracts stock and returns the new stock, as before.\n- **`release(sku, quantity)`:** adds the quantity back to stock, lowers the outstanding reservation and returns the new stock.\n  - A bad SKU or quantity throws `INVALID_INPUT`, using the same rules as the other methods.\n  - Releasing more than is outstanding throws `INVALID_RELEASE`, including on a SKU that has never been reserved.\n  - A failed call leaves both stock and reservations unchanged.\n- **`add`, `reserve`, `stock`** and the `INVALID_INPUT` / `INSUFFICIENT_STOCK` errors work exactly as before. The isolation and \"failed calls change nothing\" rules still apply.\n\n**Choices I made** (recorded in `.product-planner/decisions.md`)\n- **Added `reserved(sku)`:** you asked to track reservations but didn't ask for a way to read them. This getter returns the outstanding amount for a SKU, or 0 for an unknown one.\n- **Error order:** a bad SKU or quantity is reported first, then `INVALID_RELEASE`, then the size limit. A release that would push stock past JavaScript's largest exact integer throws `INVALID_INPUT`, as `add` does.\n\n**How it was verified**\n- **Tests:** there are 12 new ones, and the 14 original tests still pass, 9 of them with their code untouched. The README test now runs the usage example and checks that each value shown in the comments is what the code actually returns.\n- **Problem found and fixed:** the independent review found that the README described the error order wrongly in one edge case: a release that both exceeds the reservation and would overflow. The code was right. I corrected the wording, added a test that locks in that order, and the review then passed.\n\n**Limitations**\n- `release` returns items to the shared reservation count for a SKU. It doesn't track individual reservations or who made them.\n- Everything is still in memory only.\n- None of this work, from either round, is committed yet.",
+    "cost": 2.398167510000001,
+    "ms": 357155,
+    "turns": 35,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 54,
+      "cacheWrite": 38969,
+      "cacheRead": 2084943,
+      "output": 17641
+    }
+  }
+]

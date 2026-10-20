@@ -107,7 +107,9 @@ function ownerReply(agentText) {
   return `${(res.result || '').trim() || 'Use your recommendations.'}\n\n${APPROVE}`;
 }
 let stopReason = 'message_limit';
-const asksSomething = (text) => /\?\s*$|\bapprov|\breply\b|\bconfirm\b|which option|let me know|should i\b|\bproceed\b|\bwant me to\b/i.test(text.slice(-600));
+// Waiting for the user: ends with a question, uses a hand-over phrase, or lists several questions near the end.
+const asksSomething = (text) => /\?\s*$|\bapprov|\brepl(y|ies)\b|\bconfirm\b|which option|let me know|should i\b|\bproceed\b|\bwant me to\b|once you('ve| have)? (answer|decid|confirm)|your answers?\b|answer (these|the|my) questions|before i (write|build|start|implement)/i.test(text.slice(-800))
+  || (text.slice(-4000).match(/\?(\s|\*|\)|$)/g) || []).length >= 3;
 // Planner arm: finished when the phase is done, or the build has nothing left except blocked tasks.
 const plannerDone = (text) => {
   const dir = path.join(ws, '.product-planner');
@@ -135,6 +137,10 @@ for (let i = 0; i < maxMessages && cost < budget; i++) {
     tokens: { input: u.input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, output: u.output_tokens || 0 } });
   fs.writeFileSync(path.join(out, 'transcript.json'), JSON.stringify(turns, null, 2));
   console.log(`[${opt.arm}] message ${i + 1}: $${(res.total_cost_usd || 0).toFixed(2)} · ${res.num_turns} turns · ${res.subtype || ''}`);
+  // A subscription usage limit is not the arm's failure: stop and mark it so the run is redone after the reset.
+  if (/hit your (session|usage|weekly|daily) limit|usage limit reached/i.test(String(res.result || ''))) { stopReason = 'usage_limit'; break; }
+  // Hitting the per-message turn cap is not an error: the scripted user simply continues the conversation.
+  if (res.subtype === 'error_max_turns' && session && cost < budget) continue;
   if (res.is_error || r.error || r.status !== 0) { stopReason = res.subtype?.includes('budget') ? 'budget_exhausted' : 'host_error'; break; }
   if (queue.length) continue;
   if (PLANNER) { if (plannerDone(res.result || '')) { stopReason = 'completed'; break; } continue; }

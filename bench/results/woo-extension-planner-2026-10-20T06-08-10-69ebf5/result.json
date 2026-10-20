@@ -1,0 +1,86 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-20T06:26:36.935Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": false,
+      "errors": 54,
+      "details": "tests/e2e/.data/plugins/woocommerce/assets/client/admin/app/style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/app/style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/1528.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/3799.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/3799.style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/3799.style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/activity-panels-setup.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/homescreen.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/homescreen.style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/homescreen.style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/import-products.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/import-products.style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/import-products.style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/products.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/products.style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/products.style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/chunks/shipping-recommendation.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/embed/style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/embed/style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/experimental/index.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/experimental/style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/experimental/style.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/onboarding/index.js, tests/e2e/.data/plugins/woocommerce/assets/client/admin/onboarding/style-rtl.css, tests/e2e/.data/plugins/woocommerce/assets/client/admin/onboarding/style.css, tests/e2e/.data/plugins/woocommerce/includes/admin/class-wc-admin-marketplace-promotions.php, tests/e2e/.data/plugins/woocommerce/src/Admin/Features/OnboardingTasks/TaskLists.php, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/app/style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/app/style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/1528.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/activity-panels-setup.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/chunks/shipping-recommendation.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/embed/style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/embed/style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/experimental/index.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/experimental/style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/experimental/style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/onboarding/index.js, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/onboarding/style-rtl.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/assets/client/admin/onboarding/style.css, tests/e2e/.data/site/wp-content/plugins/woocommerce/includes/admin/class-wc-admin-marketplace-promotions.php, tests/e2e/.data/site/wp-content/plugins/woocommerce/src/Admin/Features/OnboardingTasks/TaskLists.php"
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "composer test: OK (61 tests, 184 assertions)"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"phpstan produced no JSON report\",\"output\":\"\\nIn Resolver.php line 476:\\n                                                                               \\n  Service 'rules.1' (type of SzepeViktor\\\\PHPStan\\\\WordPress\\\\HookDocsRule): Mul  \\n  tiple services of type SzepeViktor\\\\PHPStan\\\\Word"
+    },
+    {
+      "name": "security-scan",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"nonce-or-settings-api\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"capability-"
+    }
+  ],
+  "review": null,
+  "costUsd": 5.6778,
+  "costByModel": {
+    "claude-opus-5-5": 5.6778
+  },
+  "minutes": 18.3,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 81,
+  "tokens": {
+    "input": 160,
+    "cacheWrite": 174913,
+    "cacheRead": 8424526,
+    "output": 101851,
+    "total": 8701450
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-planner-KseLtV"
+}

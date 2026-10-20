@@ -1,0 +1,66 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 2,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "scope-change",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T05:40:52.801Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8,
+    "groups": {
+      "original api": {
+        "pass": 5,
+        "total": 5
+      },
+      "change": {
+        "pass": 3,
+        "total": 3
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 23 - returned inventory object is frozen # pass 23 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 0.9624,
+  "costByModel": {
+    "claude-opus-5-5": 0.9624
+  },
+  "minutes": 2.5,
+  "messages": 2,
+  "scriptedReplies": 0,
+  "agentTurns": 19,
+  "tokens": {
+    "input": 20,
+    "cacheWrite": 32504,
+    "cacheRead": 307546,
+    "output": 17284,
+    "total": 357354
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-scope-change-plain-BEvEGK"
+}

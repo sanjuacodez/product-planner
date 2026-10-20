@@ -1,0 +1,83 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 4,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "product-owner",
+  "arm": "speckit",
+  "model": "opus",
+  "date": "2026-10-20T06:00:25.722Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 17,
+    "fail": 0,
+    "total": 17,
+    "groups": {
+      "prompt": {
+        "pass": 5,
+        "total": 5
+      },
+      "points": {
+        "pass": 3,
+        "total": 3
+      },
+      "tiers": {
+        "pass": 3,
+        "total": 3
+      },
+      "redeem": {
+        "pass": 2,
+        "total": 2
+      },
+      "refunds": {
+        "pass": 4,
+        "total": 4
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 7 - atomicity: failed operations change nothing # pass 42 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "owner": {
+    "answers": 1,
+    "model": "haiku",
+    "costUsd": 0.0035
+  },
+  "costUsd": 4.2205,
+  "costByModel": {
+    "claude-opus-5-5": 4.2204
+  },
+  "minutes": 6.8,
+  "messages": 5,
+  "scriptedReplies": 1,
+  "agentTurns": 46,
+  "tokens": {
+    "input": 52,
+    "cacheWrite": 96962,
+    "cacheRead": 1864698,
+    "output": 45021,
+    "total": 2006733
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-product-owner-speckit-JpQU4R"
+}

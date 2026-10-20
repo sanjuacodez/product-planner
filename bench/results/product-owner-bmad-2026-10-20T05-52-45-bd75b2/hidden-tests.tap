@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: prompt: unknown customers start at zero, earn adds its returned points, refund reverses them
+ok 1 - prompt: unknown customers start at zero, earn adds its returned points, refund reverses them
+  ---
+  duration_ms: 0.829041
+  type: 'test'
+  ...
+# Subtest: prompt: invalid input throws INVALID_INPUT and changes nothing
+ok 2 - prompt: invalid input throws INVALID_INPUT and changes nothing
+  ---
+  duration_ms: 0.346083
+  type: 'test'
+  ...
+# Subtest: prompt: a reused purchaseId throws DUPLICATE_PURCHASE for any customer and changes nothing
+ok 3 - prompt: a reused purchaseId throws DUPLICATE_PURCHASE for any customer and changes nothing
+  ---
+  duration_ms: 0.090125
+  type: 'test'
+  ...
+# Subtest: prompt: redeeming more than the balance throws INSUFFICIENT_POINTS and changes nothing
+ok 4 - prompt: redeeming more than the balance throws INSUFFICIENT_POINTS and changes nothing
+  ---
+  duration_ms: 0.062041
+  type: 'test'
+  ...
+# Subtest: prompt: ledgers and customers are independent
+ok 5 - prompt: ledgers and customers are independent
+  ---
+  duration_ms: 0.088709
+  type: 'test'
+  ...
+# Subtest: points: bronze earns 1 point per 10 rupees, rounded down per purchase
+ok 6 - points: bronze earns 1 point per 10 rupees, rounded down per purchase
+  ---
+  duration_ms: 0.064042
+  type: 'test'
+  ...
+# Subtest: points: the first purchase earns a 20 point welcome bonus, once per customer
+ok 7 - points: the first purchase earns a 20 point welcome bonus, once per customer
+  ---
+  duration_ms: 0.075459
+  type: 'test'
+  ...
+# Subtest: tiers: bronze by default, silver at 500 and gold at 1500 lifetime points
+ok 8 - tiers: bronze by default, silver at 500 and gold at 1500 lifetime points
+  ---
+  duration_ms: 0.050167
+  type: 'test'
+  ...
+# Subtest: tiers: tier follows lifetime points, so redeeming never lowers it
+ok 9 - tiers: tier follows lifetime points, so redeeming never lowers it
+  ---
+  duration_ms: 0.177583
+  type: 'test'
+  ...
+# Subtest: points: silver 1.5x and gold 2x apply to rounded-down base points, rounded down again
+ok 10 - points: silver 1.5x and gold 2x apply to rounded-down base points, rounded down again
+  ---
+  duration_ms: 0.21425
+  type: 'test'
+  ...
+# Subtest: tiers: an upgrade applies from the next purchase, not the one that crosses the threshold
+ok 11 - tiers: an upgrade applies from the next purchase, not the one that crosses the threshold
+  ---
+  duration_ms: 0.069834
+  type: 'test'
+  ...
+# Subtest: redeem: only multiples of 100 points, otherwise REDEEM_STEP and nothing changes
+ok 12 - redeem: only multiples of 100 points, otherwise REDEEM_STEP and nothing changes
+  ---
+  duration_ms: 0.046375
+  type: 'test'
+  ...
+# Subtest: redeem: the multiple-of-100 check comes before the balance check
+ok 13 - redeem: the multiple-of-100 check comes before the balance check
+  ---
+  duration_ms: 0.035375
+  type: 'test'
+  ...
+# Subtest: refunds: remove exactly the points the purchase earned and return the new balance
+ok 14 - refunds: remove exactly the points the purchase earned and return the new balance
+  ---
+  duration_ms: 0.027292
+  type: 'test'
+  ...
+# Subtest: refunds: after redemption the balance goes negative and blocks redeeming
+ok 15 - refunds: after redemption the balance goes negative and blocks redeeming
+  ---
+  duration_ms: 0.03275
+  type: 'test'
+  ...
+# Subtest: refunds: reduce lifetime points and can move a customer down a tier
+ok 16 - refunds: reduce lifetime points and can move a customer down a tier
+  ---
+  duration_ms: 0.026583
+  type: 'test'
+  ...
+# Subtest: refunds: ALREADY_REFUNDED, UNKNOWN_PURCHASE, and a refunded purchaseId stays used
+ok 17 - refunds: ALREADY_REFUNDED, UNKNOWN_PURCHASE, and a refunded purchaseId stays used
+  ---
+  duration_ms: 0.04525
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42.840458

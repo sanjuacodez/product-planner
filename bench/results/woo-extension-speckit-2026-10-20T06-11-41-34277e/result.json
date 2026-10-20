@@ -1,0 +1,86 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 4,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "speckit",
+  "model": "opus",
+  "date": "2026-10-20T06:23:14.038Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":1,\"files\":7,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":7,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"first\":[\"includes/class-mobr-rules.php:125 Property WooCommerce::$cart (WC_Cart) in empty() is not falsy. [empty.property]\"]}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 2,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":false,\"errors\":[\"includes/admin/class-mobr-settings-page.php:128: $_POST['?'] used without sanitising (inside: wp_unslash)\"],\"warnings\":[]"
+    }
+  ],
+  "review": null,
+  "costUsd": 5.8051,
+  "costByModel": {
+    "claude-opus-5-5": 5.805
+  },
+  "minutes": 11.1,
+  "messages": 4,
+  "scriptedReplies": 0,
+  "agentTurns": 66,
+  "tokens": {
+    "input": 74,
+    "cacheWrite": 137091,
+    "cacheRead": 3427903,
+    "output": 73716,
+    "total": 3638784
+  },
+  "ownTests": false,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-speckit-QvvoO6"
+}

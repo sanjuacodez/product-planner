@@ -1,0 +1,66 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 2,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "scope-change",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-20T05:52:42.925Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8,
+    "groups": {
+      "original api": {
+        "pass": 5,
+        "total": 5
+      },
+      "change": {
+        "pass": 3,
+        "total": 3
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 28 - README examples match actual behaviour # pass 28 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 2.3398,
+  "costByModel": {
+    "claude-opus-5-5": 2.3398
+  },
+  "minutes": 5.4,
+  "messages": 2,
+  "scriptedReplies": 0,
+  "agentTurns": 57,
+  "tokens": {
+    "input": 80,
+    "cacheWrite": 69783,
+    "cacheRead": 2044023,
+    "output": 29061,
+    "total": 2142947
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-scope-change-planner-k8VRwo"
+}

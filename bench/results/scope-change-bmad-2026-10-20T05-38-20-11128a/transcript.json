@@ -1,0 +1,32 @@
+[
+  {
+    "message": "/bmad-build I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runti",
+    "result": "I built the inventory core in `inventory.js`. `createInventory()` returns an independent in-memory inventory with `add`, `reserve` and `stock`, and the public API is documented in `README.md`. All 21 tests pass under `npm test`, using Node's built-in test runner with no dependencies.\n\nChoices I made where you hadn't specified:\n- **SKUs:** case-sensitive and not trimmed, so `' A'` and `'A'` are different SKUs, and a SKU made only of spaces is accepted.\n- **Validation order:** input is checked before stock, so `reserve('UNKNOWN', 0)` throws `INVALID_INPUT`, not `INSUFFICIENT_STOCK`.\n- **`stock()`:** also rejects an invalid SKU with `INVALID_INPUT`.\n- **Very large totals:** `add` throws `INVALID_INPUT` if the total would exceed `Number.MAX_SAFE_INTEGER`, so counts stay exact.\n- **Node version:** requires Node 20 or later.\n\nA review found a few small gaps, which I fixed: the minimum Node version was set too low, one test didn't check that over-reservations actually failed, and the SKU rule and error behaviour weren't fully documented. I set aside one idea for later in `deferred-work.md`: a way to release a reservation. As specified, `reserve` permanently subtracts stock.\n\nCommitted as `207dfe9`. Next, I can walk you through the change with `bmad-walkthrough`, or make another change.",
+    "cost": 1.007231,
+    "ms": 184393,
+    "turns": 26,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 34,
+      "cacheWrite": 48881,
+      "cacheRead": 751947,
+      "output": 13428
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I added `release(sku, quantity)`. Each SKU now tracks how much is reserved and not yet returned. `reserve` adds to that amount and `release` takes from it, returning the items to stock. All 37 tests pass.\n\n- **Rules from your request:** `release` returns the resulting stock. Releasing more than is reserved throws `INVALID_RELEASE` and leaves both stock and reservations unchanged. That includes an unknown SKU or one with nothing reserved. Bad SKUs or quantities throw `INVALID_INPUT`, and that check runs first.\n- **Existing behaviour:** `add`, `reserve` and `stock` work exactly as before. Each inventory is still independent, and failed calls still change nothing.\n- **What I added that you didn't ask for:**\n  - A read-only `reserved(sku)` method that reports the reserved amount (0 for an unknown SKU).\n  - An exported `INVALID_RELEASE` constant.\n  - The package version is now 1.1.0.\n- **Very large stock:** `release` throws `INVALID_INPUT` if stock would go above `Number.MAX_SAFE_INTEGER`, the same as `add`.\n\nThe review found one real problem, which I fixed. I had added a similar limit check to `reserve`, which gave it a new way to fail and broke your rule to preserve the existing behaviour. I removed it, so the reserved count can lose precision above about 9 quadrillion (9×10¹⁵) units, which normal use won't reach. I also fixed a few small issues, mainly a test that `stock + reserved` always equals the total added, plus README and code-comment updates. Nothing was set aside this time.\n\nThe release-operation idea from last round is still listed in `deferred-work.md`, because the workflow doesn't allow editing earlier entries even though this change delivers it.\n\nCommitted as `1c5bff8`. Next, I can walk you through the change with `bmad-walkthrough`, or make another change.",
+    "cost": 1.9892544000000005,
+    "ms": 197309,
+    "turns": 30,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 28,
+      "cacheWrite": 27233,
+      "cacheRead": 1060966,
+      "output": 15616
+    }
+  }
+]

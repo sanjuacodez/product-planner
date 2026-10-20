@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I've built the inventory core. All 15 tests pass and the final acceptance audit passed.\n\n**What you get**\n- **`inventory.js`**: a plain JavaScript ES module with no dependencies. It exports `createInventory()`, and each call gives you a separate in-memory inventory with `add`, `reserve` and `stock`. Inputs are fully checked before stock changes, so a failed call never changes anything and stock can't go below zero. Errors come back as an `Error` with code `INVALID_INPUT` or `INSUFFICIENT_STOCK`.\n- **`README.md`**: documents the public API, the error codes, the input rules, the choices I made for details you didn't specify, and how to run the tests.\n- **Tests**: run with `npm test`, using Node's built-in test runner. There are 13 tests covering every rule you gave and 2 tests on the README; one of them actually runs the README's usage example to confirm the values and error codes it shows.\n\n**Choices I made where you didn't specify**\n- `stock()` rejects an invalid SKU with `INVALID_INPUT`.\n- SKUs are case-sensitive and aren't trimmed, so a string of only spaces counts as a valid SKU.\n- Input checks run before the stock check. So reserving a bad quantity on an unknown SKU gives `INVALID_INPUT`, not `INSUFFICIENT_STOCK`.\n- Quantities must be whole numbers no larger than JavaScript can represent exactly (`Number.MAX_SAFE_INTEGER`). An `add` that would push stock past that limit throws `INVALID_INPUT` and leaves stock unchanged.\n- Reserving exactly what's available is allowed and leaves 0.\n\n**How it was checked**\n- Two tracked tasks: the code with its tests, then the README. For each one, a developer sub-agent wrote the work and a separate QA sub-agent ran the tests, checked behaviour by hand and filled in a verification report. For the README, QA also compared every documented value and error code against the code.\n- I reviewed the code and README myself.\n- Planning records and the dashboard are updated.\n\n**Limitations**\n- Inventories live only in memory and are lost when the program ends.\n- The no-dependencies test just scans the source text for imports.\n- The README says Node 18 or later, but the tests were only run on Node 22.\n- A stray verification template I created, `.product-planner/verification/T1.tpl.json`, is still there because deleting it needed approval. You can safely delete it.\n\nNothing is committed yet; say if you want me to commit.",
+    "cost": 1.2945926500000002,
+    "ms": 287596,
+    "turns": 44,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 64,
+      "cacheWrite": 55914,
+      "cacheRead": 1450740,
+      "output": 14664
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "`release(sku, quantity)` is added, with the outstanding reservation tracked per SKU. All 30 tests pass and the final acceptance audit passed again.\n\n**How it behaves**\n- **Reservations:** `reserve` still returns the same values and throws the same errors as before. It now also adds the reserved amount to that SKU's outstanding reservation.\n- **`release(sku, quantity)`:** puts the quantity back into stock, takes it off the outstanding reservation and returns the resulting stock quantity.\n- **Over-release:** releasing more than is reserved throws `INVALID_RELEASE` and leaves both stock and reservations unchanged.\n- **Bad input:** `release` uses the same `INVALID_INPUT` checks as the other methods.\n- **Unchanged:** every original method, error code, the independence of each inventory and the rule that failed calls change nothing all still hold. The 13 original tests are byte-for-byte unchanged and still pass.\n\n**Choices I made where you didn't specify**\n- I added a read-only `reserved(sku)` method so the outstanding reservation can be checked. It returns 0 for an unknown SKU.\n- Input checks run first, so a bad SKU or quantity gives `INVALID_INPUT` before any reservation check.\n- Releasing on an unknown SKU, or one with nothing reserved, throws `INVALID_RELEASE`.\n- `add` does not affect reservations.\n- A release that would push stock past `Number.MAX_SAFE_INTEGER` (JavaScript's largest exact whole number) throws `INVALID_INPUT` and changes nothing, matching how `add` already behaves.\n\n**Decision for you:** `reserve` can now throw `INVALID_INPUT` in one case where it used to succeed. That happens only when one SKU's outstanding reservation would exceed `Number.MAX_SAFE_INTEGER`, which is over 9 quadrillion units. This guard keeps the reservation count exact, and the README documents it. If you'd rather `reserve` never gain a new error, I can drop the guard, but very large reservation totals could then lose precision.\n\n**How it was checked**\n- Two follow-up tasks went through a developer sub-agent and then a separate QA sub-agent: the code with 15 new tests, then the README update.\n- The README's usage example now includes `release`, `reserved` and an `INVALID_RELEASE` error, and a test runs it.\n- I reviewed the code myself.\n- The change and these choices are recorded in `.product-planner/decisions.md`.\n\n**Limitations**\n- The README still says Node 18 or later, but the tests were only run on Node 22.\n- Two stray files can be deleted: `.product-planner/verification/T1.tpl.json` and `.product-planner/replan-F3.json`, which was the input file for the new feature record.\n\nNothing is committed yet; say if you want me to commit.",
+    "cost": 2.480036240000001,
+    "ms": 314755,
+    "turns": 27,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 44,
+      "cacheWrite": 28705,
+      "cacheRead": 1846934,
+      "output": 13137
+    }
+  }
+]

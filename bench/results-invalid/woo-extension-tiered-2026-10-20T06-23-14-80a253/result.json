@@ -1,0 +1,88 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "tiered",
+  "model": "opus",
+  "date": "2026-10-20T06:43:17.529Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "composer test: OK (60 tests, 167 assertions)"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":6,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":6,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"phpstan produced no JSON report\",\"output\":\"Running PHPStan with incompatible extensions\\nYou're running PHPStan from a different Composer project\\nthan the one where you installed extensions.\\n\\nYour PHPStan version is: 2.3.1\\nInstalled PHPStan extensions support: >=1.10.31.0-dev, <2.0.0"
+    },
+    {
+      "name": "security-scan",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"nonce-or-settings-api\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"capability-"
+    }
+  ],
+  "review": null,
+  "costUsd": 3.9901,
+  "costByModel": {
+    "claude-opus-5-5": 2.7036,
+    "claude-sonnet-5-5": 1.2257,
+    "claude-haiku-5-5": 0.0608
+  },
+  "minutes": 20,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 22,
+  "tokens": {
+    "input": 32,
+    "cacheWrite": 28158,
+    "cacheRead": 1835893,
+    "output": 15589,
+    "total": 1879672
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-tiered-HuKSxC"
+}

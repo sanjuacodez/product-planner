@@ -1,0 +1,17 @@
+[
+  {
+    "message": "/speckit-specify I want a WooCommerce extension that sets a minimum order amount per customer role. We will sell it on the WooCommerce Marketplace, so it must meet the marketplace's quality, security ",
+    "result": "You've hit your session limit · resets 3:50pm (Asia/Calcutta)",
+    "cost": 0,
+    "ms": 2518,
+    "turns": 1,
+    "error": true,
+    "subtype": "success",
+    "tokens": {
+      "input": 0,
+      "cacheWrite": 0,
+      "cacheRead": 0,
+      "output": 0
+    }
+  }
+]

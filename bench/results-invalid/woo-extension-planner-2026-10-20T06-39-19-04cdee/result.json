@@ -1,0 +1,86 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-20T06:43:46.591Z",
+  "hiddenExitCode": 1,
+  "hidden": {
+    "pass": 1,
+    "fail": 13,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 1,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": false,
+      "errors": 27,
+      "details": "tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/app/style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/app/style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/1528.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/3799.style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/activity-panels-setup.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/homescreen.style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/import-products.style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/products.style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/chunks/shipping-recommendation.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/embed/style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/embed/style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/experimental/index.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/experimental/style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/experimental/style.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/onboarding/index.js, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/onboarding/style-rtl.css, tests/env/wp/wp-content/plugins/woocommerce/assets/client/admin/onboarding/style.css, tests/env/wp/wp-content/plugins/woocommerce/includes/admin/class-wc-admin-marketplace-promotions.php, tests/env/wp/wp-content/plugins/woocommerce/src/Admin/Features/OnboardingTasks/TaskLists.php"
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-planner-06GVau/min-order-by-role\"}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-planner-06GVau/min-order-by-role\"}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-planner-06GVau/min-order-by-role\"}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"structure\":{\"pass\":false,\"errors\":[\"main plugin file not found: min-order-by-role/min-order-by-role.php\"],\"warnings\":[],\"errorCount\":1}}"
+    }
+  ],
+  "review": null,
+  "costUsd": 1.128,
+  "costByModel": {
+    "claude-opus-5-5": 1.128
+  },
+  "minutes": 4.4,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 38,
+  "tokens": {
+    "input": 48,
+    "cacheWrite": 53468,
+    "cacheRead": 1091171,
+    "output": 24090,
+    "total": 1168777
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-planner-06GVau"
+}

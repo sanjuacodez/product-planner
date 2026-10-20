@@ -1,0 +1,17 @@
+[
+  {
+    "message": "I run a café and want the core of a loyalty-points ledger for it. Make it a plain JavaScript ES module, no runtime dependencies, no UI or server. Put it in loyalty.js exporting createLedger(). Each ca",
+    "result": "The repo is empty, so I'll start from scratch. You asked me to check your shop's rules before deciding them, so here are my questions. Each one has a suggested default you can just accept.\n\n**Earning points**\n1. What's the earn rate? For example, 1 point per ₹10 spent?\n2. How should partial amounts round? For example, does ₹95 give 9 points (round down)? Is there a minimum purchase?\n3. Do higher tiers earn more? For example, gold earns 1.5× or 2×? If so, is the bonus based on the tier *before* the purchase or *after* it?\n\n**Redeeming**\n4. Is there a minimum redemption, or do points have to be spent in fixed blocks (for example, multiples of 100)?\n5. Does redeeming ever change a customer's tier, or do tiers only depend on what they've earned or spent?\n\n**Refunds**\n6. When a purchase is refunded, should the customer lose exactly the points it earned?\n7. If they've already spent those points, so the balance would go below 0, what should happen? Options:\n   (a) the refund is blocked with an error,\n   (b) the balance goes to 0 and the rest is written off, or\n   (c) the balance is allowed to go negative.\n8. Can a refunded purchaseId ever be used again, or is it permanently taken? (My default is permanently taken.)\n9. Can a purchase be refunded twice? (My default is no: it throws an error such as `ALREADY_REFUNDED`. Refunding an unknown ID throws `UNKNOWN_PURCHASE`.)\n\n**Tiers**\n10. What are the tier names and thresholds? For example: bronze from 0, silver from ₹5,000 spent, gold from ₹20,000.\n11. Are thresholds based on total rupees spent, total points earned, or current balance?\n12. Can a refund move a customer down a tier, or are tiers keep-once-reached?\n13. Do tiers reset after a time period (yearly, for example), or count lifetime totals?\n\nOnce you've answered, I'll build `loyalty.js`, write tests with `node:test` (no dependencies) and document the API in a README.",
+    "cost": 0.114836,
+    "ms": 13323,
+    "turns": 2,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 4,
+      "cacheWrite": 11291,
+      "cacheRead": 34460,
+      "output": 880
+    }
+  }
+]

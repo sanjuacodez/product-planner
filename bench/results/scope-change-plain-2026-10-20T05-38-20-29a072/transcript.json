@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I built the inventory core in `inventory.js` and all 15 tests pass (`npm test`, which uses Node's built-in test runner). It has no runtime dependencies. I haven't committed anything.\n\n**Files:**\n- `inventory.js`: exports `createInventory()` plus the two error codes, `INVALID_INPUT` and `INSUFFICIENT_STOCK`.\n- `inventory.test.js`: the tests.\n- `README.md`: documents the public API, the input rules, the errors and the guarantees.\n- `package.json`: sets the package up as an ES module, makes `npm test` run the tests, and requires Node 18 or later.\n\n**What I chose for the details you didn't specify:**\n- **SKUs** must be primitive strings and are matched exactly: case matters and spaces aren't trimmed. A SKU like `\"__proto__\"` works like any other.\n- **Quantities** must be numbers from 1 up to JavaScript's largest exact integer (`Number.MAX_SAFE_INTEGER`). Numeric strings like `'5'`, fractions, `NaN`, `Infinity` and BigInts are rejected with `INVALID_INPUT`.\n- **`add` overflow:** if the new total would be bigger than JavaScript can store exactly, `add` throws `INVALID_INPUT` and leaves stock unchanged.\n- **`stock(sku)`** also checks the SKU, so `stock('')` throws `INVALID_INPUT` rather than returning 0.\n- **Bad input wins:** `reserve('UNKNOWN', -1)` throws `INVALID_INPUT`, not `INSUFFICIENT_STOCK`, because input is checked before stock.\n- **Reserving to zero** is allowed, and the SKU stays known with a stock of 0.\n- The object `createInventory()` returns is frozen, so its methods can't be replaced.\n- Errors are plain `Error` objects with a `code` property and a readable message, e.g. how much is actually available.\n\n**What the tests cover:** every requirement you listed. That includes stock staying unchanged after each kind of failure, inventories being independent of each other, and a 5,000-step randomized run checked against a simple model to confirm stock never goes negative.",
+    "cost": 0.28905400000000003,
+    "ms": 65860,
+    "turns": 7,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 17254,
+      "cacheRead": 115510,
+      "output": 6394
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I added `release(sku, quantity)`, and all 23 tests pass: the original 15 (some extended) plus 8 new ones. All existing functions, error codes, isolation and failure rules work as before. Nothing is committed yet.\n\n**How it works**\n- Each SKU now has a reserved count alongside its stock. `reserve` takes items out of stock and adds them to that count; `release` moves them back.\n- `release` checks its input exactly like the other operations, so bad input throws `INVALID_INPUT`.\n- It throws `INVALID_RELEASE` if you release more than is currently reserved, and leaves both stock and the reserved count unchanged.\n\n**Choices I made for things you didn't specify**\n- **New `reserved(sku)` function:** without it there's no way to see how much is reserved. It returns 0 for an unknown SKU and rejects invalid SKUs, like `stock`.\n- **Reservations are one running total per SKU,** not separate reservations you track by ID. Partial releases are allowed.\n- **Releasing when nothing is reserved** throws `INVALID_RELEASE`, even if the SKU has stock. This includes unknown SKUs.\n- **Order of checks:** bad input is reported first, so `release('X', -1)` throws `INVALID_INPUT`, not `INVALID_RELEASE`.\n- **Number overflow:** because `add` only increases stock, stock and the reserved count could each reach JavaScript's largest exact integer. `reserve` and `release` now throw `INVALID_INPUT` in that case without changing anything, the same as `add` already did.\n- **What `stock()` means:** it still returns only the quantity available, not counting reserved items, so its behaviour hasn't changed.\n\n**Tests added**\n- `release` happy paths, and reserved items can be reserved again after release.\n- Over-releasing, and releasing with nothing reserved, leave stock and the reserved count unchanged.\n- A failed reserve leaves the reserved count unchanged.\n- Reservations are kept separate between inventories.\n- The overflow cases above.\n- The 5,000-step random test now also runs `release` and checks the reserved count against the model.\n\nThe README now documents `release`, `reserved`, the `INVALID_RELEASE` error and the updated guarantees.",
+    "cost": 0.6204928000000001,
+    "ms": 76684,
+    "turns": 12,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 12,
+      "cacheWrite": 13386,
+      "cacheRead": 215514,
+      "output": 9060
+    }
+  }
+]

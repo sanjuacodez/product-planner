@@ -1,0 +1,83 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "product-owner",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T05:54:43.967Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 17,
+    "fail": 0,
+    "total": 17,
+    "groups": {
+      "prompt": {
+        "pass": 5,
+        "total": 5
+      },
+      "points": {
+        "pass": 3,
+        "total": 3
+      },
+      "tiers": {
+        "pass": 3,
+        "total": 3
+      },
+      "redeem": {
+        "pass": 2,
+        "total": 2
+      },
+      "refunds": {
+        "pass": 4,
+        "total": 4
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 22 - prototype-like ids are handled as plain keys # pass 22 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "owner": {
+    "answers": 1,
+    "model": "haiku",
+    "costUsd": 0.0025
+  },
+  "costUsd": 0.6344,
+  "costByModel": {
+    "claude-opus-5-5": 0.6345
+  },
+  "minutes": 1.8,
+  "messages": 2,
+  "scriptedReplies": 1,
+  "agentTurns": 12,
+  "tokens": {
+    "input": 16,
+    "cacheWrite": 27881,
+    "cacheRead": 230353,
+    "output": 12354,
+    "total": 270604
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-product-owner-plain-FCb6hH"
+}
