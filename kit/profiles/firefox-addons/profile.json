@@ -1,0 +1,109 @@
+{
+  "id": "firefox-addons",
+  "kind": "platform",
+  "title": "Firefox add-on (addons.mozilla.org)",
+  "extends": "browser-extension",
+  "appliesWhen": "A browser extension for Firefox, listed on addons.mozilla.org (AMO) or self-distributed after Mozilla signing.",
+  "ask": "Will the extension be published on addons.mozilla.org (listed) or self-distributed (unlisted), and does it collect or transmit any user data?",
+  "detect": {
+    "packages": [
+      "web-ext"
+    ],
+    "contentPatterns": [
+      {
+        "glob": "manifest.json",
+        "pattern": "\"gecko\""
+      },
+      {
+        "glob": "*/manifest.json",
+        "pattern": "\"gecko\""
+      }
+    ],
+    "requestWords": [
+      "Firefox add-on",
+      "Firefox extension",
+      "addons.mozilla.org"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Mozilla Add-on Policies",
+      "url": "https://extensionworkshop.com/documentation/publish/add-on-policies/"
+    },
+    {
+      "title": "Source code submission",
+      "url": "https://extensionworkshop.com/documentation/publish/source-code-submission/"
+    },
+    {
+      "title": "Firefox built-in data collection consent",
+      "url": "https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/"
+    },
+    {
+      "title": "web-ext command reference",
+      "url": "https://extensionworkshop.com/documentation/develop/web-ext-command-reference/"
+    },
+    {
+      "title": "Manifest V3 migration guide (Firefox)",
+      "url": "https://extensionworkshop.com/documentation/develop/manifest-v3-migration-guide/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "web-ext lint runs the same addons-linter checks as AMO upload validation. It exits non-zero on errors; warnings fail only with --warnings-as-errors. A manifest declaring both background.scripts and background.service_worker (the cross-browser pattern) gets a BACKGROUND_SERVICE_WORKER_IGNORED warning, so leave -w off for shared manifests or lint a Firefox-specific build.",
+    "An add-on ID in browser_specific_settings.gecko.id is required to publish an MV3 extension (web-ext lint reports ADDON_ID_REQUIRED otherwise).",
+    "From 3 November 2025 every new extension must declare browser_specific_settings.gecko.data_collection_permissions, using \"required\": [\"none\"] if nothing is collected or transmitted. Existing add-ons will need it for new versions later. web-ext lint warns when it is missing.",
+    "Data categories: personal data types (personallyIdentifyingInfo, healthInfo, financialAndPaymentInfo, authenticationInfo, personalCommunications, locationInfo, browsingActivity, websiteContent, websiteActivity, searchTerms, bookmarksInfo) may be required or optional; technicalAndInteraction must be optional. Optional types are requested later with permissions.request() from a user action and can be toggled in about:addons.",
+    "Built-in consent works from Firefox 140 desktop and 142 Android. For new extensions, set strict_min_version to 140 (gecko) and 142 (gecko_android), or turn off data collection on older versions; otherwise you must build your own consent screen shown right after install.",
+    "Policy on data: transmit only what the functionality needs; personal data needs explicit opt-in; technical and interaction data must be declinable without losing functionality.",
+    "Source code: if any file is minified, bundled, transpiled or generated (webpack, Vite, Rollup, TypeScript, templates), upload the original source with a README giving OS, tool versions and exact build commands, plus the lockfile. Reviewers build it and diff the result against the package; there must be no differences. Build tools must be open source and run locally (no web-based tools). Source uploads are limited to 200 MB.",
+    "Obfuscated code and remote code are not allowed; minification is. Add-ons must not weaken web pages' security headers such as their Content-Security-Policy.",
+    "Listing: describe what the add-on does and what data it transmits, disclose any paid features, and make unexpected features opt-in. Injected ads must be labelled as coming from the add-on; no affiliate-tag injection or redirection, no cryptocurrency mining.",
+    "Firefox host permissions (from Firefox 127) are shown and granted at install, but users can revoke any host permission later; check and request them when needed."
+  ],
+  "gates": [
+    {
+      "id": "G-FF-LINT",
+      "type": "automated",
+      "title": "web-ext lint: no errors",
+      "setup": "npm install --save-dev web-ext; build the Firefox package into dist/ (or change the folder with profile gate G-FF-LINT --command \"npx web-ext lint --source-dir <folder>\").",
+      "command": "npx web-ext lint --source-dir dist",
+      "architecture": "Record the Firefox build (which folder is the Firefox package, the gecko id, strict_min_version for desktop and Android) and whether warnings are also enforced.",
+      "acceptance": [
+        "web-ext lint reports 0 errors for the Firefox package",
+        "Remaining warnings are listed in the task with the reason each is accepted"
+      ]
+    },
+    {
+      "id": "G-FF-DATA-CONSENT",
+      "type": "manual",
+      "title": "Data collection declared in the manifest and consented to",
+      "architecture": "Record the data_collection_permissions (required and optional categories, or \"none\"), the feature behind each category, how optional categories are requested (permissions.request from a user action), and the minimum Firefox versions or the fallback consent for older versions.",
+      "acceptance": [
+        "browser_specific_settings.gecko.data_collection_permissions lists every category the add-on transmits, or \"required\": [\"none\"] when it transmits nothing",
+        "Nothing in an optional category is sent until the user grants it, and revoking it in about:addons stops the transmission, with tests",
+        "technicalAndInteraction, if used, is optional and declining it does not restrict functionality"
+      ]
+    },
+    {
+      "id": "G-FF-SOURCE",
+      "type": "manual",
+      "title": "Reproducible build and source code package for review",
+      "architecture": "Record the build tools and versions (open source, run locally), the build command, and how the source archive with README and lockfile is produced for each submission.",
+      "acceptance": [
+        "A clean checkout built with the README instructions produces files identical to the submitted package (diff is empty)",
+        "The source archive includes the README with OS, Node and npm versions and exact commands, the lockfile, and any private dependencies"
+      ]
+    },
+    {
+      "id": "G-FF-POLICY",
+      "type": "manual",
+      "title": "Add-on policies: listing, monetisation and page security",
+      "architecture": "Record the listing description, which data the add-on transmits as stated in the listing, any paid features, and any changes the add-on makes to web pages.",
+      "acceptance": [
+        "The listing describes what the add-on does, the data it transmits and any paid features",
+        "Unexpected features are described and opt-in; injected content and ads are labelled as coming from the add-on",
+        "The add-on does not relax web page security headers such as Content-Security-Policy and does not inject affiliate tags"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "id": "containers-kubernetes",
+  "kind": "platform",
+  "title": "Containers and Kubernetes",
+  "appliesWhen": "The product is built into container images (Dockerfile/Containerfile) and run in production on a container platform or Kubernetes (manifests, Helm charts or Kustomize in the repo).",
+  "ask": "Will the product ship as container images? Where will they run (Kubernetes, a managed container service, Docker Compose on a VM), and who manages the cluster?",
+  "detect": {
+    "files": [
+      "Dockerfile",
+      "Containerfile",
+      "docker-compose.yml",
+      "docker-compose.yaml",
+      "compose.yml",
+      "compose.yaml",
+      "Chart.yaml",
+      "kustomization.yaml",
+      "skaffold.yaml",
+      "k8s",
+      "kubernetes",
+      "helm"
+    ],
+    "contentPatterns": [
+      {
+        "glob": "*.yaml",
+        "pattern": "kind:\\s*(Deployment|StatefulSet|DaemonSet|CronJob|Job|Pod|Service|Ingress)\\b"
+      },
+      {
+        "glob": "*/*.yaml",
+        "pattern": "kind:\\s*(Deployment|StatefulSet|DaemonSet|CronJob|Job|Pod|Service|Ingress)\\b"
+      },
+      {
+        "glob": "*/*.yml",
+        "pattern": "kind:\\s*(Deployment|StatefulSet|DaemonSet|CronJob|Job|Pod|Service|Ingress)\\b"
+      }
+    ],
+    "requestWords": [
+      "Docker",
+      "Kubernetes",
+      "k8s",
+      "Helm",
+      "container image",
+      "containerised",
+      "containerized"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Hadolint",
+      "url": "https://github.com/hadolint/hadolint"
+    },
+    {
+      "title": "Trivy misconfiguration scanning (trivy config)",
+      "url": "https://trivy.dev/latest/docs/scanner/misconfiguration/"
+    },
+    {
+      "title": "Trivy security advisory GHSA-69fq-xp46-6x23 (CVE-2026-33634)",
+      "url": "https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23"
+    },
+    {
+      "title": "Docker build best practices",
+      "url": "https://docs.docker.com/build/building/best-practices/"
+    },
+    {
+      "title": "Kubernetes Pod Security Standards",
+      "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/"
+    },
+    {
+      "title": "Kubernetes Pod Security Admission",
+      "url": "https://kubernetes.io/docs/concepts/security/pod-security-admission/"
+    },
+    {
+      "title": "KubeLinter",
+      "url": "https://docs.kubelinter.io/"
+    },
+    {
+      "title": "Kubernetes resource management for pods and containers",
+      "url": "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/"
+    },
+    {
+      "title": "Kubernetes liveness, readiness and startup probes",
+      "url": "https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/"
+    },
+    {
+      "title": "Kubernetes good practices for Secrets",
+      "url": "https://kubernetes.io/docs/concepts/security/secrets-good-practices/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "If the product also runs on a cloud account, select cloud-operations too (backups, monitoring, incident runbook). If images run only under Docker Compose with no Kubernetes, remove the G-K8S-* gates with a reason.",
+    "Pin base images by digest (FROM image:tag@sha256:…) and let a dependency bot update the digest; tags like latest move under you.",
+    "Use multi-stage builds so compilers and package caches stay out of the final image; prefer distroless, slim or alpine bases; add a .dockerignore so .git, .env and node_modules are not copied in.",
+    "Set USER to a numeric non-root UID in the Dockerfile; Kubernetes runAsNonRoot can only verify a numeric user.",
+    "Pod Security Standards restricted requires, per container: runAsNonRoot true, allowPrivilegeEscalation false, capabilities drop ALL (only NET_BIND_SERVICE may be added), seccompProfile RuntimeDefault or Localhost, and only restricted volume types (no hostPath). Enforce it with the namespace label pod-security.kubernetes.io/enforce=restricted; start with warn and audit, then enforce.",
+    "KubeLinter does not check the Pod Security Standards one-for-one; its defaults cover run-as-non-root, privilege escalation, privileged containers, read-only root filesystem, latest tag, unset CPU/memory requests and secrets in env vars. Probe checks (no-liveness-probe, no-readiness-probe) are off by default: enable them in .kube-linter.yaml.",
+    "KubeLinter fails on YAML files that are not Kubernetes objects, so point it at the manifests or chart directory, not the whole repository.",
+    "Trivy's release pipeline was compromised in March 2026 (binary v0.69.4, trivy-action before 0.35.0, setup-trivy before 0.2.6). Pin Trivy and actions to a current release by checksum or commit SHA.",
+    "Kubernetes Secrets are only base64-encoded: enable encryption at rest for etcd (managed clusters usually offer envelope encryption with a cloud key), restrict get/list on Secrets with RBAC, and source secrets from an external secrets manager rather than committing them."
+  ],
+  "gates": [
+    {
+      "id": "G-CTR-DOCKERFILE-LINT",
+      "type": "automated",
+      "title": "Dockerfiles pass hadolint",
+      "setup": "Install hadolint, or run it through its container (docker run --rm -i hadolint/hadolint < Dockerfile). With several Dockerfiles, list them all in the command.",
+      "command": "hadolint --failure-threshold warning Dockerfile",
+      "architecture": "Record the Dockerfile conventions: base image choice and pinning, multi-stage build, non-root USER, and the hadolint rules ignored with reasons (.hadolint.yaml).",
+      "acceptance": [
+        "hadolint reports no warnings or errors for every Dockerfile, or each ignored rule has a reason in .hadolint.yaml"
+      ]
+    },
+    {
+      "id": "G-CTR-IMAGE-SCAN",
+      "type": "automated",
+      "title": "No fixable high or critical vulnerabilities in the built image",
+      "setup": "Needs Docker and a pinned, current Trivy release (not v0.69.4). In CI, scan the image tag that will be pushed instead of the local tag with profile gate G-CTR-IMAGE-SCAN --command \"…\".",
+      "command": "docker build -t pp-gate-scan:local . && trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed pp-gate-scan:local",
+      "architecture": "Record the image scanner and threshold, when images are rebuilt to pick up base image fixes, and how accepted vulnerabilities are documented (.trivyignore with reason and expiry).",
+      "acceptance": [
+        "The image scan reports no high or critical vulnerabilities that have a fix available",
+        "Images are rebuilt and rescanned on a schedule, not only when the code changes"
+      ]
+    },
+    {
+      "id": "G-CTR-CONFIG-SCAN",
+      "type": "automated",
+      "title": "No high or critical misconfigurations in Dockerfiles, manifests and charts",
+      "command": "trivy config --exit-code 1 --severity HIGH,CRITICAL --misconfig-scanners dockerfile,kubernetes,helm .",
+      "architecture": "Record the configuration scanner, severity threshold and how accepted findings are documented.",
+      "acceptance": [
+        "trivy config reports no high or critical findings for Dockerfiles, Kubernetes manifests and Helm charts, or each has a documented ignore with a reason"
+      ]
+    },
+    {
+      "id": "G-CTR-IMAGE-HARDENING",
+      "type": "manual",
+      "title": "Minimal, pinned, non-root images",
+      "architecture": "Record the base image and why (distroless, slim or alpine), digest pinning and how updates arrive, the multi-stage build layout, the runtime user, and how build-time secrets are passed (build secrets, never ARG/ENV or COPY).",
+      "acceptance": [
+        "Every final image runs as a numeric non-root user",
+        "Base images are pinned by digest and updated automatically by a dependency bot",
+        "Final images contain no compilers, package manager caches, .git, .env files or secrets (checked by inspecting the image layers)"
+      ]
+    },
+    {
+      "id": "G-K8S-LINT",
+      "type": "automated",
+      "title": "Kubernetes manifests and charts pass KubeLinter",
+      "setup": "Install kube-linter. Point the command at the manifests, Kustomize or Helm chart directory (default k8s/) with profile gate G-K8S-LINT --command \"kube-linter lint <dir>\", and enable no-liveness-probe and no-readiness-probe in .kube-linter.yaml.",
+      "command": "kube-linter lint k8s/",
+      "architecture": "Record where manifests live (plain YAML, Kustomize or Helm), the KubeLinter configuration and the checks excluded with reasons.",
+      "acceptance": [
+        "kube-linter lint exits 0 for every manifest directory and chart",
+        "Every excluded check has a reason in .kube-linter.yaml or an ignore annotation"
+      ]
+    },
+    {
+      "id": "G-K8S-PSS",
+      "type": "manual",
+      "title": "Workloads meet the Pod Security Standards restricted profile",
+      "architecture": "Record the security context applied to every workload (runAsNonRoot, allowPrivilegeEscalation false, capabilities drop ALL, seccompProfile RuntimeDefault, read-only root filesystem where possible) and the Pod Security Admission labels on each namespace.",
+      "acceptance": [
+        "Application namespaces carry pod-security.kubernetes.io/enforce=restricted, and workloads deploy without warnings",
+        "Any namespace below restricted is documented with the reason"
+      ]
+    },
+    {
+      "id": "G-K8S-RUNTIME",
+      "type": "manual",
+      "title": "Resource requests and limits, health probes and safe rollouts",
+      "architecture": "Record CPU and memory requests and limits per workload, liveness, readiness and startup probes and what they check, replica counts, PodDisruptionBudgets, rollout strategy and graceful shutdown handling.",
+      "acceptance": [
+        "Every container sets CPU and memory requests and a memory limit",
+        "Every long-running container has readiness and liveness probes (startup probes for slow starts) and a failed rollout stops or rolls back",
+        "The app shuts down cleanly on SIGTERM within the termination grace period"
+      ]
+    },
+    {
+      "id": "G-K8S-SECRETS",
+      "type": "manual",
+      "title": "Secrets management and least-privilege access in the cluster",
+      "architecture": "Record where secrets come from (external secrets manager or encrypted secrets, never plain manifests in git), encryption at rest for Secrets, RBAC for service accounts and people, network policies between workloads, and image pull credentials.",
+      "acceptance": [
+        "No plain Secret values are committed; secrets are delivered from the recorded secret source",
+        "Secrets are encrypted at rest in the cluster and only the workloads that need them can read them",
+        "Each workload uses its own service account with no more permissions than it needs; default deny network policies are in place where the cluster supports them"
+      ]
+    }
+  ]
+}

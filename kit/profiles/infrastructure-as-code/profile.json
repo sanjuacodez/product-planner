@@ -1,0 +1,203 @@
+{
+  "id": "infrastructure-as-code",
+  "kind": "platform",
+  "title": "Infrastructure as code (Terraform/OpenTofu, CloudFormation, Pulumi)",
+  "appliesWhen": "Cloud or platform infrastructure is defined in code in this repository (Terraform or OpenTofu, AWS CloudFormation/SAM/CDK, Pulumi) and applied to real environments.",
+  "ask": "Will infrastructure be defined in code here? Which tool (Terraform, OpenTofu, CloudFormation/CDK, Pulumi), where is state kept, and who or what applies changes?",
+  "extends": "cloud-operations",
+  "detect": {
+    "files": [
+      "main.tf",
+      "versions.tf",
+      "providers.tf",
+      "backend.tf",
+      ".terraform.lock.hcl",
+      "terraform/main.tf",
+      "infra/main.tf",
+      "infrastructure/main.tf",
+      "Pulumi.yaml",
+      "cdk.json",
+      "cdktf.json"
+    ],
+    "packages": [
+      "@pulumi/pulumi",
+      "aws-cdk-lib",
+      "cdktf"
+    ],
+    "contentPatterns": [
+      {
+        "glob": "*.tf",
+        "pattern": "\\b(resource|module|provider|terraform)\\s+(\"|\\{)"
+      },
+      {
+        "glob": "*/*.tf",
+        "pattern": "\\b(resource|module|provider|terraform)\\s+(\"|\\{)"
+      },
+      {
+        "glob": "*.tofu",
+        "pattern": "\\b(resource|module|provider|terraform)\\s+(\"|\\{)"
+      },
+      {
+        "glob": "*.yaml",
+        "pattern": "AWSTemplateFormatVersion"
+      },
+      {
+        "glob": "*/*.yaml",
+        "pattern": "AWSTemplateFormatVersion"
+      },
+      {
+        "glob": "*/*.json",
+        "pattern": "\"AWSTemplateFormatVersion\""
+      }
+    ],
+    "requestWords": [
+      "Terraform",
+      "OpenTofu",
+      "CloudFormation",
+      "Pulumi",
+      "AWS CDK",
+      "infrastructure as code",
+      "IaC"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Terraform: terraform fmt",
+      "url": "https://developer.hashicorp.com/terraform/cli/commands/fmt"
+    },
+    {
+      "title": "Terraform: terraform validate",
+      "url": "https://developer.hashicorp.com/terraform/cli/commands/validate"
+    },
+    {
+      "title": "Terraform: remote state",
+      "url": "https://developer.hashicorp.com/terraform/language/state/remote"
+    },
+    {
+      "title": "Terraform: S3 backend (locking and encryption)",
+      "url": "https://developer.hashicorp.com/terraform/language/backend/s3"
+    },
+    {
+      "title": "Terraform: manage sensitive data (ephemeral values, write-only arguments)",
+      "url": "https://developer.hashicorp.com/terraform/language/manage-sensitive-data"
+    },
+    {
+      "title": "OpenTofu: tofu validate",
+      "url": "https://opentofu.org/docs/cli/commands/validate/"
+    },
+    {
+      "title": "Trivy misconfiguration scanning (trivy config)",
+      "url": "https://trivy.dev/latest/docs/scanner/misconfiguration/"
+    },
+    {
+      "title": "tfsec to Trivy migration",
+      "url": "https://github.com/aquasecurity/tfsec"
+    },
+    {
+      "title": "Trivy security advisory GHSA-69fq-xp46-6x23 (CVE-2026-33634)",
+      "url": "https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23"
+    },
+    {
+      "title": "Checkov CLI reference",
+      "url": "https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "tfsec is no longer the recommended scanner: Aqua folded it into Trivy, whose `trivy config` scans Terraform, CloudFormation, Azure ARM, Helm, Kubernetes and Dockerfiles. Checkov (`checkov -d .`) is an alternative; either is fine, pick one and keep it.",
+    "Trivy's release pipeline was compromised in March 2026 (GHSA-69fq-xp46-6x23, CVE-2026-33634): binary v0.69.4 and aquasecurity/trivy-action before 0.35.0 and setup-trivy before 0.2.6 were affected. Pin Trivy and its actions to a current release by version and checksum or commit SHA, never a floating tag.",
+    "terraform validate needs an initialised directory; `terraform init -backend=false` initialises without touching the remote backend, so it is safe in CI. Run fmt and validate in every root module; with several root modules, loop over them in the gate command.",
+    "For OpenTofu, use `tofu fmt -check -recursive` and `tofu validate`; OpenTofu can also encrypt state client-side. For CloudFormation use cfn-lint and change sets; for Pulumi use the language's type check and `pulumi preview`. Replace the Terraform commands with profile gate … --command.",
+    "Values marked sensitive are still written to state and plan files. Keep secrets out of state with ephemeral values (Terraform 1.10+) and write-only arguments (1.11+) where the provider supports them, or let the cloud generate and hold the secret (managed passwords in a secrets manager).",
+    "S3 backend: set use_lockfile = true for native locking (DynamoDB locking is deprecated), encrypt = true (and kms_key_id for a customer key), and enable bucket versioning and restricted access.",
+    "Commit .terraform.lock.hcl and pin required_version and provider versions so plans are reproducible.",
+    "Pitfall: applying from a laptop. Apply from CI using the reviewed saved plan, with an identity that only the pipeline can assume."
+  ],
+  "gates": [
+    {
+      "id": "G-IAC-FMT",
+      "type": "automated",
+      "title": "Infrastructure code is formatted",
+      "command": "terraform fmt -check -recursive",
+      "architecture": "Record the IaC tool and version (Terraform, OpenTofu, CloudFormation, Pulumi), the repository layout of root modules and reusable modules, and the formatting check used.",
+      "acceptance": [
+        "terraform fmt -check -recursive (or the tool's equivalent) exits 0"
+      ]
+    },
+    {
+      "id": "G-IAC-VALIDATE",
+      "type": "automated",
+      "title": "Infrastructure code validates",
+      "setup": "Run from the root module directory; with several root modules or a subfolder (for example infra/), change the command with profile gate G-IAC-VALIDATE --command \"…\".",
+      "command": "terraform init -backend=false -input=false && terraform validate",
+      "architecture": "Record the pinned tool and provider versions (required_version, required_providers, committed .terraform.lock.hcl) and which root modules are validated.",
+      "acceptance": [
+        "terraform validate (or the tool's equivalent) succeeds for every root module",
+        "Tool and provider versions are pinned and the dependency lock file is committed"
+      ]
+    },
+    {
+      "id": "G-IAC-SCAN",
+      "type": "automated",
+      "title": "No high or critical misconfigurations in infrastructure code",
+      "setup": "Install a pinned, current Trivy release (not v0.69.4). To use Checkov instead, set profile gate G-IAC-SCAN --command \"checkov -d . --quiet\". Accept a finding only with an inline ignore that states the reason.",
+      "command": "trivy config --exit-code 1 --severity HIGH,CRITICAL --misconfig-scanners terraform,cloudformation,azure-arm .",
+      "architecture": "Record the misconfiguration scanner and its version, the severity threshold, and how accepted findings are documented (inline ignore with reason and owner).",
+      "acceptance": [
+        "The scanner reports no high or critical findings, or each remaining one has a documented ignore with a reason",
+        "The scan runs in CI on every change to infrastructure code"
+      ]
+    },
+    {
+      "id": "G-IAC-STATE",
+      "type": "manual",
+      "title": "State stored remotely with locking, encryption and restricted access",
+      "architecture": "Record the state backend, locking mechanism, encryption at rest (and key), versioning or backups of state, one state per environment, and who and which pipelines can read or write state.",
+      "acceptance": [
+        "No state files are committed to the repository (*.tfstate and .terraform/ are ignored)",
+        "Remote state has locking enabled, is encrypted at rest and versioned, and only the deploy pipeline and named operators can access it",
+        "Each environment has its own state"
+      ]
+    },
+    {
+      "id": "G-IAC-IAM",
+      "type": "manual",
+      "title": "Least-privilege IAM defined in code",
+      "architecture": "Record the roles and policies the code creates, the identity that runs plan and apply (separate read-only plan role if possible, OIDC federation from CI rather than stored keys), and the rule against wildcard actions and resources.",
+      "acceptance": [
+        "Policies created by the code grant specific actions on specific resources; any wildcard is documented with a reason",
+        "CI authenticates to the cloud with short-lived federated credentials, not stored access keys"
+      ]
+    },
+    {
+      "id": "G-IAC-SECRETS",
+      "type": "manual",
+      "title": "No secrets in infrastructure code or state",
+      "architecture": "Record how secrets used by infrastructure are created and passed (secrets manager references, cloud-managed passwords, ephemeral values or write-only arguments) so they do not appear in code, variables files, plans or state.",
+      "acceptance": [
+        "No secret values appear in .tf/.tfvars or template files, plan output or state",
+        "Variables and outputs that carry sensitive values are marked sensitive or ephemeral"
+      ]
+    },
+    {
+      "id": "G-IAC-TAGGING",
+      "type": "manual",
+      "title": "Resources are tagged consistently",
+      "architecture": "Record the required tags or labels (for example owner, environment, application, cost centre, data classification) and how they are applied by default (provider default_tags or a shared module).",
+      "acceptance": [
+        "Every taggable resource carries the required tags, applied by default in code"
+      ]
+    },
+    {
+      "id": "G-IAC-PLAN-REVIEW",
+      "type": "manual",
+      "title": "Plans reviewed before apply",
+      "architecture": "Record the change workflow: plan in CI on every pull request, plan output attached to the review, apply only from CI with the reviewed saved plan, approval required for production, and drift detection.",
+      "acceptance": [
+        "Every infrastructure change has a plan reviewed by someone other than the author before apply",
+        "Production applies run from CI using the reviewed plan, not from personal machines",
+        "Drift between code and real infrastructure is detected on a schedule"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "id": "chrome-web-store",
+  "kind": "platform",
+  "title": "Chrome Web Store extension",
+  "extends": "browser-extension",
+  "appliesWhen": "A browser extension published (publicly, unlisted or privately) in the Chrome Web Store.",
+  "ask": "Will the extension be published in the Chrome Web Store, and what single purpose will its listing describe?",
+  "detect": {
+    "requestWords": [
+      "Chrome Web Store",
+      "Chrome extension",
+      "Chromium extension"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Chrome Web Store Program Policies",
+      "url": "https://developer.chrome.com/docs/webstore/program-policies/policies"
+    },
+    {
+      "title": "Chrome Web Store: User Data FAQ",
+      "url": "https://developer.chrome.com/docs/webstore/program-policies/user-data-faq"
+    },
+    {
+      "title": "Chrome Web Store: Fill out the privacy fields",
+      "url": "https://developer.chrome.com/docs/webstore/cws-dashboard-privacy"
+    },
+    {
+      "title": "Chrome extensions: Deal with remote hosted code violations",
+      "url": "https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code"
+    },
+    {
+      "title": "Manifest V2 support timeline",
+      "url": "https://developer.chrome.com/docs/extensions/develop/migrate/mv2-deprecation-timeline"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "The Web Store accepts Manifest V3 only; MV2 items were removed from the store on 31 August 2026.",
+    "Single purpose: one narrow, easy-to-understand purpose. Unrelated features belong in separate extensions; the single purpose statement in the dashboard must match the listing and the code.",
+    "Request the narrowest permissions; the Privacy practices tab asks for a justification of every permission, and unused permissions must be removed (upload a new version) before you can continue.",
+    "Remote code: the full functionality must be discernible from the submitted code. Logic may not be fetched and executed (only the Debugger and User Scripts APIs permit it). Fetching data and configuration is allowed if it does not change the logic. Unused dependency code that could load remote scripts must be removed too; Chrome gives no exceptions for popular SDKs.",
+    "Obfuscation is prohibited; ordinary minification (removing whitespace and comments, shortening names, collapsing files) is allowed.",
+    "User data: post an accurate privacy policy if the extension handles any user data, including data processed or stored only locally. Collect only what the single purpose needs; browsing activity only as required by a user-facing feature. No sale, no personalised advertising, no creditworthiness or lending use, limited human access.",
+    "Prominent disclosure: before collecting, show in the extension's own UI which data is collected and how it is used, and get a specific affirmative action from the user. A privacy policy, terms of service or the store listing alone does not satisfy this. Material changes in data use need a new disclosure.",
+    "Post a Limited Use statement on the homepage or one click away (for example in the privacy policy) saying the use of data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements.",
+    "Listing: no impersonation of other brands, no claims of endorsement or store badges you do not have, no mimicking of browser or OS warnings, no keyword stuffing (repeating a keyword more than five times is a listed example), no duplicate extensions, no manipulating ratings or installs. The extension must do something useful on its own, not just launch a website or other software.",
+    "Protect the publisher account with two-step verification (ideally a security key) and use group publishers or member roles rather than shared credentials."
+  ],
+  "gates": [
+    {
+      "id": "G-CWS-SINGLE-PURPOSE",
+      "type": "manual",
+      "title": "Single, narrow purpose with minimum functionality",
+      "architecture": "Record the single purpose statement and how every feature, permission and data flow serves it; features that do not belong are split out or dropped.",
+      "acceptance": [
+        "The single purpose statement fits in one or two sentences and every shipped feature serves it",
+        "The extension is useful on its own (not only a link to a website or a launcher for other software) and has no broken features"
+      ]
+    },
+    {
+      "id": "G-CWS-PRIVACY-PRACTICES",
+      "type": "manual",
+      "title": "Privacy practices tab completed and consistent with the code",
+      "architecture": "Record the text for each Privacy practices field: single purpose, a justification for each permission and host permission, the remote code declaration, the data types collected, the Limited Use certification and the privacy policy URL.",
+      "acceptance": [
+        "Every permission in the uploaded manifest has a justification that names the feature using it",
+        "Remote code is declared \"No\" and G-EXT-REMOTE-CODE passes for the uploaded package",
+        "The declared data types match what the code collects or transmits and what the privacy policy says"
+      ]
+    },
+    {
+      "id": "G-CWS-USER-DATA",
+      "type": "manual",
+      "title": "User data limited to the purpose, with prominent disclosure and consent",
+      "architecture": "Record each user data type handled (including locally processed data and web browsing activity), the feature that needs it, where it is sent, and the in-extension disclosure and consent screen shown before collection.",
+      "acceptance": [
+        "Before any user data is collected or sent, the extension's own UI shows what is collected and how it is used and requires an explicit user action to agree, with tests",
+        "Declining consent stops the collection; no data is sold, used for personalised ads or credit decisions, or shared beyond the disclosed purpose",
+        "Data in transit uses HTTPS and data stored at rest on servers is encrypted"
+      ]
+    },
+    {
+      "id": "G-CWS-CODE-READABILITY",
+      "type": "manual",
+      "title": "Submitted code is readable: no obfuscation or hidden behaviour",
+      "architecture": "Record the build pipeline (bundler, minifier settings) and confirm it does not obfuscate; remote configuration, if any, only toggles behaviour already present and reviewable in the package.",
+      "acceptance": [
+        "The release build uses minification only (no obfuscators, string encoding or packed eval)",
+        "All features in the listing are reachable from the submitted code without downloading logic"
+      ]
+    },
+    {
+      "id": "G-CWS-LISTING",
+      "type": "manual",
+      "title": "Store listing accurate, original branding, no spam",
+      "architecture": "Record the listing name, icon, description and screenshots plan, and any third-party names or trademarks used and the permission to use them.",
+      "acceptance": [
+        "The name, icon and description do not impersonate another product or imply endorsement, and screenshots show the real extension",
+        "The description has no keyword stuffing and does not claim store status the extension does not have",
+        "The extension does not mimic browser or operating system warnings or dialogs"
+      ]
+    },
+    {
+      "id": "G-CWS-PRIVACY-LEGAL",
+      "type": "legal",
+      "title": "Privacy policy and Limited Use statement reviewed",
+      "architecture": "A qualified reviewer checks that the privacy policy accurately describes collection, use and sharing of user data (including locally processed data), that the Limited Use statement is posted on the homepage or one click away, and that the in-product disclosure text matches the policy and applicable privacy law.",
+      "acceptance": []
+    }
+  ]
+}

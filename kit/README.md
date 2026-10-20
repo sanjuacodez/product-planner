@@ -56,7 +56,7 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Request statements | `product-planner request list` (R1, R2, … and the features or notFeatures they map to) |
 | Import the plan | `product-planner plan import --file .product-planner/plan.json` (features, notFeatures, epics and tasks in one validated step; runs the plan check) |
 | Approve and lock the plan | `product-planner plan approve --reason "user approved in chat"` (check must pass; moves to build; later changes go through pp-replan) |
-| Quality profile | `product-planner profile catalog`, `profile detect`, `profile set <ids> --because "…"`, `profile verify <id> --sources "…" --note "…"`, `profile gate <id> --command "…"`, `profile run [ids]`, `profile show` (see [guides/quality-profiles.md](guides/quality-profiles.md)) |
+| Quality profile | `product-planner profile catalog`, `profile detect`, `profile show <id>`, `profile new|validate|save <id>` (uncovered platforms and laws; save to your library), `profile none --because "…"`, `profile set <ids> --because "…"`, `profile verify <id> --sources "…" --note "…"`, `profile gate <id> --command "…"`, `profile run [ids]`, `profile show` (see [guides/quality-profiles.md](guides/quality-profiles.md)) |
 | Add one task later | `product-planner task add --json '{"title":"…","epic":"E1","acceptance":["…"]}'` |
 | List dependency-ready candidates | `product-planner task ready --json` (check ownership before parallel execution) |
 | Propose a parallel batch | `product-planner task batch --json` (ready tasks with disjoint `writes`/`sources`, up to `options.maxConcurrentTasks`; starts nothing) |

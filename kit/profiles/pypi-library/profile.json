@@ -1,0 +1,139 @@
+{
+  "id": "pypi-library",
+  "kind": "platform",
+  "title": "Python package published to PyPI",
+  "appliesWhen": "A Python library or tool published to PyPI (or another package index) for others to pip install.",
+  "ask": "Will this be published to PyPI? Which Python versions are supported, is it pure Python or does it need compiled wheels, and is it typed?",
+  "detect": {
+    "files": [],
+    "packages": [],
+    "contentPatterns": [
+      {
+        "glob": "pyproject.toml",
+        "pattern": "\\[(project|tool\\.poetry)\\]"
+      }
+    ],
+    "requestWords": [
+      "PyPI",
+      "pip install",
+      "pip package",
+      "Python package",
+      "Python library",
+      "Python SDK",
+      "SDK",
+      "client library"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Python Packaging User Guide: Writing your pyproject.toml",
+      "url": "https://packaging.python.org/en/latest/guides/writing-pyproject-toml/"
+    },
+    {
+      "title": "Python Packaging User Guide: Publishing releases with GitHub Actions (trusted publishing)",
+      "url": "https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/"
+    },
+    {
+      "title": "PyPI Docs: Publishing with a Trusted Publisher",
+      "url": "https://docs.pypi.org/trusted-publishers/using-a-publisher/"
+    },
+    {
+      "title": "PyPI Docs: Producing attestations",
+      "url": "https://docs.pypi.org/attestations/producing-attestations/"
+    },
+    {
+      "title": "PyPI Help",
+      "url": "https://pypi.org/help/"
+    },
+    {
+      "title": "twine documentation (twine check)",
+      "url": "https://twine.readthedocs.io/en/stable/"
+    },
+    {
+      "title": "Python typing spec: Distributing type information (py.typed)",
+      "url": "https://typing.python.org/en/latest/spec/distributing.html"
+    },
+    {
+      "title": "Version specifiers (PEP 440)",
+      "url": "https://packaging.python.org/en/latest/specifications/version-specifiers/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "Use PEP 621 [project] metadata in pyproject.toml with a [build-system] table; name is the only field that cannot be dynamic.",
+    "licence: use an SPDX expression string (license = \"MIT\") and license-files (PEP 639). Older backends reject it; it needs hatchling 1.27+, setuptools 77.0.3+, flit-core 3.12+, pdm-backend 2.4.0+, poetry-core 2.2.0+ or uv-build 0.7.19+.",
+    "Set requires-python to the lowest version you test; avoid an upper bound. Classifiers are for search only and do not restrict installs.",
+    "Build the sdist and wheel once in CI with python -m build, check them with twine check --strict, and publish those exact files; build and publish run in separate jobs.",
+    "Compiled extensions need wheels for each supported platform and Python version (commonly built with cibuildwheel); otherwise users compile from the sdist.",
+    "Publish with trusted publishing (pypa/gh-action-pypi-publish@release/v1, id-token: write at job level, a \"pypi\" GitHub environment with required reviewers). The action uploads attestations by default.",
+    "PyPI never allows a file name to be reused, even after deletion: a bad release is fixed with a new version (and a yank of the bad one).",
+    "Typed packages ship a py.typed file inside the import package so type checkers use the inline annotations; it must be in the wheel.",
+    "Check the release on TestPyPI first when changing packaging; PyPI requires 2FA on every account."
+  ],
+  "gates": [
+    {
+      "id": "G-PYLIB-METADATA",
+      "type": "automated",
+      "title": "pyproject.toml has complete [project] metadata",
+      "setup": "Needs Python 3.11+ (tomllib) to run the check.",
+      "command": "python3 -c \"import sys,tomllib;p=tomllib.load(open('pyproject.toml','rb')).get('project',{});d=p.get('dynamic',[]);miss=[k for k in ('name','version','description','readme','requires-python','license','urls') if k not in p and k not in d]+(['license as an SPDX expression string (PEP 639), not a table'] if isinstance(p.get('license'),dict) else []);print('pyproject.toml [project] needs: '+', '.join(miss) if miss else p.get('name','?')+': [project] metadata present');sys.exit(1 if miss else 0)\"",
+      "architecture": "Record the distribution name, build backend (and its minimum version), how the version is set (static or dynamic from a tag), requires-python, the SPDX licence expression and project URLs.",
+      "acceptance": [
+        "pyproject.toml [project] has name, version (or dynamic), description, readme, requires-python, license and urls",
+        "license is an SPDX expression string with license-files, not the deprecated table form"
+      ]
+    },
+    {
+      "id": "G-PYLIB-BUILD",
+      "type": "automated",
+      "title": "sdist and wheel build and pass twine check",
+      "setup": "python3 -m pip install build twine (in the project virtual environment or CI)",
+      "command": "rm -rf dist && python3 -m build && python3 -m twine check --strict dist/*",
+      "architecture": "Record the artifacts produced (sdist plus pure-Python wheel, or platform wheels and how they are built) and what the sdist includes.",
+      "acceptance": [
+        "python -m build produces an sdist and at least one wheel in dist/",
+        "twine check --strict dist/* passes (metadata valid, README renders on PyPI)"
+      ]
+    },
+    {
+      "id": "G-PYLIB-TYPED",
+      "type": "automated",
+      "title": "The wheel ships py.typed (typed packages)",
+      "setup": "Runs after G-PYLIB-BUILD; it reads the wheel in dist/.",
+      "command": "python3 -c \"import glob,sys,zipfile;w=sorted(glob.glob('dist/*.whl'));ok=bool(w) and any(n.endswith('/py.typed') for n in zipfile.ZipFile(w[-1]).namelist());print('py.typed is in '+w[-1] if ok else 'no wheel in dist/ ships py.typed (run G-PYLIB-BUILD first)');sys.exit(0 if ok else 1)\"",
+      "architecture": "Record whether the package is typed, the type checker and strictness used in CI (for example mypy --strict or pyright), and where py.typed lives; remove this gate for an untyped package with a reason.",
+      "acceptance": [
+        "The built wheel contains py.typed inside the import package",
+        "The chosen type checker reports no errors on the package"
+      ]
+    },
+    {
+      "id": "G-PYLIB-VERSIONING",
+      "type": "manual",
+      "title": "Versions follow PEP 440 and SemVer-style compatibility with a changelog",
+      "architecture": "Record the public API (what is importable without a leading underscore), the version policy, the deprecation policy and where the changelog lives.",
+      "acceptance": [
+        "Each release has a PEP 440 version and a changelog entry",
+        "Removed or changed public API is deprecated first or released as a major version"
+      ]
+    },
+    {
+      "id": "G-PYLIB-PUBLISH",
+      "type": "manual",
+      "title": "Releases are published from CI with trusted publishing",
+      "architecture": "Record the release workflow: build job, separate publish job using pypa/gh-action-pypi-publish with id-token: write at job level, the protected \"pypi\" environment, the trusted publisher configured on PyPI, and TestPyPI use.",
+      "acceptance": [
+        "The project is published only from the CI workflow registered as its trusted publisher; no long-lived API token is stored in CI",
+        "The publish job uploads the files built by the build job and attestations appear on PyPI",
+        "All maintainers have 2FA enabled"
+      ]
+    },
+    {
+      "id": "G-PYLIB-LICENSES",
+      "type": "legal",
+      "title": "Package licence and dependency licence compatibility need review",
+      "architecture": "Record the chosen licence and the runtime dependencies (and any vendored or bundled code, including libraries linked into wheels) with their licences.",
+      "acceptance": []
+    }
+  ]
+}

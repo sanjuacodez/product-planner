@@ -1,0 +1,77 @@
+{
+  "id": "edge-addons",
+  "kind": "platform",
+  "title": "Microsoft Edge Add-ons extension",
+  "extends": "browser-extension",
+  "appliesWhen": "A browser extension published on the Microsoft Edge Add-ons website through Partner Center.",
+  "ask": "Will the extension be published on Microsoft Edge Add-ons, and does it need sign-in or a server to be tested?",
+  "detect": {
+    "requestWords": [
+      "Edge Add-ons",
+      "Microsoft Edge extension",
+      "Edge extension"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Developer policies for the Microsoft Edge Add-ons website",
+      "url": "https://learn.microsoft.com/en-us/legal/microsoft-edge/extensions/developer-policies"
+    },
+    {
+      "title": "Publish a Microsoft Edge extension",
+      "url": "https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "Partner Center's Privacy page asks for a single purpose description, a justification per permission, a remote code declaration (remote code is not permitted in Manifest V3), data usage certification and a privacy policy URL. Inaccurate disclosures can mean extra review, delay or rejection.",
+    "A privacy policy URL is required if the extension accesses, collects or transmits personal information. It must be specific to the extension, refer primarily to Microsoft Edge, and describe user controls and access.",
+    "Personal data (including browsing activity) only for a prominently disclosed user-facing feature, stated at install. Sharing with third parties needs opt-in in the extension UI plus an opt-out that stops collection immediately, and is limited to processors doing product improvement and analytics; data brokering is prohibited. Highly sensitive data (health, financial) needs express consent.",
+    "Changing the search provider, home page, new tab page or favourites needs user consent, must be easily reversible, use standard APIs and be described in the listing.",
+    "Certification testers must be able to use everything: put test account credentials and steps for locked features in Notes for certification, and keep required servers up. Certification can take up to seven business days.",
+    "Listing: description 250 to 10,000 characters per language, a logo per language (at least 128x128), at most seven search terms (21 words, 30 characters each), no references to other browsers, no name or icon similar to other extensions. Use __MSG_ placeholders and default_locale so Partner Center detects every language.",
+    "No obfuscated code, including code fetched from the web; no bulk submissions of the same functionality; no cryptocurrency mining; updates only through Partner Center."
+  ],
+  "gates": [
+    {
+      "id": "G-EDGE-PRIVACY-PAGE",
+      "type": "manual",
+      "title": "Partner Center Privacy page completed and consistent with the code",
+      "architecture": "Record the single purpose description, a justification for each permission, the remote code answer, the data types declared and the privacy policy URL.",
+      "acceptance": [
+        "Every permission in the uploaded manifest has a justification naming the feature that uses it",
+        "Remote code is declared \"No\" and G-EXT-REMOTE-CODE passes for the uploaded package",
+        "The declared data usage matches the code and the privacy policy"
+      ]
+    },
+    {
+      "id": "G-EDGE-DATA",
+      "type": "manual",
+      "title": "Personal data limited, consented and shared only as allowed",
+      "architecture": "Record each personal data type, the user-facing feature it serves, how it is disclosed at install, any third-party processors and the opt-in/opt-out controls in the extension UI.",
+      "acceptance": [
+        "Personal data is collected only for a disclosed user-facing feature and sent over HTTPS",
+        "Any sharing with third parties happens only after opt-in in the extension UI, and opting out stops collection immediately, with tests",
+        "Browser settings (search, home page, new tab, favourites) change only with user consent and can be reverted"
+      ]
+    },
+    {
+      "id": "G-EDGE-CERTIFICATION",
+      "type": "manual",
+      "title": "Testable submission and accurate listing",
+      "architecture": "Record the Notes for certification content (test credentials, steps to reach locked features, regional differences) and the listing per language (description, logo, search terms).",
+      "acceptance": [
+        "Notes for certification give working test credentials or explain why none are needed, and every server the extension needs is reachable",
+        "Each listed language has a description of 250 to 10,000 characters and a logo; search terms are at most seven and relevant",
+        "The listing does not reference other browsers or use a name or icon similar to another extension"
+      ]
+    },
+    {
+      "id": "G-EDGE-PRIVACY-LEGAL",
+      "type": "legal",
+      "title": "Privacy policy reviewed for Edge Add-ons",
+      "architecture": "A qualified reviewer checks that the privacy policy is specific to the extension, refers to Microsoft Edge, describes data handling, third-party services and user controls, covers the interest-based advertising opt-out if ads are used, and complies with applicable law.",
+      "acceptance": []
+    }
+  ]
+}
