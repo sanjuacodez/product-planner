@@ -589,6 +589,12 @@ The phase, approvals, task history, agent/model records and activity log travel 
 
 `pp uninstall` removes the known adapter files and marked instruction blocks, while keeping project state/docs, the installed kit and dashboard. `pp browser remove` removes the Playwright MCP entry. Generated adapter files are managed by this package; do not store unrelated custom content in them.
 
+## Where product understanding and plans live
+
+Run `pp-plan` in your coding tool from the product repository. For an existing product, the workflow inventories repository files, reads its documents and inspects implementation and tests before asking about missing information. It saves source-backed discovery and baseline reports, then reconciles the concept, requirements, UX, architecture and roadmap in `.product-planner/`. Existing capabilities are documented without inventing completed task history. For a new product, the interview gathers missing requirements and saves the answers and plans in the same folder. Quick plans combine requirements, UX and architecture in `plan.md`.
+
+Run `pp dashboard --open` to view the saved result: **Documents** contains discovery, baseline and design documents; **Roadmap** contains release plans; **Tasks → By epic** contains imported epics and tasks. An empty Documents tab explains how to create the missing plans. Updating the CLI or running `init` refreshes instructions, but does not perform discovery or create a product plan: run `pp-plan` afterwards (or resume/replan an existing approved plan).
+
 ## Updating and uninstalling
 
 To update, reinstall the CLI (or pull your linked checkout), then refresh the generated files in each product project:

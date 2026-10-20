@@ -289,3 +289,23 @@ test('briefs keep table column context, dependency evidence and requested model 
   brief = ok(cwd, 'task', 'context', 'T2'); assert.match(brief, /Requested model: task-model/);
   assert.deepEqual(loadTasks(cwd).tasks[1].workedBy, []);
 });
+
+
+test('dashboard explains missing plans and renders persisted discovery and product documents', async (t) => {
+  const cwd = project(t);
+  await init(cwd, { tools: 'generic', yes: true });
+  const dashboard = buildDashboard(cwd);
+  let html = fs.readFileSync(dashboard, 'utf8');
+  assert.match(html, /data-tab="docs"/);
+  assert.match(html, /No planning documents yet/);
+  const dir = path.join(cwd, '.product-planner');
+  for (const [file, text] of Object.entries({
+    'discovery.md': '# Discovery evidence\nRead docs/system.md and src/service.js.',
+    'baseline.md': '# Existing capabilities\nExisting checkout journey.',
+    'architecture.md': '# Architecture\nQueue-backed delivery.',
+    'plan.md': '# Quick plan\n## Architecture\nLocal storage.',
+  })) fs.writeFileSync(path.join(dir, file), text);
+  html = fs.readFileSync(buildDashboard(cwd), 'utf8');
+  for (const text of ['Repository discovery', 'Discovery evidence', 'docs/system.md', 'Current product baseline', 'Existing checkout journey', 'Queue-backed delivery', 'Quick delivery plan', 'Local storage']) assert.ok(html.includes(text), text);
+  assert.doesNotMatch(html, /No planning documents yet/);
+});

@@ -51,7 +51,7 @@ export function renderDashboard(d) {
       ...custom.research,
     ],
     docs: [
-      d.docs.length ? docsSection(d.docs) : '',
+      d.docs.length ? docsSection(d.docs) : empty('No planning documents yet. Run pp-plan in your coding tool: existing products are inspected and documented first; new products start with a requirements interview. Plans are saved in .product-planner/. Regenerate with product-planner dashboard after saving documents.'),
       d.risks ? section('docs-risks', 'Risks and open questions', mdToHtml(d.risks)) : '',
       d.decisions ? section('docs-decisions', 'Decisions', mdToHtml(d.decisions)) : '',
       ...custom.docs,

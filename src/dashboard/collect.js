@@ -14,6 +14,7 @@ const DOCS = [
   ['ux', 'UX and UI direction', 'ux.md'],
   ['marketing', 'Marketing plan', 'marketing.md'],
   ['architecture', 'Architecture', 'architecture.md'],
+  ['discovery', 'Repository discovery', 'discovery.md'],
   ['baseline', 'Current product baseline', 'baseline.md'],
   ['lessons', 'Verified lessons', 'lessons.md'],
   ['acceptance', 'Acceptance audit', 'acceptance.md'],
