@@ -30,8 +30,13 @@ export function findModel(catalog, id) {
   return catalog.models.find((m) => m.id === id || m.id === base || Object.values(m.ids || {}).includes(id));
 }
 
-/** Providers each installed tool can run without extra setup; '*' means the user chooses (declare the pool). */
-export const HOST_PROVIDERS = { claude: ['anthropic'], codex: ['openai'], gemini: ['google'], opencode: ['*'], cursor: ['*'], windsurf: ['*'], generic: [] };
+/** Providers each installed tool can run; '*' means several, chosen by the user's keys and plan (declare the pool). */
+export const HOST_PROVIDERS = { claude: ['anthropic'], codex: ['openai'], gemini: ['google'], antigravity: ['google'], opencode: ['*'], cursor: ['*'], windsurf: ['*'], generic: [] };
+/** With a single build tool that runs one provider, only that provider's models can be dispatched. */
+export function buildHost(cwd) {
+  const tools = (loadConfig(cwd).tools || []).filter((t) => t !== 'generic');
+  return tools.length === 1 ? tools[0] : null;
+}
 
 /** Models this project can use: declared (models available …), else inferred from single-provider tools. */
 export function modelPool(cwd) {
@@ -103,8 +108,10 @@ export function modelStats(cwd) {
 }
 
 /** Recommend a model (and an independent reviewer) for every open task. */
-export function recommend(cwd) {
-  const pool = modelPool(cwd);
+export function recommend(cwd, { host = buildHost(cwd) } = {}) {
+  const full = modelPool(cwd);
+  const providers = HOST_PROVIDERS[host] || ['*'];
+  const pool = providers.includes('*') ? full : { ...full, source: `${full.source}; limited to what ${host} can run (${providers.join(', ')})`, models: full.models.filter((m) => providers.includes(m.provider)) };
   const { mix, source: mixSource } = tokenMix(cwd);
   const stats = modelStats(cwd);
   // A model that keeps failing a role (3+ tasks, under 60% first pass) is not chosen for that role at its tier.

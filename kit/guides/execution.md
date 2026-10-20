@@ -34,15 +34,25 @@ the role defaults; `models auto` also turns on delegated build tasks. The user's
 
 ### Applying a recommendation in each tool
 
-- Claude Code: role defaults are written into `.claude/agents/pp-<role>.md` (`model:`), which
-  Claude Code honours for that sub-agent; only Claude models are written there. When the agent
-  tool accepts a model per call, pass the task's `model` (and `reviewModel` for its review).
-- Tools whose agents read a model from project files: the kit writes it where the format is
-  verified (see the adapters); otherwise the coordinator follows the brief.
-- Tools where models are chosen only in their UI: the brief names the recommended model; the user
-  or coordinator selects it, and the actual model is recorded with `--model`.
-- Several providers in one tool: give parallel batch slots and reviews the providers the router
-  chose, so work is split across them rather than queued on one.
+The kit writes each role's model into the agent files of every installed tool, translated to that
+tool's own id, and only where the tool can run the model (otherwise the agent inherits the session
+model). Formats were checked against each tool's documentation on 2026-10-20:
+
+| Tool | Agent files the kit writes | Models | Per task |
+|---|---|---|---|
+| Claude Code | `.claude/agents/pp-<role>.md`, `model:` alias or id | Claude only | The Agent tool takes a `model` per call: pass the task's `model` / `reviewModel` |
+| Codex | `.codex/agents/pp-<role>.toml`, `model = "…"` | OpenAI only; agents inherit the session provider | Name the model when spawning |
+| OpenCode | `.opencode/agents/pp-<role>.md`, `model: provider/model` | Any configured provider, per agent | Delegate to the agent whose model matches |
+| Cursor | `.cursor/agents/pp-<role>.md`, `model:` (inherit unless a Cursor id is known) | Several vendors per sub-agent | Choose the model per sub-agent call |
+| Antigravity | `.agents/agents/pp-<role>.md`, `model: inherit|flash|pro` | Gemini tiers in files; Claude and others in its UI | UI for non-Gemini models |
+| Gemini CLI (legacy) | `.gemini/agents/pp-<role>.md`, `model:` | Gemini | — |
+| Windsurf / Devin Desktop, Copilot, others | Instructions only (AGENTS.md and rules) | Chosen in the tool's UI | The brief names the model; record what ran |
+
+When the build tool runs a single provider, recommendations stay within it; tools with several
+providers use the whole declared pool.
+- Several providers in one tool (OpenCode, Cursor, Devin Desktop, Copilot, Kiro): give parallel
+  batch slots and reviews the providers the router chose, so work is split across them rather
+  than queued on one.
 
 Cost falls only when delegated work runs on a cheaper model and with a smaller context than the
 coordinator's; sub-agents on the same model mainly add re-reading. Measure with `product-planner

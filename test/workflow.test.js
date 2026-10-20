@@ -139,7 +139,7 @@ test('planned role models are written into Claude Code agent files; the tiered p
   const cwd = await project(t, 'claude');
   const agent = (role) => fs.readFileSync(path.join(cwd, `.claude/agents/pp-${role}.md`), 'utf8');
   assert.doesNotMatch(agent('developer'), /^model:/m);
-  assert.match(ok(cwd, 'models', 'tiered'), /developer=sonnet, qa=haiku\); delegate tasks: yes; 10 Claude Code agent files updated/);
+  assert.match(ok(cwd, 'models', 'tiered'), /developer=sonnet, qa=haiku\); delegate tasks: yes; agent files updated \(claude 10\)/);
   assert.match(agent('developer'), /^model: sonnet$/m); assert.match(agent('qa'), /^model: haiku$/m); assert.doesNotMatch(agent('architect'), /^model:/m);
   assert.equal(loadState(cwd).options.delegateTasks, true);
   ok(cwd, 'state', 'set', 'models.architect', 'claude-opus-5-5');

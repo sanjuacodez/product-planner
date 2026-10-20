@@ -103,3 +103,45 @@ test('plan approve applies the recommended models unless routing is off', async 
   assert.doesNotMatch(ok(off, 'plan', 'approve', '--reason', 'approved in test'), /models applied/);
   assert.equal(loadTasks(off).tasks[0].model, undefined);
 });
+
+test('each tool gets the models it can run: Codex TOML, OpenCode provider/model, Cursor and Antigravity overrides', async (t) => {
+  const cwd = await project(t, 'claude,codex,opencode,cursor,antigravity');
+  ok(cwd, 'state', 'set', 'models.developer', 'gpt-6.1-sol');
+  ok(cwd, 'state', 'set', 'models.qa', 'gemini-3.8-flash');
+  ok(cwd, 'state', 'set', 'models.architect', 'claude-opus-5-5');
+  const read = (f) => fs.readFileSync(path.join(cwd, f), 'utf8');
+  // Codex: OpenAI models only, valid TOML string for the persona body.
+  assert.match(read('.codex/agents/pp-developer.toml'), /^model = "gpt-6\.1-sol"$/m);
+  assert.doesNotMatch(read('.codex/agents/pp-architect.toml'), /^model =/m);
+  assert.match(read('.codex/agents/pp-developer.toml'), /\ndeveloper_instructions = '''\n[\s\S]+\n'''\n$/);
+  // OpenCode: any provider as provider/model.
+  assert.match(read('.opencode/agents/pp-developer.md'), /^model: openai\/gpt-6\.1-sol$/m);
+  assert.match(read('.opencode/agents/pp-qa.md'), /^model: google\/gemini-3\.8-flash$/m);
+  assert.match(read('.opencode/agents/pp-architect.md'), /^model: anthropic\/claude-opus-5-5$/m);
+  // Claude Code: Claude models only; others inherit.
+  assert.match(read('.claude/agents/pp-architect.md'), /^model: opus$/m);
+  assert.doesNotMatch(read('.claude/agents/pp-developer.md'), /^model:/m);
+  // Cursor overrides .claude/agents so Claude aliases never reach it; unknown Cursor ids inherit.
+  assert.match(read('.cursor/agents/pp-developer.md'), /^model: inherit$/m);
+  // Antigravity accepts only Gemini tiers.
+  assert.match(read('.agents/agents/pp-qa.md'), /^model: flash$/m);
+  assert.match(read('.agents/agents/pp-developer.md'), /^model: inherit$/m);
+  // Uninstall removes every generated agent file.
+  ok(cwd, 'uninstall');
+  for (const f of ['.codex/agents/pp-developer.toml', '.cursor/agents/pp-developer.md', '.agents/agents/pp-qa.md', '.opencode/agents/pp-qa.md']) assert.ok(!fs.existsSync(path.join(cwd, f)), f);
+});
+
+test('a single-provider build tool limits recommendations to that provider; multi-provider tools use the whole pool', async (t) => {
+  const codex = await project(t, 'codex');
+  setPool(codex, ['gpt-6.1-sol', 'gpt-6-luna', 'gpt-6-astra', 'claude-sonnet-5-5']);
+  task(codex, 'T1', { agent: 'developer', risk: 'medium' });
+  let r = recommend(codex);
+  assert.ok(r.pool.models.every((m) => m.provider === 'openai')); assert.equal(r.tasks[0].model.id, 'gpt-6.1-sol');
+  const oc = await project(t, 'opencode');
+  setPool(oc, ['gpt-6.1-sol', 'deepseek-v4-pro', 'gemini-3.8-flash', 'claude-sonnet-5-5']);
+  task(oc, 'T1', { agent: 'developer', risk: 'medium' }); task(oc, 'T2', { agent: 'qa', risk: 'low' });
+  r = recommend(oc);
+  assert.equal(r.pool.models.length, 4);
+  assert.ok(['deepseek-v4-pro', 'gpt-6.1-sol', 'claude-sonnet-5-5'].includes(r.tasks[0].model.id));
+  assert.notEqual(r.tasks[0].reviewer.provider, r.tasks[0].model.provider);
+});

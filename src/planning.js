@@ -3,7 +3,7 @@ import { loadState, saveState, stateDir, appendLog, PLANNING_STEPS } from './sta
 import { readText, readJson, nowIso } from './util/fs.js';
 import { hash } from './evidence.js';
 import { recommend, applyRecommendations } from './router.js';
-import { syncClaudeAgents } from './init/adapters.js';
+import { syncAgentModels } from './init/adapters.js';
 
 const DEPTHS = {
   direct: { documents: ['request.md', 'features.json', 'tasks.json'], roles: ['developer (plans, implements and tests in one pass)', 'qa by risk'] },
@@ -47,7 +47,7 @@ export function approvePlan(cwd, { reason, check }) {
   let routing = null;
   if (state.options?.modelRouting !== 'off') {
     const rec = recommend(cwd);
-    if (rec.tasks.some((r) => r.model)) { routing = { ...applyRecommendations(cwd, rec), tasks: rec.tasks }; state.models = { ...(state.models || {}), ...routing.roles }; syncClaudeAgents(cwd, state.models); }
+    if (rec.tasks.some((r) => r.model)) { routing = { ...applyRecommendations(cwd, rec), tasks: rec.tasks }; state.models = { ...(state.models || {}), ...routing.roles }; syncAgentModels(cwd, state.models); }
   }
   const from = state.phase;
   state.phase = 'build';
