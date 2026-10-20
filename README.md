@@ -76,6 +76,12 @@ What this shows, honestly:
 - **Where Product Planner's extra cost went** (from its own per-task token tracking): writing the planning documents, build turns that carry the planning context, and an independent QA pass (314k tokens). Task briefs now include the product concept, complete matching requirement sections, shared constraints and dependency evidence. Since then: the quick track writes one `plan.md` instead of five documents, the build workflow batches tasks with disjoint file ownership where the host allows delegation, and verification depth follows task risk. On the scope-change scenario Product Planner still cost about 4× plain prompting with the same pass rate: it used the quick track, recorded verification and the audit, and over 90% of its tokens were cache reads of a larger working context across more agent turns.
 - **Not yet shown:** a scenario where planning produces measurably better results. Plain Opus 5.5 handled a 40-rule specification, four mid-build changes including a reversal, an existing codebase, an owner interview and WooCommerce platform quality, at or near 100% and at lower cost. On single-session tasks of this size, a strong model with a clear request does not lose requirements. Where the kit should matter (multi-session products that outgrow one context, vague requests, many epics, weaker or cheaper models, compliance work that must be designed and evidenced) is still to be measured. Until then, use plain prompting or `pp-direct` for small, precise jobs; the quality gates, audit trail and dashboard are the reason to use the kit on larger ones.
 
+### A real session on an existing app
+
+Besides the scripted benchmark, one real `pp-direct` run is written up with its files, screenshots and token data: [testing an existing app through pp-direct](docs/case-study-testing-an-existing-app.md) (2026-10-20). An 18-route Next.js app was tested end to end with 31 browser checks in 5 tasks, about 11 minutes of build time and about $3.8 of build-stage tokens; it found one app defect and six things to improve in the kit, including how the usage hook attributes pre-install session tokens.
+
+![Tasks tab of the dashboard at the end of that run](docs/screenshots/tacit-qa/dashboard-tasks.png)
+
 ## Requirements
 
 - Node.js **20 or newer** and npm.
