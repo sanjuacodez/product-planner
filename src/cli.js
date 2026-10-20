@@ -19,7 +19,7 @@ import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
 import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates, setNoProfile, installProfileSkills, newProfile, saveProfile, renderSkill, validateProfileDef } from './profile.js';
-import { syncAgentModels } from './init/adapters.js';
+import { syncAgentModels, hostModel } from './init/adapters.js';
 const agentSyncNote = (out) => { const parts = Object.entries(out).map(([t, f]) => `${t} ${f.length}`); return parts.length ? `agent files updated (${parts.join(', ')})` : ''; };
 import { loadModelCatalog, modelPool, setPool, modelStats, recommend, applyRecommendations } from './router.js';
 import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
@@ -151,6 +151,14 @@ function args(rest, options, allowPositionals = true) {
 /** Write a JSON template for the agent to fill in, creating directories, so no shell redirection is needed. */
 function writeOut(cwd, file, value) { const full = path.resolve(cwd, file); writeJson(full, value); return path.relative(cwd, full); }
 function requireInit(cwd) { if (!isInitialised(cwd)) throw new Error(`not initialised here – run \`product-planner init\` in the project root`); }
+/** Open the dashboard in the browser the first time the project reaches build only. Afterwards the
+ * file is rewritten in place and the open tab reloads itself, so no new tabs pile up. */
+function openDashboardOnce(cwd, out) {
+  const st = loadState(cwd);
+  if (!out || st.options?.autoOpenDashboard === false || st.dashboardOpenedAt) { if (out) console.log(`dashboard updated: ${path.relative(cwd, out)} (an open tab reloads itself)`); return; }
+  openInBrowser(out); st.dashboardOpenedAt = new Date().toISOString(); saveState(cwd, st);
+  console.log(`opened ${path.relative(cwd, out)} in the browser; later updates reload that tab`);
+}
 function refreshDashboard(cwd) { try { return buildDashboard(cwd); } catch (e) { if (process.env.PP_DEBUG) console.error(e); return null; } }
 
 async function cmdInit(cwd, rest) {
@@ -198,7 +206,7 @@ function cmdPlan(cwd, rest) {
     for (const w of r.warnings) console.log(`warning: ${w}`);
     if (r.routing) console.log(`models applied: ${r.routing.tasks.filter((x) => x.model).map((x) => `${x.id} ${x.model.label || x.model.id}${x.reviewer ? ` (review ${x.reviewer.label || x.reviewer.id})` : ''}`).join(', ')}; change any with task update T# --json '{"model":"…"}'`);
     console.log(`plan approved and locked (${r.lock.reason}); phase: build`);
-    const out = refreshDashboard(cwd); if (out && loadState(cwd).options?.autoOpenDashboard !== false) openInBrowser(out);
+    const out = refreshDashboard(cwd); openDashboardOnce(cwd, out);
     return;
   }
   if (positionals[0] !== 'import' || !values.file) throw new Error('usage: plan profile | plan import --file plan.json | plan approve --reason "…"');
@@ -299,6 +307,33 @@ function cmdModels(cwd, rest) {
   refreshDashboard(cwd);
 }
 
+/** At task start: make sure the task has a recommended model (projects approved before routing, or new
+ * tasks), and say how to run it. A session cannot change its own model, so a different model means
+ * handing the task to the role's sub-agent with that model. */
+function routeAtStart(cwd, id) {
+  const st = loadState(cwd);
+  if (st.options?.modelRouting === 'off') return [];
+  let task = getTask(loadTasks(cwd), id);
+  const lines = [];
+  if (!task.model) {
+    const rec = recommend(cwd).tasks.find((r) => r.id === id);
+    if (rec?.model) {
+      const graph = loadTasks(cwd); const tk = getTask(graph, id);
+      tk.model = rec.model.id; if (rec.reviewer) tk.reviewModel = rec.reviewer.id;
+      saveTasks(cwd, graph); task = tk;
+      appendLog(cwd, { type: 'note', task: id, message: `model routing at start: ${rec.model.id}${rec.reviewer ? `, review ${rec.reviewer.id}` : ''} (${rec.why})` });
+      lines.push(`recommended model for ${id}: ${rec.model.label || rec.model.id} — ${rec.why}`);
+    }
+  }
+  if (!task.model) return lines;
+  const tools = loadConfig(cwd).tools || [];
+  const host = tools.includes('claude') ? 'claude-code' : tools.find((t) => !['generic'].includes(t)) || null;
+  const run = (m) => (host ? hostModel(m, host) : null) || m;
+  if (task.risk === 'high') lines.push(`${id} is high risk: implement and verify it on the strongest available model (${run(task.model)}).`);
+  else lines.push(`run ${id} on ${run(task.model)}${task.reviewModel ? ` and its QA review on ${run(task.reviewModel)}` : ''}: if your session is on a different model, do not implement it here; give the pp-${task.agent || 'developer'} sub-agent the brief (product-planner task context ${id}) with model ${run(task.model)}${task.reviewModel ? `, then the pp-qa sub-agent with model ${run(task.reviewModel)}` : ''}, review their evidence and run task complete. Record the model that actually ran with --model.`);
+  return lines;
+}
+
 function cmdTask(cwd, rest) {
   requireInit(cwd);
   const [sub, id] = rest;
@@ -351,7 +386,7 @@ function cmdTask(cwd, rest) {
         recordVerification(cwd, getTask(loadTasks(cwd), id), report);
       }
       if (sub === 'start') for (const w of readinessWarnings(getTask(t, id), loadFeatures(cwd))) console.log(`definition of ready: ${w}`);
-      if (sub === 'start' && loadState(cwd).options?.delegateTasks) { const tk = getTask(t, id); console.log(tk.risk === 'high' ? `delegated mode: ${id} is high risk, so implement and verify it in this session on the strongest model.` : `delegated mode: do not implement ${id} here. Give the pp-developer sub-agent the brief (product-planner task context ${id}), owned paths and acceptance; then the pp-qa sub-agent the brief, changed paths and the report template; review their evidence and run task complete.`); }
+      if (sub === 'start') for (const line of routeAtStart(cwd, id)) console.log(line);
       const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent, model: values.model });
       console.log(`${task.id} → ${task.status}`);
       if ((task.qaReturns || 0) >= LOOP_LIMIT && task.status === 'in_progress') { console.log(`warning: QA has returned ${task.id} ${task.qaReturns} times. Possible loop: change approach, or block it with a precise reason and continue with other work.`); appendLog(cwd, { type: 'note', task: task.id, message: `possible loop: QA returned ${task.id} ${task.qaReturns} times` }); }
@@ -395,7 +430,7 @@ function cmdState(cwd, rest) {
   switch (sub) {
     case undefined: case 'get': { if (!key) { console.log(JSON.stringify(st, null, 2)); return; } const v = key.split('.').reduce((o, k) => o?.[k], st); console.log(typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)); return; }
     case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const note = agentSyncNote(syncAgentModels(cwd, st.models)); if (note) console.log(note); } refreshDashboard(cwd); return; }
-    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
+    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build') openDashboardOnce(cwd, out); return; }
     case 'step': { const status = vals[0]; if (!PLANNING_STEPS.includes(key)) throw new Error(`step must be one of ${PLANNING_STEPS.join(', ')}`); if (!['pending', 'in_progress', 'done', 'skipped'].includes(status)) throw new Error('status must be pending|in_progress|done|skipped'); st.planning[key] = status; if (st.phase === 'init') st.phase = 'planning'; saveState(cwd, st); appendLog(cwd, { type: 'planning', step: key, to: status }); console.log(`planning.${key} = ${status}`); refreshDashboard(cwd); return; }
     case 'product': { const { values } = args([key, ...vals].filter(Boolean), { name: { type: 'string' }, tagline: { type: 'string' }, summary: { type: 'string' } }); Object.assign(st.product, Object.fromEntries(Object.entries(values).filter(([, v]) => v != null))); saveState(cwd, st); console.log(JSON.stringify(st.product, null, 2)); refreshDashboard(cwd); return; }
     default: throw new Error(`unknown state subcommand "${sub}"`);
