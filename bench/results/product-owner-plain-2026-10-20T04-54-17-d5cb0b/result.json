@@ -1,0 +1,111 @@
+{
+  "kitDigest": "1f38bae76bfa",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 5,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "product-owner",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T04:56:22.574Z",
+  "hiddenExitCode": 1,
+  "hidden": {
+    "pass": 16,
+    "fail": 1,
+    "total": 17,
+    "groups": {
+      "prompt": {
+        "pass": 5,
+        "total": 5
+      },
+      "points": {
+        "pass": 2,
+        "total": 3
+      },
+      "tiers": {
+        "pass": 3,
+        "total": 3
+      },
+      "redeem": {
+        "pass": 2,
+        "total": 2
+      },
+      "refunds": {
+        "pass": 4,
+        "total": 4
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "# pass 33 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "owner": {
+    "answers": 1,
+    "model": "haiku",
+    "costUsd": 0.0038
+  },
+  "costUsd": 0.611,
+  "minutes": 1.8,
+  "messages": 2,
+  "scriptedReplies": 1,
+  "agentTurns": 9,
+  "tokens": {
+    "input": 12,
+    "cacheWrite": 26983,
+    "cacheRead": 153849,
+    "output": 12237,
+    "total": 193081
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-product-owner-plain-C5ZFOp",
+  "originalHidden": {
+    "pass": 8,
+    "fail": 9,
+    "total": 17,
+    "groups": {
+      "prompt": {
+        "pass": 4,
+        "total": 5
+      },
+      "points": {
+        "pass": 1,
+        "total": 3
+      },
+      "tiers": {
+        "pass": 0,
+        "total": 3
+      },
+      "redeem": {
+        "pass": 1,
+        "total": 2
+      },
+      "refunds": {
+        "pass": 2,
+        "total": 4
+      }
+    }
+  },
+  "rescored": {
+    "at": "2026-10-20T05:01:55.937Z",
+    "reason": "hidden tests made fact-independent (one missed fact no longer fails other tests) and an ambiguous balance(\"\") assertion removed; the run itself used the strict owner responder (v1)"
+  }
+}

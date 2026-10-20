@@ -40,6 +40,13 @@
 
 <!-- Replace with concrete project evidence, requirements or decisions. -->
 
+## Quality and compliance profile
+
+<!-- One decision per non-legal gate in .product-planner/profile.json (product-planner profile show), each naming the gate id, for example:
+- G-PRIV-RIGHTS: deletion runs through UserDataService.erase(), which removes rows in users, orders (anonymised) and the email provider; backups expire after 30 days.
+- G-WP-PHPCS: prefix `mobr_` for functions, options and hooks; text domain `min-order-by-role`; phpcs runs in CI.
+List legal-review items (G-…-LEGAL) with the facts a reviewer needs: hosting region, processors, data categories. -->
+
 ## Testing strategy
 
 <!-- Replace with concrete project evidence, requirements or decisions. -->

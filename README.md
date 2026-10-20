@@ -11,7 +11,9 @@ All requirements gathering happens during planning. You review the complete plan
 - **Keep your choice of coding tool.** Use dedicated adapters for supported tools and the same file-based workflow in any editor that can read the instructions and run shell commands.
 - **Give specialists clear responsibilities.** Each role receives concrete inputs, owned outputs and acceptance criteria; the host can delegate or run the roles sequentially.
 - **See progress outside the editor.** Open an offline HTML dashboard with tabs for the dashboard (charts and tables), tasks (table, board, by-epic and delivery-order views), roadmap and future plans, research, documents and activity.
-- **Know who did what.** Every task shows the agent persona and the AI model that worked on it.
+- **Know who did what, and what it cost.** Every task shows the role and AI model that worked on it ("Developer · Sonnet 5.5"), and the dashboard estimates cost per product, phase, epic, task, role and model from recorded tokens.
+- **Nothing in the request goes missing.** Each statement in your request is numbered (R1, R2, …) and must be mapped to a feature or a recorded decision before the plan can be approved; the final audit checks each one again.
+- **Platform and regulatory checks are planned, not remembered.** A quality profile (WordPress, WooCommerce, Shopify, web baseline, GDPR, UK GDPR, CCPA/CPRA, India's DPDP Act, PCI DSS, HIPAA, COPPA) adds architecture decisions, tasks and checks that run with every task.
 - **Resume across sessions and tools.** Project documents and task state stay in the repository, so a new session can recover what was decided and what remains.
 - **Start without extra services.** The core CLI has no npm dependencies, API keys or hosted backend. Your chosen AI tool may have its own costs; optional memory downloads are separate.
 
@@ -49,12 +51,30 @@ First results (2026-10-19, Claude Code with Opus 5.5, one run per arm):
 | `todo-cli` (small, 8 hidden tests) | 8/8 · $0.25 · 0.9 min | 8/8 · $1.09 · 3.1 min | 8/8 · $4.04 · 4.7 min |
 | `booking-lib` (medium, 17 hidden tests) | 17/17 · $0.85 · 3.3 min | 17/17 · $3.10 · 11.4 min | 17/17 · $6.77 · 7.7 min |
 
+Scope-change follow-up (2026-10-19/20, current kit, 3 runs per arm, mean with range): an inventory core, then a scripted mid-build change request.
+
+| Scenario | Plain Claude Code | Product Planner |
+|---|---|---|
+| `scope-change` (small, 8 hidden tests) | 8/8 in 3 of 3 runs · $0.98 ($0.89–$1.07) · 2.6 min | 8/8 in 3 of 3 runs · $4.04 ($2.82–$5.69) · 9.9 min |
+
+After the overhead changes (leaner instructions, one-step task completion, audit without re-verification), one planner run on the same scenario cost $2.66 and took 5.6 minutes, below the earlier range. That is a single run, not yet a repeated measurement.
+
+Screening the new harder scenarios with plain Claude Code (Opus 5.5, one run each, 2026-10-20), to find where planning could make a difference:
+
+| Scenario | What it stresses | Plain Claude Code |
+|---|---|---|
+| `long-spec` | 40 numbered rules in one message | 40/40 · $1.34 |
+| `change-sequence` | 4 change requests, one reversing an earlier rule | 20/20 · $4.83 |
+| `existing-codebase` | change an existing library without regressions | 18/18 · $0.67 |
+| `product-owner` | facts only the owner knows, given when asked | 16/17 · $0.61 (asked 13 questions; missed one fact) |
+| `woo-extension` | WooCommerce Marketplace quality without naming tools | 14/14 behaviour · PHPCS, PHP compatibility, PHPStan level 5 and the security scan all pass · $1.59 |
+
 What this shows, honestly:
 
 - **On precise, fully specified requests, every approach reached 100%**, and plain prompting was cheapest. Planning added cost without adding quality.
 - **Product Planner cost 54–73% less than spec-kit** for the same result. It asked no questions when the request was already precise, and planned on the quick track.
-- **Where Product Planner's extra cost went** (from its own per-task token tracking): writing the planning documents, build turns that carry the planning context, and an independent QA pass (314k tokens). The next optimisation is to build each task in a fresh context fed by `pp task context` and to write lighter quick-track documents.
-- **Not yet shown:** whether planning wins when requests are vague, larger, or change mid-build. That is where clarifying questions, the feature register, acceptance audits and `pp-replan` should matter. Those scenarios and repeated runs are the next step. Until then, use plain prompting for small, precise jobs.
+- **Where Product Planner's extra cost went** (from its own per-task token tracking): writing the planning documents, build turns that carry the planning context, and an independent QA pass (314k tokens). Task briefs now include the product concept, complete matching requirement sections, shared constraints and dependency evidence. Since then: the quick track writes one `plan.md` instead of five documents, the build workflow batches tasks with disjoint file ownership where the host allows delegation, and verification depth follows task risk. On the scope-change scenario Product Planner still cost about 4× plain prompting with the same pass rate: it used the quick track, recorded verification and the audit, and over 90% of its tokens were cache reads of a larger working context across more agent turns.
+- **Not yet shown:** a scenario where planning produces measurably better results. Plain Opus 5.5 handled a 40-rule specification, four mid-build changes including a reversal, an existing codebase, an owner interview and WooCommerce platform quality, at or near 100% and at lower cost. On single-session tasks of this size, a strong model with a clear request does not lose requirements. Where the kit should matter (multi-session products that outgrow one context, vague requests, many epics, weaker or cheaper models, compliance work that must be designed and evidenced) is still to be measured. Until then, use plain prompting or `pp-direct` for small, precise jobs; the quality gates, audit trail and dashboard are the reason to use the kit on larger ones.
 
 ## Requirements
 
@@ -148,18 +168,21 @@ Example starting prompt:
 You give a one-line idea; the agent does the drafting and asks you to choose. It follows the [interview guide](kit/guides/interview.md):
 
 1. **Draft first, then ask.** It writes its best guess at the product from your idea, your repository and any material you supplied, and asks only where the answer would change scope, user experience, architecture, cost or acceptance. Everything else becomes a listed assumption you can correct.
-2. **Short multiple-choice rounds.** At most 3 rounds of at most 5 questions (2 rounds in the quick track). Every question has 2–4 options with one marked *recommended* and a reason. Reply `1a 2b 3 recommended`, “use your recommendations”, or in your own words. Tools with a built-in question picker show the same choices as buttons.
+2. **Short multiple-choice rounds until the plan is ready.** At most 5 questions per round, and rounds continue until the readiness gate passes: every feature decided, every request statement mapped, the quality profile chosen. A precise request may need none; "use your recommendations" ends the questions at any time and turns what is open into listed assumptions. Every question has 2–4 options with one marked *recommended* and a reason. Reply `1a 2b 3 recommended`, “use your recommendations”, or in your own words. Tools with a built-in question picker show the same choices as buttons.
 3. **Pick the size of the plan.** Round 1 confirms the track:
 
    | Track | For | Interview and documents |
    |---|---|---|
-   | `quick` | Small apps, prototypes, one feature (≈15 tasks or fewer) | 2 rounds; no research unless asked; UX goes inside the PRD; short architecture |
-   | `standard` | A new product with several journeys | 3 rounds; research offered; separate UX and architecture documents |
+   | `direct` | A small, precisely specified request that authorizes building (≈5 tasks or fewer, no platform or regulatory profile) | Usually no questions; request.md, features and tasks only (`pp-direct`); tests, verification and the audit still apply |
+   | `quick` | Small apps, prototypes, one feature (≈15 tasks or fewer) | Usually 1–2 rounds; no research unless asked; one `plan.md` holds requirements, UX, architecture, risks and roadmap |
+   | `standard` | A new product with several journeys | Usually 3 rounds; research offered; separate UX and architecture documents |
    | `existing` | Changes to an existing codebase | Code inspected and baseline.md written first; questions cover only the change |
 
 4. **Features you accept, not prose you re-read.** Round 2 proposes a feature list (`features.json`) with priority (must / should / could / won't), release (MVP / Next / Later) and where each idea came from. Accept, defer or reject them in one reply. The agent then asks only about gaps in the accepted MVP features: who uses it, the main flow, data, roles, edge cases, integrations and what “done” looks like.
 5. **A one-page concept brief.** When `pp feature check` passes (every feature decided; MVP features have acceptance criteria and no open questions), the agent shows a one-page brief to confirm: problem, user, MVP features, non-goals, success metric and key assumptions. PRD, UX, architecture and tasks are all derived from those features.
-6. **Nothing gets lost.** Every task lists the feature IDs it delivers, and `pp task validate` fails if an accepted MVP feature has no task. The Roadmap tab shows each feature with its decision and task progress.
+6. **Platform, markets and personal data.** The interview always asks where the product ships, where its users are, what personal data it handles and how payments work. The answers select a [quality profile](kit/guides/quality-profiles.md), which is verified against official sources during research.
+7. **Research becomes a recommendation you confirm.** When a decision depends on outside knowledge, the researcher writes 2–3 options with trade-offs and sources and one recommendation, and you confirm the main user flow before the architecture is written.
+8. **Nothing gets lost.** Every request statement maps to a feature or a recorded decision (`pp request list`), every task lists the feature IDs it delivers, and `pp check` fails if an accepted MVP feature has no task. Approving the plan (`pp plan approve`) records a lock snapshot; later changes go through `pp-replan`. The Roadmap tab shows each feature with its decision and task progress.
 
 A real first round, produced by Claude Code from the one-line idea (no answers given yet):
 
@@ -178,6 +201,32 @@ pp feature set F12 release Later   # change a decision yourself
 pp feature check                   # is the scope ready for requirements and tasks?
 ```
 
+## Model selection and concurrent tasks
+
+The host runs models and creates subagents. Product Planner supplies the task graph,
+briefs and delegation instructions. A task's `model` takes precedence over
+`state.models.<agent>` and `state.models.default` as the requested model. These settings
+are preferences; they do not switch the running session. The coordinator uses available
+host controls, records a fallback when selection is unsupported, and records the actual
+worker model on task transitions and the dashboard.
+
+`pp task ready --json` lists every dependency-ready task; `pp task batch --json` proposes
+the subset that can run together: tasks whose declared `writes` and `sources` paths do not
+overlap each other or active work, up to the concurrency cap. Tasks without declared
+`writes` always run alone. The build workflow asks the
+host to delegate eligible independent tasks concurrently, with exclusive output paths,
+settled shared contracts and at most two active build tasks by default. Set
+`pp state set options.maxConcurrentTasks 1` for sequential execution, or another positive
+integer for a different cap within host limits. Only the coordinator writes shared
+planner state; it reviews combined changes and verifies integration before releasing
+dependent tasks. When delegation is unavailable, execution stays sequential.
+
+For example, a UI component and a separate export module can run together once their
+API contracts are fixed. A database migration and code that depends on that migration
+must follow dependency order. Parallel work can shorten elapsed time but can consume
+more tokens; savings have not yet been measured for this workflow. See the
+[execution guide](kit/guides/execution.md) for ownership and model-selection rules.
+
 ## Quality and token controls
 
 These run as code in the CLI, so they cost no model tokens. The workflows call them at the right moments.
@@ -186,13 +235,19 @@ These run as code in the CLI, so they cost no model tokens. The workflows call t
 |---|---|---|
 | `request.md` | The agent saves your original request word for word, plus any later changes, dated | Paraphrasing loses requirements; the final audit checks the build against your exact words |
 | Exact acceptance criteria | Every rule, number, name and error code in your request is copied into a feature's acceptance criteria and gets its own FR ID | Rules you stated become things that get tested |
-| `pp check` | Checks task graph errors, unready features and MVP features without tasks, and warns on FR IDs no task references, vague criteria (“fast”, “user-friendly”, “etc.”) and unfilled template sections | Catches plan gaps before any code is written, without spending tokens |
+| `pp check` | Checks task graph errors, unready features, MVP features without tasks, unmapped request statements and quality gates without an architecture decision or task, and warns on FR IDs no task references, unverified profiles, changes since approval, vague criteria (“fast”, “user-friendly”, “etc.”) and unfilled template sections | Catches plan gaps before any code is written, without spending tokens |
+| Request coverage | `pp request list` numbers each statement of request.md (R1, R2, …); each must map to a feature's `requests` or to `notFeatures` with a reason before `pp plan approve` succeeds | A requirement can't silently drop out between your message and the plan |
+| Quality profiles | `pp profile detect/set/verify/run`: platform and regulatory gates (for example PHPCS + PHPStan for WordPress, privacy webhooks for Shopify, export and deletion for GDPR/DPDP). Each needs an architecture decision and a task; automated gates run with each task's verification; legal items are listed for legal review, never passed by a test | Platform standards and privacy controls are designed in, built and checked, instead of remembered at the end |
 | Tests first | The developer writes at least one test per acceptance criterion, named after it, before implementing. QA records evidence for each criterion | Each criterion gets a test, so “done” is checked rather than claimed |
-| Acceptance audit | At the end, QA writes `acceptance.md`: each statement in request.md and each MVP criterion, with evidence and pass/fail. Gaps become tasks | Compares the finished code with what you asked for |
-| `pp task context T#` | A compact brief for one task: acceptance, linked features, the matching PRD lines, dependencies and related decisions | Agents read what the task needs instead of whole documents |
+| Definition of done | `pp task complete T# --file report.json` records evidence for every acceptance criterion, the full test suite result, each gate the task lists, and the checks its `risk` requires (an independent reviewer from medium; integration and a security/data review for high or a task QA returned three times), then marks it done in one step. With `options.requireVerification` (default for new projects) a task can't be done without it, or when the verified files changed afterwards | “Done” needs recorded evidence, and editing code after QA forces a recheck |
+| Increment review | When the last task of an epic is done, the agent runs the epic's integration checks and records them with `pp epic review E#`; with more than one epic the audit requires every review | Each increment is checked as a working slice, not just as separate tasks |
+| Acceptance audit | `pp audit template` lists every request statement, every accepted MVP feature criterion and every non-legal quality gate; QA fills in evidence and `pp audit check` records it and writes `acceptance.md`, with legal items listed for review. `state phase done` refuses without a current passing audit; any later change to sources, tasks, the request or the concept makes it stale | Compares the finished code with what you asked for |
+| Evidence freshness | `pp task capture T#` fingerprints the planning documents and the task's declared paths by content; the brief and `pp task freshness T#` list what changed since. Memory search skips indexed files changed since the last `memory index` | Agents are told when what they read earlier is out of date |
+| Quick plan | On the quick track one `plan.md` holds requirements, UX, architecture, risks and roadmap; briefs, `pp check` and the dashboard read its sections | Less duplicated planning text on small jobs, with the same request capture, traceability and audit |
+| `pp task context T#` | A brief for one task: product concept, acceptance, linked features, complete matching PRD sections, shared constraints, architecture, dependency evidence and decisions | Agents read what the task needs instead of whole documents |
 | Loop warning | When QA sends the same task back 3 times, the CLI warns and logs it, and the agent must change approach or block the task with a reason | Stops the agent spending tokens repeating a failing approach |
 | `risk: high` | The planner marks tasks that touch data deletion, auth, payments or permissions. They are listed at plan approval and flagged on the dashboard | You approve risky work knowingly, before the build runs unattended |
-| `pp usage` | A Claude Code hook (`.claude/settings.json`, merged with your settings) reads the session transcripts and records tokens per task and per phase. The dashboard shows them | Shows what each task actually cost in tokens |
+| `pp usage` | A Claude Code hook (`.claude/settings.json`, merged with your settings) reads the session transcripts and records tokens per task, phase and model, and the dashboard rebuilds on each hook event. Cost is estimated from an editable, dated price table (`pricing.models` in config.json) at API list prices | Shows what each task, role and model actually cost |
 
 ## Automatic mode and replanning
 
@@ -346,17 +401,31 @@ The dashboard is a local HTML file and needs none of this. Product test suites (
 pp status
 pp task list
 pp task next
+pp task ready --json           # dependency-ready candidates for ownership review
+pp task batch --json           # ready tasks with disjoint writes/sources, up to the concurrency cap
 pp task add --file .product-planner/plan.json
 pp task add --json '{"title":"Document local setup","acceptance":["README setup works"]}'
 pp task start T1 --agent developer --model claude-opus-5-5
 pp task review T1 --agent developer --model claude-opus-5-5 --note "Implementation checks pass"
+pp task verify T1 --template --out t1-report.json   # fill in evidence, then:
+pp task verify T1 --file t1-report.json            # or task complete T1 --file … to finish in one step
 pp task done T1 --agent qa --model claude-sonnet-5-5 --note "Acceptance verified"
 pp task block T2 --reason "Provider credentials missing"
 pp task unblock T2
 pp task validate
 pp check                      # whole-plan analysis without a model: coverage, vague criteria, gaps
 pp task context T5            # compact brief an agent reads instead of whole documents
-pp usage                      # tokens per task and phase (Claude Code hook)
+pp task capture T5            # fingerprint the sources the brief relies on (task freshness T5 shows changes)
+pp audit template --out audit.json   # fill in evidence, then: pp audit check --file audit.json
+pp usage                      # tokens and estimated cost per task, phase and model (Claude Code hook)
+pp request list               # request statements R1… and what each maps to
+pp plan import --file .product-planner/plan.json   # features, epics and tasks in one validated step
+pp plan approve --reason "approved in chat"        # lock the plan and start the build
+pp profile detect             # suggested platform/regulatory profiles from repository signals
+pp profile set wordpress-plugin gdpr --because "WordPress.org plugin; EU users"
+pp profile run                # run the automated quality gates
+pp task complete T1 --file .product-planner/verification/T1.report.json --agent qa --model claude-haiku-5-5
+pp epic review E1 --evidence "npm test: 42 passed; checkout journey checked"
 pp task update T5 --json '{"priority":"high"}' --note "replan"
 pp task remove T7 --reason "replan: out of scope"
 pp auto status
@@ -377,14 +446,14 @@ Tasks follow `todo → in_progress → review → done`; block/unblock and reope
 
 | Tab | What it shows |
 |---|---|
-| **Dashboard** | Phase and planning progress, KPI tiles, blocked tasks, charts (status donut, tasks per epic, tasks by agent and AI model, burn-up) with data tables, summary tables (epic progress; agents and AI models) and recent activity |
+| **Dashboard** | Phase and planning progress, KPI tiles, blocked tasks, the quality and compliance profile (gates, tasks, last results, legal-review items), estimated cost and tokens (total, per completed task, by phase, task and model), charts (status donut, tasks per epic, tasks by agent and AI model, burn-up) with data tables, summary tables (epic progress and cost, increment reviews; role · model with tasks and cost) and recent activity |
 | **Tasks** | Status filters and search (by task, agent or model) across four views: **Table** (expand a task for acceptance criteria, dependencies and notes), **Board** (kanban by status), **By epic**, and **Delivery order** (dependency steps). Every task shows its agent and AI model |
 | **Roadmap** | Features and scope from the interview (decision, release, task progress), then future plans: each `##` section of roadmap.md (MVP, Next release, Later…) as a lane, plus delivery milestones per epic |
 | **Research** | Competitor comparison, market research and sources |
 | **Documents** | Concept, PRD, UX, marketing, architecture, baseline, lessons, risks and decisions |
 | **Activity** | Full activity log with agent and model |
 
-Links are addressable, for example `product-dashboard.html#tasks/board` or `#roadmap`, and `?theme=dark` selects dark mode. Task/state/log commands regenerate the file automatically. The browser reloads every 30 seconds by default and stays on the selected tab. Editing planning documents directly requires `pp dashboard`, or a running `pp dashboard --watch`. `pp dashboard --no-refresh` disables auto-refresh; `pp state set options.autoOpenDashboard false` stops it opening at the planning/build handoff.
+Links are addressable, for example `product-dashboard.html#tasks/board` or `#roadmap`, and `?theme=dark` selects dark mode. Updates are event-driven, with no cron job or server: task/state/plan/profile commands regenerate the file, and so does each Claude Code usage hook event, so token and cost figures appear within one refresh. Roles and models appear as "Developer · Sonnet 5.5" (the model id on hover); if a task's transcripts show a different model from the one the agent reported, the task is flagged. Costs are estimates at API list prices; subscription plans are billed differently, and hosts without a usage hook show no cost rather than a guess. The browser reloads every 30 seconds by default and stays on the selected tab. Editing planning documents directly requires `pp dashboard`, or a running `pp dashboard --watch`. `pp dashboard --no-refresh` disables auto-refresh; `pp state set options.autoOpenDashboard false` stops it opening at the planning/build handoff.
 
 Ask for extra sections in plain language, such as “show API endpoints and their implementation status”. The agent writes `.product-planner/dashboard/<slug>.json` (types: table, metrics, list, bar, Markdown text; `"tab"` picks where it appears) and regenerates. See `kit/templates/dashboard-section.json`.
 
@@ -559,4 +628,4 @@ npm run check
 npm pack --dry-run
 ```
 
-Tests use temporary directories and cover all adapter outputs, repeat installation, removal preservation, task dependency/cycle checks, CLI import and lifecycle, agent/model recording, feature readiness and coverage, automatic-mode routing on/off, replanning task updates/removals, dashboard tabs/views/escaping/custom data, delivery-order and roadmap parsing, browser MCP registration, research parsing, memory retrieval and state-path validation. No network is needed for the test suite. Editor command loading and actual LLM execution require a session in each host; generated-file checks do not replace that integration testing. Optional vector and browser downloads are not part of the core tests.
+Tests use temporary directories and cover all adapter outputs, repeat installation, removal preservation, task dependency/cycle checks, CLI import and lifecycle, agent/model recording, feature readiness and coverage, automatic-mode routing on/off, replanning task updates/removals, dashboard tabs/views/escaping/custom data, delivery-order and roadmap parsing, browser MCP registration, research parsing, memory retrieval and stale-memory exclusion, state-path validation, quick-plan sections, ownership-aware batching, content-based evidence freshness, risk-based verification and the final audit gate, and usage attribution across models and subagents. No network is needed for the test suite. Editor command loading and actual LLM execution require a session in each host; generated-file checks do not replace that integration testing. Optional vector and browser downloads are not part of the core tests.

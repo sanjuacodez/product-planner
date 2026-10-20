@@ -1,0 +1,23 @@
+{
+    "name": "product-planner/bench-tools",
+    "description": "PHP quality tools for the woo-extension benchmark scenario. Installed by the harness into $BENCH_TOOLS, outside the workspace.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "squizlabs/php_codesniffer": "^3.13",
+        "wp-coding-standards/wpcs": "^3.1",
+        "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2@alpha",
+        "phpstan/phpstan": "^2.1",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "php-stubs/woocommerce-stubs": "^10.0",
+        "phpcompatibility/php-compatibility": "10.0.0-alpha2@alpha",
+        "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2@alpha"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "phpstan/extension-installer": false
+        },
+        "sort-packages": true
+    }
+}

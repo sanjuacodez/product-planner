@@ -41,7 +41,9 @@ export function validateFeatures(f) {
     if (!FEATURE_STATUSES.includes(x.status)) errors.push(`${x.id}: status must be ${FEATURE_STATUSES.join('|')}`);
     if (!RELEASES.includes(x.release)) errors.push(`${x.id}: release must be ${RELEASES.join('|')}`);
     for (const k of ['acceptance', 'openQuestions', 'assumptions']) if (!Array.isArray(x[k])) errors.push(`${x.id}: ${k} must be an array`);
+    if (x.requests != null && (!Array.isArray(x.requests) || x.requests.some((r) => !/^R[1-9]\d*$/.test(r)))) errors.push(`${x.id}: requests must be an array of request ids (R1, R2, …)`);
   }
+  if (f.notFeatures != null && (!Array.isArray(f.notFeatures) || f.notFeatures.some((n) => !Array.isArray(n?.requests) || !n.reason?.trim()))) errors.push('notFeatures must be an array of { "requests": ["R#"], "reason": "…" }');
   return errors;
 }
 
@@ -78,9 +80,11 @@ export function sortedFeatures(f) {
 }
 
 /** Merge features by id: new ids are appended, existing ids are updated field by field. */
-export function upsertFeatures(cwd, incoming) {
+export function upsertFeatures(cwd, incoming, { notFeatures } = {}) {
   const f = loadFeatures(cwd);
   let added = 0, updated = 0;
+  // notFeatures entries are keyed by their request ids; a later entry for the same ids replaces the earlier one.
+  if (notFeatures?.length) { const key = (n) => [...(n.requests || [])].sort().join(','); f.notFeatures = [...(f.notFeatures || []).filter((n) => !notFeatures.some((m) => key(m) === key(n))), ...notFeatures]; }
   for (const x of incoming) {
     if (!x.id) x.id = `F${Math.max(0, ...f.features.map((y) => Number(y.id.slice(1)) || 0)) + 1}`;
     const cur = f.features.find((y) => y.id === x.id);
@@ -106,4 +110,19 @@ export function setFeature(cwd, id, field, value) {
   saveFeatures(cwd, f);
   appendLog(cwd, { type: 'note', message: `${id} ${field}: ${from ?? '—'} → ${value}` });
   return x;
+}
+
+/** Every request statement (R#) must be delivered by a feature or explained in notFeatures
+ * (a delivery instruction, or scope the user excluded). Deferred and rejected features count:
+ * they are recorded decisions the user saw. */
+export function requestCoverage(f, items) {
+  const known = new Set(items.map((r) => r.id));
+  const mapped = new Map();
+  const note = (id, by) => { if (!mapped.has(id)) mapped.set(id, []); mapped.get(id).push(by); };
+  const errors = [];
+  for (const x of f.features) for (const id of x.requests || []) { if (!known.has(id)) errors.push(`${x.id}: unknown request ${id}`); else note(id, x.id); }
+  for (const n of f.notFeatures || []) for (const id of n.requests || []) { if (!known.has(id)) errors.push(`notFeatures: unknown request ${id}`); else note(id, 'notFeatures'); }
+  const uncovered = items.filter((r) => !mapped.has(r.id));
+  for (const r of uncovered) errors.push(`${r.id} is not mapped to a feature or notFeatures: "${r.text.length > 120 ? r.text.slice(0, 117) + '…' : r.text}"`);
+  return { errors, uncovered, mapped };
 }

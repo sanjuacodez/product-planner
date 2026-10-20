@@ -1,0 +1,17 @@
+[
+  {
+    "message": "I need a change to invoice-kit, our existing invoice library. Its code is already in this repository: read README.md, src/ and test/ before changing anything. Make sensible choices for any details I h",
+    "result": "I've added line discounts, `removeLine` and `summarizeByCurrency`, and changed `formatTotal` to put commas in the whole-currency part. All 20 tests pass under `npm test`: the 9 that were already there and 11 new ones. I also ran the updated README example, and it prints exactly what the README says. Nothing is committed yet.\n\n**What changed**\n- **Line discounts:** `addLine` accepts an optional `discount` in basis points (default 0), and every new line stores it. Each line's discount is rounded half up with the existing `applyRate` helper, and its tax is worked out on the discounted amount. A bad value (−1, 10001, 1.5, `'100'`, `null`, `NaN`) is rejected with `INV_INVALID_LINE`. `totals()` now returns `{ subtotal, discount, tax, total }`.\n- **`removeLine(invoice, index)`:** returns a new invoice and leaves the original unchanged. A final invoice throws `INV_NOT_DRAFT`. An index that isn't an integer pointing at an existing line throws `INV_LINE_NOT_FOUND`.\n- **`summarizeByCurrency(invoices)`:** counts and adds up the final invoices per currency, as you specified; drafts are skipped and an empty array gives `{}`.\n- **`formatTotal`:** `USD 1,234,567.89`. I changed the shared formatting helper in `src/money.js`. It always uses `,` and `.` whatever the machine's language settings are.\n- **README:** the example, the API table and a new rule on discounts are updated.\n\n**Choices I made where you didn't specify**\n- **Order of checks in `removeLine`:** it checks for a final invoice before checking the index. So a final invoice gives `INV_NOT_DRAFT` even when the index is also bad, the same way `addLine` behaves.\n- **Older lines:** a line saved without a `discount` field (for example, from before this change) counts as having no discount, instead of breaking `totals`.\n- **Where the code went:** everything went into the existing `src/invoice.js` and `test/invoice.test.js` rather than new files.\n\n**Decision for you:** I left the package version at 1.2.0. The new `formatTotal` output and the extra `discount` field in `totals()` change what existing callers get back. Anything that compares those exactly, such as a test checking `'USD 1234.50'` or the full `totals()` object, will now fail. You may want a minor or major version bump depending on who uses this.",
+    "cost": 0.6715034,
+    "ms": 123893,
+    "turns": 19,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 20,
+      "cacheWrite": 35886,
+      "cacheRead": 359777,
+      "output": 15619
+    }
+  }
+]

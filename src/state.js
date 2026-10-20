@@ -18,6 +18,9 @@ export function defaultState() {
     planning: Object.fromEntries(PLANNING_STEPS.map((s) => [s, 'pending'])),
     options: {
       track: 'standard',
+      requireVerification: true,
+      requestCoverage: true,
+      maxConcurrentTasks: 2,
       research: true,
       marketing: false,
       memory: false,

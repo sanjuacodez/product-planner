@@ -1,0 +1,31 @@
+{
+  "kitDigest": "325d2f103fca",
+  "status": "completed",
+  "stages": 2,
+  "budgetUsd": 8,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "scope-change",
+  "arm": "planner",
+  "model": "opus",
+  "date": "2026-10-19T19:08:12.843Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8
+  },
+  "costUsd": 5.6902,
+  "minutes": 15.3,
+  "messages": 2,
+  "scriptedReplies": 0,
+  "agentTurns": 62,
+  "tokens": {
+    "input": 86,
+    "cacheWrite": 89021,
+    "cacheRead": 3089889,
+    "output": 40095,
+    "total": 3219091
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-scope-change-planner-489iCQ"
+}

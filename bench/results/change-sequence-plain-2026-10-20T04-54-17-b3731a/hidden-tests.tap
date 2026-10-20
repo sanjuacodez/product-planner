@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: base: empty cart has no items and zero amounts
+ok 1 - base: empty cart has no items and zero amounts
+  ---
+  duration_ms: 0.995875
+  type: 'test'
+  ...
+# Subtest: base: addItem accumulates the same SKU and returns the line quantity
+ok 2 - base: addItem accumulates the same SKU and returns the line quantity
+  ---
+  duration_ms: 0.231167
+  type: 'test'
+  ...
+# Subtest: base: items keep insertion order and subtotal sums line totals
+ok 3 - base: items keep insertion order and subtotal sums line totals
+  ---
+  duration_ms: 0.117958
+  type: 'test'
+  ...
+# Subtest: base: invalid input throws INVALID_INPUT and changes nothing
+ok 4 - base: invalid input throws INVALID_INPUT and changes nothing
+  ---
+  duration_ms: 0.482084
+  type: 'test'
+  ...
+# Subtest: base: removeItem reduces quantity and drops a line that reaches zero
+ok 5 - base: removeItem reduces quantity and drops a line that reaches zero
+  ---
+  duration_ms: 0.338584
+  type: 'test'
+  ...
+# Subtest: base: invalid removals throw INVALID_REMOVE and change nothing
+ok 6 - base: invalid removals throw INVALID_REMOVE and change nothing
+  ---
+  duration_ms: 0.2865
+  type: 'test'
+  ...
+# Subtest: base: items returns copies that cannot change the cart
+ok 7 - base: items returns copies that cannot change the cart
+  ---
+  duration_ms: 0.306208
+  type: 'test'
+  ...
+# Subtest: base: SAVE10 rounds down, FLAT500 is capped, both follow the current subtotal
+ok 8 - base: SAVE10 rounds down, FLAT500 is capped, both follow the current subtotal
+  ---
+  duration_ms: 0.204917
+  type: 'test'
+  ...
+# Subtest: base: one coupon at a time and an unknown code keeps the previous coupon
+ok 9 - base: one coupon at a time and an unknown code keeps the previous coupon
+  ---
+  duration_ms: 0.25125
+  type: 'test'
+  ...
+# Subtest: base: carts are independent
+ok 10 - base: carts are independent
+  ---
+  duration_ms: 0.298458
+  type: 'test'
+  ...
+# Subtest: change 1 (shipping): 499 below 5000 cents, free from 5000, included in total
+ok 11 - change 1 (shipping): 499 below 5000 cents, free from 5000, included in total
+  ---
+  duration_ms: 0.085083
+  type: 'test'
+  ...
+# Subtest: change 1 (shipping): the threshold uses the discounted subtotal
+ok 12 - change 1 (shipping): the threshold uses the discounted subtotal
+  ---
+  duration_ms: 0.041833
+  type: 'test'
+  ...
+# Subtest: change 1 (shipping): an empty cart ships free, also after removing everything
+ok 13 - change 1 (shipping): an empty cart ships free, also after removing everything
+  ---
+  duration_ms: 0.032834
+  type: 'test'
+  ...
+# Subtest: change 2 (limit): a line holds at most 10 units; violations throw QUANTITY_LIMIT and change nothing
+ok 14 - change 2 (limit): a line holds at most 10 units; violations throw QUANTITY_LIMIT and change nothing
+  ---
+  duration_ms: 0.075292
+  type: 'test'
+  ...
+# Subtest: change 2 (limit): the limit is per line and removals free capacity
+ok 15 - change 2 (limit): the limit is per line and removals free capacity
+  ---
+  duration_ms: 0.035875
+  type: 'test'
+  ...
+# Subtest: change 3 (reversal): a different unit price replaces the line price instead of throwing PRICE_MISMATCH
+ok 16 - change 3 (reversal): a different unit price replaces the line price instead of throwing PRICE_MISMATCH
+  ---
+  duration_ms: 0.031875
+  type: 'test'
+  ...
+# Subtest: change 3 (reversal): a re-price above the quantity limit is rejected and keeps the old price
+ok 17 - change 3 (reversal): a re-price above the quantity limit is rejected and keeps the old price
+  ---
+  duration_ms: 0.846916
+  type: 'test'
+  ...
+# Subtest: change 4 (FREESHIP): no discount and free shipping below the threshold
+ok 18 - change 4 (FREESHIP): no discount and free shipping below the threshold
+  ---
+  duration_ms: 0.050208
+  type: 'test'
+  ...
+# Subtest: change 4 (FREESHIP): follows the one-coupon rule in both directions
+ok 19 - change 4 (FREESHIP): follows the one-coupon rule in both directions
+  ---
+  duration_ms: 0.0545
+  type: 'test'
+  ...
+# Subtest: change 4 (removeCoupon): removes the active coupon and is safe without one
+ok 20 - change 4 (removeCoupon): removes the active coupon and is safe without one
+  ---
+  duration_ms: 0.034792
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 58.10875

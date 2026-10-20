@@ -1,0 +1,17 @@
+# PHPStan settings for the woo-extension quality check.
+# quality/check.js writes a wrapper config that includes this file plus
+# szepeviktor/phpstan-wordpress (from $BENCH_TOOLS) and sets the paths to analyse.
+parameters:
+	level: 5
+	treatPhpDocTypesAsCertain: false
+	reportUnmatchedIgnoredErrors: false
+	excludePaths:
+		analyseAndScan:
+			- */vendor/*
+			- */node_modules/*
+			- */tests/*
+			- */test/*
+	scanFiles:
+		- %env.BENCH_TOOLS%/vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+	dynamicConstantNames:
+		- WP_DEBUG

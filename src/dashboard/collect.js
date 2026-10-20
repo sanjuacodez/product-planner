@@ -1,12 +1,15 @@
 import path from 'node:path';
+import { planningText } from '../planning.js';
 import { stateDir, loadState, loadConfig, readLog, PLANNING_STEPS } from '../state.js';
 import { loadTasks, summary, tasksByEpic } from '../tasks.js';
 import { readText, readJson, listFiles } from '../util/fs.js';
 import { loadFeatures, sortedFeatures, coverage } from '../features.js';
 import { readUsage, summarizeUsage } from '../usage.js';
+import { loadProfile } from '../profile.js';
 
 const DOCS = [
   ['concept', 'Product concept', 'concept.md'],
+  ['plan', 'Quick delivery plan', 'plan.md'],
   ['prd', 'Product requirements (PRD)', 'prd.md'],
   ['ux', 'UX and UI direction', 'ux.md'],
   ['marketing', 'Marketing plan', 'marketing.md'],
@@ -36,15 +39,16 @@ export function collect(cwd = process.cwd()) {
     byEpic: tasksByEpic(tasks),
     planningSteps: PLANNING_STEPS.map((s) => ({ step: s, status: state.planning?.[s] || 'pending' })),
     docs,
-    roadmap: readText(path.join(dir, 'roadmap.md')),
-    risks: readText(path.join(dir, 'risks.md')),
+    roadmap: planningText(cwd, 'roadmap.md'),
+    risks: planningText(cwd, 'risks.md'),
     decisions: readText(path.join(dir, 'decisions.md')),
     competitors: readJson(path.join(dir, 'research', 'competitors.json'), null),
     market: readText(path.join(dir, 'research', 'market.md')),
     sources: readText(path.join(dir, 'research', 'sources.md')),
     custom,
     burnup: burnupSeries(log, tasks),
-    usage: summarizeUsage(readUsage(cwd)),
+    profile: loadProfile(cwd),
+    usage: summarizeUsage(readUsage(cwd), { prices: config.pricing?.models }),
   };
 }
 

@@ -1,5 +1,7 @@
 import path from 'node:path';
-import { stateDir, appendLog } from './state.js';
+import { verificationStatus } from './verification.js';
+import { stateDir, appendLog, loadState } from './state.js';
+import { projectPath } from './evidence.js';
 import { readJson, writeJson, nowIso } from './util/fs.js';
 
 export const STATUSES = ['todo', 'in_progress', 'review', 'done', 'blocked'];
@@ -46,7 +48,9 @@ export function validateTasks(t) {
     if (task.dependsOn != null && !Array.isArray(task.dependsOn)) errors.push(`${task.id}: dependsOn must be an array`);
     if (task.features != null && (!Array.isArray(task.features) || task.features.some((x) => typeof x !== 'string'))) errors.push(`${task.id}: features must be an array of feature ids`);
     if (task.risk != null && !['low', 'medium', 'high'].includes(task.risk)) errors.push(`${task.id}: risk must be low, medium or high`);
+    for (const field of ['writes', 'sources']) if (task[field] != null && (!Array.isArray(task[field]) || task[field].some((p) => { try { projectPath(process.cwd(), p); return false; } catch { return true; } }))) errors.push(`${task.id}: ${field} must be an array of concrete repository-relative paths`);
     if (task.model != null && typeof task.model !== 'string') errors.push(`${task.id}: model must be a string`);
+    if (task.gates != null && (!Array.isArray(task.gates) || task.gates.some((g) => !/^G-[A-Z0-9-]+$/.test(g)))) errors.push(`${task.id}: gates must be an array of quality gate ids (G-…)`);
     if (task.epic && !epicIds.has(task.epic)) errors.push(`${task.id}: unknown epic ${task.epic}`);
     if (!Array.isArray(task.acceptance) || !task.acceptance.length || task.acceptance.some((a) => typeof a !== 'string' || !a.trim())) errors.push(`${task.id}: acceptance must contain nonempty criteria`);
   }
@@ -107,6 +111,7 @@ export function transition(cwd, id, status, extra = {}) {
   const allowed = { todo: ['in_progress', 'blocked'], in_progress: ['review', 'blocked', 'todo'], review: ['done', 'in_progress', 'blocked', 'todo'], done: ['todo'], blocked: ['todo'] };
   if (!allowed[from]?.includes(status)) throw new Error(`cannot move ${id} from ${from} to ${status}`);
   if (status === 'in_progress' && task.dependsOn.some((d) => getTask(t, d).status !== 'done')) throw new Error(`${id}: dependencies are not done`);
+  if (status === 'done' && loadState(cwd).options?.requireVerification) { const evidence = verificationStatus(cwd, task); if (evidence.status !== 'pass') throw new Error(`${id}: ${evidence.errors.join('; ')}`); }
   if (status === 'blocked' && !extra.reason?.trim()) throw new Error('blocking requires a reason');
   if (from === 'review' && status === 'in_progress') task.qaReturns = (task.qaReturns || 0) + 1;
   task.status = status;
@@ -133,6 +138,22 @@ export function recordWorker(task, agent, model) {
   else task.workedBy.push({ agent, ...(model ? { model } : {}), ts: nowIso() });
 }
 
+/** Merge epics and tasks with new ids into the graph and validate, without saving. Existing ids are never rewritten. */
+export function mergeTaskPlan(cwd, src) {
+  const merged = loadTasks(cwd);
+  for (const e of src.epics || []) if (!merged.epics.some((x) => x.id === e.id)) merged.epics.push(e);
+  const imported = [];
+  for (const task of src.tasks || []) if (!merged.tasks.some((x) => x.id === task.id)) { merged.tasks.push(task); imported.push(task); }
+  normalise(merged);
+  const errors = validateTasks(merged);
+  if (errors.length) throw new Error(errors.join('\n'));
+  return { merged, imported };
+}
+export function saveTaskPlan(cwd, { merged, imported }, src) {
+  saveTasks(cwd, merged);
+  for (const task of imported) appendLog(cwd, { type: 'task', task: task.id, from: null, to: task.status, note: `imported: ${task.title}` });
+  appendLog(cwd, { type: 'plan', message: `imported ${(src.tasks || []).length} tasks, ${(src.epics || []).length} epics` });
+}
 export function addTask(cwd, task) {
   const t = loadTasks(cwd);
   if (!task.id) task.id = nextId(t.tasks, 'T');
@@ -145,7 +166,7 @@ export function addTask(cwd, task) {
   appendLog(cwd, { type: 'task', task: task.id, from: null, to: task.status, note: `added: ${task.title}` });
   return task;
 }
-const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features', 'risk'];
+const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features', 'risk', 'writes', 'sources', 'gates'];
 export const LOOP_LIMIT = 3;
 
 /** Replanning: revise a task that has not been completed. Done work is never rewritten; add a follow-up task instead. */
@@ -190,4 +211,32 @@ export function tasksByEpic(t) {
   const arr = [...groups.values()];
   if (none.tasks.length) arr.push(none);
   return arr;
+}
+
+/** Definition of Ready, checked when a task starts. Advisory: printed, never blocking. */
+export function readinessWarnings(task, features) {
+  const w = [];
+  if (features?.features?.length && !task.features?.length) w.push(`${task.id} delivers no feature (set "features")`);
+  if (!task.risk) w.push(`${task.id} has no risk level; medium verification applies`);
+  if (!task.writes?.length) w.push(`${task.id} declares no "writes" paths; it cannot be batched or checked for stale evidence`);
+  return w;
+}
+/** The epic a just-completed task finished, if every task in it is now done. */
+export function epicCompleted(t, task) {
+  if (!task.epic) return null;
+  const tasks = t.tasks.filter((x) => x.epic === task.epic);
+  return tasks.length && tasks.every((x) => x.status === 'done') ? t.epics.find((e) => e.id === task.epic) || { id: task.epic } : null;
+}
+/** Record the end-of-epic integration check (increment review). */
+export function reviewEpic(cwd, id, { evidence, agent, model }) {
+  const t = loadTasks(cwd);
+  const epic = t.epics.find((e) => e.id === id);
+  if (!epic) throw new Error(`unknown epic ${id}`);
+  const open = t.tasks.filter((x) => x.epic === id && x.status !== 'done');
+  if (open.length) throw new Error(`${id} still has unfinished tasks: ${open.map((x) => x.id).join(', ')}`);
+  if (!evidence?.trim()) throw new Error('--evidence "…" is required: the integration checks run and their results');
+  epic.review = { at: nowIso(), evidence: evidence.trim(), ...(agent ? { agent: agentName(agent) } : {}), ...(model ? { model } : {}) };
+  saveTasks(cwd, t);
+  appendLog(cwd, { type: 'epic', epic: id, message: `increment review: ${evidence.trim()}`, agent: agentName(agent) });
+  return epic;
 }

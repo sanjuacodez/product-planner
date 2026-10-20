@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: existing: createInvoice defaults to an empty USD draft and validates number and currency
+ok 1 - existing: createInvoice defaults to an empty USD draft and validates number and currency
+  ---
+  duration_ms: 0.656375
+  type: 'test'
+  ...
+# Subtest: existing: addLine returns a new invoice and never mutates its input
+ok 2 - existing: addLine returns a new invoice and never mutates its input
+  ---
+  duration_ms: 0.151166
+  type: 'test'
+  ...
+# Subtest: existing: invalid line fields throw INV_INVALID_LINE
+ok 3 - existing: invalid line fields throw INV_INVALID_LINE
+  ---
+  duration_ms: 0.149041
+  type: 'test'
+  ...
+# Subtest: existing: totals of undiscounted lines are unchanged
+ok 4 - existing: totals of undiscounted lines are unchanged
+  ---
+  duration_ms: 0.080084
+  type: 'test'
+  ...
+# Subtest: existing: tax is rounded half up per line, not on the invoice total
+ok 5 - existing: tax is rounded half up per line, not on the invoice total
+  ---
+  duration_ms: 0.055042
+  type: 'test'
+  ...
+# Subtest: existing: finalize locks the invoice and keeps INV_EMPTY and INV_NOT_DRAFT
+ok 6 - existing: finalize locks the invoice and keeps INV_EMPTY and INV_NOT_DRAFT
+  ---
+  duration_ms: 0.067542
+  type: 'test'
+  ...
+# Subtest: existing: duplicateInvoice starts a new draft with copied lines
+ok 7 - existing: duplicateInvoice starts a new draft with copied lines
+  ---
+  duration_ms: 0.115084
+  type: 'test'
+  ...
+# Subtest: existing: formatTotal keeps the currency prefix and two decimals below 1000
+ok 8 - existing: formatTotal keeps the currency prefix and two decimals below 1000
+  ---
+  duration_ms: 0.109208
+  type: 'test'
+  ...
+# Subtest: discount: taken off before tax, each rounded half up per line
+ok 9 - discount: taken off before tax, each rounded half up per line
+  ---
+  duration_ms: 0.177292
+  type: 'test'
+  ...
+# Subtest: discount: defaults to 0 and totals always report a discount field
+ok 10 - discount: defaults to 0 and totals always report a discount field
+  ---
+  duration_ms: 0.214667
+  type: 'test'
+  ...
+# Subtest: discount: an invalid discount throws INV_INVALID_LINE like other line fields
+ok 11 - discount: an invalid discount throws INV_INVALID_LINE like other line fields
+  ---
+  duration_ms: 0.113041
+  type: 'test'
+  ...
+# Subtest: discount: line discounts survive finalize and duplicateInvoice
+ok 12 - discount: line discounts survive finalize and duplicateInvoice
+  ---
+  duration_ms: 0.035834
+  type: 'test'
+  ...
+# Subtest: removeLine: removes the line at a zero-based index without mutating the input
+ok 13 - removeLine: removes the line at a zero-based index without mutating the input
+  ---
+  duration_ms: 0.051375
+  type: 'test'
+  ...
+# Subtest: removeLine: an index without a line throws INV_LINE_NOT_FOUND as an InvoiceError
+ok 14 - removeLine: an index without a line throws INV_LINE_NOT_FOUND as an InvoiceError
+  ---
+  duration_ms: 0.056917
+  type: 'test'
+  ...
+# Subtest: removeLine: final invoices throw INV_NOT_DRAFT
+ok 15 - removeLine: final invoices throw INV_NOT_DRAFT
+  ---
+  duration_ms: 0.031167
+  type: 'test'
+  ...
+# Subtest: summarizeByCurrency: counts and totals final invoices per currency, ignoring drafts
+ok 16 - summarizeByCurrency: counts and totals final invoices per currency, ignoring drafts
+  ---
+  duration_ms: 0.121417
+  type: 'test'
+  ...
+# Subtest: summarizeByCurrency: totals include line discounts and per-line tax rounding
+ok 17 - summarizeByCurrency: totals include line discounts and per-line tax rounding
+  ---
+  duration_ms: 0.04175
+  type: 'test'
+  ...
+# Subtest: modified: formatTotal groups thousands with commas
+ok 18 - modified: formatTotal groups thousands with commas
+  ---
+  duration_ms: 0.036875
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 41.520708

@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I've built the inventory core in `inventory.js` and written tests and API docs; all 17 tests pass (`npm test`).\n\n**Files:**\n- `inventory.js`: the ES module. `createInventory()` returns a new, separate inventory with `add`, `reserve` and `stock`.\n- `inventory.test.js`: tests using Node's built-in test runner. They check every rule you listed, that failed operations leave stock unchanged, and that separate inventories don't share stock. One test runs 5,000 random operations against a simple reference model and confirms stock never goes negative.\n- `README.md`: the public API, input rules, error codes and guarantees.\n- `package.json`: marks the project as an ES module and adds `npm test`. Requires Node 18 or newer; there are no dependencies.\n\n**Choices I made for the details you left open:**\n- **Blank SKUs:** a SKU that is only spaces (like `'   '`) is rejected. SKUs are otherwise matched exactly, so `'abc'`, `'ABC'` and `' abc'` are three different SKUs.\n- **`stock()` with an invalid SKU:** it throws `INVALID_INPUT`, the same as `add` and `reserve`.\n- **Quantities:** only whole numbers are accepted. Numeric strings like `'3'` and very large integers are rejected. An `add` that would push the total past JavaScript's largest exact whole number (about 9 quadrillion) throws `INVALID_INPUT` and leaves stock unchanged.\n- **Which error comes first:** inputs are checked before stock, so `reserve('UNKNOWN', 0)` throws `INVALID_INPUT`, not `INSUFFICIENT_STOCK`.\n- **Errors:** they come from an `InventoryError` class that extends `Error`. `INSUFFICIENT_STOCK` errors also include `sku`, `requested` and `available`.\n- **Extra exports:** the module also exports `InventoryError` and an `ErrorCodes` constant, so callers can check error codes without typing the strings.\n- **Other details:**\n  - The returned inventory object is frozen.\n  - Its methods still work if you pull them off the object.\n  - Names like `'__proto__'` work as ordinary SKUs.\n- **Reservations are simple subtractions:** there are no reservation IDs, no release or cancel step, and no expiry. The README says so.\n\nI haven't committed anything.",
+    "cost": 0.29790859999999997,
+    "ms": 63690,
+    "turns": 7,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 6,
+      "cacheWrite": 17918,
+      "cacheRead": 58303,
+      "output": 7144
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "`release(sku, quantity)` is added. The inventory now keeps a separate reserved total for each SKU, and all 26 tests pass (`npm test`). Every existing method, error code and rule works as before.\n\n**How it works:**\n- `reserve` now moves units from stock to that SKU's reserved total; it still returns the resulting stock.\n- `release` moves units back from reserved to stock and returns the resulting stock.\n- `release` uses the same `INVALID_INPUT` checks as the other methods, and runs them before checking the reservation.\n- Releasing more than is reserved throws `INVALID_RELEASE`. That includes a SKU that is unknown or has nothing reserved. Stock and reservations stay as they were.\n- `INVALID_RELEASE` errors also include `sku`, `requested` and `reserved`, like the extra details on `INSUFFICIENT_STOCK`.\n\n**Choices I made:**\n- **New `reserved(sku)` method:** it returns the outstanding reserved amount, or `0` for an unknown SKU, and checks the SKU the same way `stock` does. Without it there was no way to see the reservations you asked me to track. The inventory object now has five methods.\n- **Reservations are one total per SKU:** you can release them in any split, for example reserve 5 then release 2 and 3. There are still no reservation IDs, expiry, or \"consumed\" state; the README says so.\n- **Very large totals:** stock plus reserved can exceed JavaScript's largest exact whole number (about 9 quadrillion) if you add more after reserving a huge amount. In that case `release` throws `INVALID_INPUT` and changes nothing, the same guard `add` already has. `add` itself is unchanged.\n\n**Tests:** the new tests cover:\n- releasing part or all of a reservation\n- releasing after stock reaches 0\n- each `INVALID_RELEASE` case, checking that stock and reservations don't change\n- a failed `reserve` leaving reservations unchanged\n- reservations kept separately per SKU and per inventory\n- the large-total guard\n\nThe 5,000-step random test now mixes in releases and checks both stock and reserved against a reference model after every step.\n\n**Docs:** the README covers both new methods, the new error code and the updated guarantees.\n\nThe changes are in `inventory.js`, `inventory.test.js` and `README.md`. Nothing is committed.",
+    "cost": 0.678254,
+    "ms": 88218,
+    "turns": 15,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 15795,
+      "cacheRead": 179127,
+      "output": 10906
+    }
+  }
+]

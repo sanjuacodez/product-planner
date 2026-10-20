@@ -21,6 +21,9 @@
       "priority": "high",
       "estimate": "S",
       "dependsOn": [],
+      "risk": "medium",
+      "writes": ["package.json", "src/"],
+      "sources": [],
       "status": "todo"
     }
   ]

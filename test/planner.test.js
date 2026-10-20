@@ -18,6 +18,11 @@ const cli = fileURLToPath(new URL('../bin/product-planner.js', import.meta.url))
 function project(t) { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-test-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true })); return dir; }
 function run(cwd, ...args) { return spawnSync(process.execPath, [cli, ...args], { cwd, encoding: 'utf8' }); }
 function ok(cwd, ...args) { const r = run(cwd, ...args); assert.equal(r.status, 0, r.stderr || r.stdout); return r.stdout; }
+function verify(cwd, id) {
+  const task = loadTasks(cwd).tasks.find((t) => t.id === id);
+  const report = { criteria: task.acceptance.map((criterion) => ({ criterion, status: 'pass', evidence: 'Fixture acceptance checked' })), reviewer: 'fixture-qa', reviewEvidence: 'Fixture reviewed', checks: { 'test suite': 'Fixture regression checks pass', integration: 'Fixture integration checks pass', 'security and data integrity review': 'Fixture reviewed' } };
+  const file = path.join(cwd, 'verification-report.json'); fs.writeFileSync(file, JSON.stringify(report)); ok(cwd, 'task', 'verify', id, '--file', file);
+}
 const plan = () => ({ epics: [{ id: 'E1', title: 'Core' }], tasks: [
   { id: 'T1', epic: 'E1', title: 'Foundation', acceptance: ['Starts locally'] },
   { id: 'T2', epic: 'E1', title: 'Journey', acceptance: ['Journey works'], dependsOn: ['T1'], priority: 'critical' },
@@ -25,7 +30,7 @@ const plan = () => ({ epics: [{ id: 'E1', title: 'Core' }], tasks: [
 
 test('all adapters install complete kit, update idempotently and preserve user instructions/data', async (t) => {
   const cwd = project(t); fs.writeFileSync(path.join(cwd, 'AGENTS.md'), '# User instructions\n');
-  const kit = loadKit(); assert.equal(kit.agents.length, 10); assert.equal(kit.workflows.length, 6);
+  const kit = loadKit(); assert.equal(kit.agents.length, 10); assert.equal(kit.workflows.length, 7);
   await init(cwd, { tools: 'all', yes: true });
   for (const f of ['.claude/agents/pp-qa.md', '.claude/commands/pp-plan.md', '.claude/commands/pp-replan.md', '.gemini/commands/pp/replan.toml', '.agents/skills/pp-plan/SKILL.md', '.gemini/commands/pp/plan.toml', '.opencode/agents/pp-developer.md', '.opencode/commands/pp-build.md', '.cursor/commands/pp-plan.md', '.windsurf/workflows/pp-build.md', '.product-planner/kit/templates/task-plan.json']) assert.ok(fs.existsSync(path.join(cwd, f)), f);
   const state = loadState(cwd); await init(cwd, { tools: 'all', yes: true }); assert.equal(loadState(cwd).createdAt, state.createdAt);
@@ -54,8 +59,9 @@ test('CLI plan import, dependency checks, QA transitions and completion work end
   assert.equal(JSON.parse(ok(cwd, 'task', 'next', '--json')).id, 'T1');
   assert.equal(run(cwd, 'task', 'start', 'T2').status, 1); assert.equal(run(cwd, 'task', 'done', 'T1').status, 1);
   ok(cwd, 'state', 'set', 'options.autoOpenDashboard', 'false'); ok(cwd, 'state', 'step', 'handoff', 'done'); ok(cwd, 'state', 'phase', 'build');
-  for (const id of ['T1', 'T2']) { ok(cwd, 'task', 'start', id); ok(cwd, 'task', 'review', id); ok(cwd, 'task', 'done', id, '--note', 'Acceptance verified'); }
-  assert.equal(loadState(cwd).phase, 'done'); assert.equal(run(cwd, 'task', 'next', '--json').status, 2);
+  for (const id of ['T1', 'T2']) { ok(cwd, 'task', 'start', id); ok(cwd, 'task', 'review', id); verify(cwd, id); ok(cwd, 'task', 'done', id, '--note', 'Acceptance verified'); }
+  assert.equal(loadState(cwd).phase, 'build'); // Final acceptance audit is now a separate completion gate.
+  assert.equal(run(cwd, 'state', 'phase', 'done').status, 1); assert.equal(run(cwd, 'task', 'next', '--json').status, 2);
   ok(cwd, 'task', 'reopen', 'T2'); assert.equal(loadTasks(cwd).tasks[1].completedAt, undefined);
   ok(cwd, 'task', 'block', 'T2', '--reason', 'External account missing'); assert.match(run(cwd, 'task', 'next').stdout, /ALL_BLOCKED/);
   ok(cwd, 'task', 'unblock', 'T2'); assert.equal(JSON.parse(ok(cwd, 'task', 'next', '--json')).id, 'T2');
@@ -94,13 +100,13 @@ test('tasks record the agent and AI model that worked on them and the dashboard 
   ok(cwd, 'state', 'set', 'models.developer', 'planned-model-x');
   ok(cwd, 'task', 'start', 'T1', '--agent', 'pp-developer', '--model', 'claude-opus-5-5');
   ok(cwd, 'task', 'review', 'T1', '--agent', 'developer', '--model', 'claude-opus-5-5');
-  ok(cwd, 'task', 'done', 'T1', '--agent', 'qa', '--model', 'claude-sonnet-5-5', '--note', 'Verified');
+  verify(cwd, 'T1'); ok(cwd, 'task', 'done', 'T1', '--agent', 'qa', '--model', 'claude-sonnet-5-5', '--note', 'Verified');
   assert.deepEqual(loadTasks(cwd).tasks[0].workedBy.map((w) => `${w.agent}/${w.model}`), ['developer/claude-opus-5-5', 'qa/claude-sonnet-5-5']);
   assert.match(ok(cwd, 'task', 'show', 'T1'), /worked by: developer \(claude-opus-5-5\), qa \(claude-sonnet-5-5\)/);
   const html = fs.readFileSync(buildDashboard(cwd), 'utf8');
   for (const tab of ['overview', 'tasks', 'roadmap', 'activity']) assert.match(html, new RegExp(`data-panel="${tab}"`));
   for (const view of ['table', 'board', 'epics', 'sequence']) assert.match(html, new RegExp(`data-view-panel="${view}"`));
-  assert.match(html, /<b>qa<\/b> · claude-sonnet-5-5/); assert.match(html, /planned-model-x <small>\(planned\)/); assert.match(html, /Agents and AI models/);
+  assert.match(html, /<b>QA<\/b> · Sonnet 5\.5/); assert.match(html, /model id claude-sonnet-5-5/); assert.match(html, /planned-model-x <small>\(planned\)/); assert.match(html, /Agents and AI models/);
 });
 
 test('delivery waves follow dependencies and roadmap headings become lanes', () => {
@@ -160,7 +166,7 @@ test('replanning updates unfinished tasks, removes unneeded ones and never rewri
     { id: 'T2', epic: 'E1', title: 'Journey', acceptance: ['Works'], dependsOn: ['T1'] },
     { id: 'T3', epic: 'E1', title: 'Old idea', acceptance: ['x'], dependsOn: ['T1'] },
   ] })); ok(cwd, 'task', 'add', '--file', 'plan.json');
-  for (const s of ['start', 'review', 'done']) ok(cwd, 'task', s, 'T1');
+  for (const s of ['start', 'review', 'done']) { if (s === 'done') verify(cwd, 'T1'); ok(cwd, 'task', s, 'T1'); }
   assert.match(run(cwd, 'task', 'update', 'T1', '--json', '{"title":"x"}').stderr, /follow-up task/);
   assert.match(run(cwd, 'task', 'update', 'T2', '--json', '{"status":"done"}').stderr, /cannot update status/);
   ok(cwd, 'task', 'update', 'T2', '--json', JSON.stringify({ title: 'Journey with reschedule', acceptance: ['Works', 'Can reschedule'] }), '--note', 'replan: reschedule');
@@ -222,10 +228,64 @@ test('usage hook attributes transcript tokens to active tasks and phases; hooks 
   fs.mkdirSync(path.join(cwd, 'session', 'subagents'), { recursive: true }); fs.writeFileSync(path.join(cwd, 'session/subagents/agent-1.jsonl'), msg('s1', 30) + '\n');
   hook('Stop');
   const lines = fs.readFileSync(path.join(cwd, '.product-planner/usage.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
-  assert.equal(lines.length, 2); assert.equal(lines[0].phase, 'init'); assert.equal(lines[0].tokens.output, 12);
-  assert.deepEqual(lines[1].tasks, ['T1']); assert.equal(lines[1].tokens.output, 50); assert.equal(lines[1].tokens.cacheRead, 200);
+  assert.equal(lines.length, 3); assert.equal(lines[0].phase, 'init'); assert.equal(lines[0].tokens.output, 12);
+  assert.deepEqual(lines[1].tasks, ['T1']); assert.equal(lines[1].tokens.output + lines[2].tokens.output, 50); assert.equal(lines[1].tokens.cacheRead + lines[2].tokens.cacheRead, 200);
   assert.match(ok(cwd, 'usage'), /T1 +272 tokens/);
   assert.match(fs.readFileSync(buildDashboard(cwd), 'utf8'), /Token usage/);
   uninstallTools(cwd);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(cwd, '.claude/settings.json'), 'utf8')), { permissions: { allow: ['Bash(ls:*)'] } });
+});
+
+test('task briefs preserve product context, multiline rules and exact ID boundaries', async (t) => {
+  const cwd = project(t); await init(cwd, { tools: 'generic' });
+  const dir = path.join(cwd, '.product-planner');
+  const write = (name, text) => fs.writeFileSync(path.join(dir, name), text);
+  write('concept.md', '# Concept\n## Goal\nHelp tutors book lessons.\n## Non-goals\nNo payments.\n## Constraints\nOffline only.');
+  write('prd.md', '# PRD\n## FR-1 (F1): Booking\nBook a free slot.\n\nReject overlaps with SLOT_UNAVAILABLE.\n### Timing\nUse UTC.\n## FR-10 (F10): Payments\nUNRELATED_PAYMENT\n');
+  write('architecture.md', '# Architecture\n## Security\nNever persist secrets.\n## Booking F1\nUse booking.js.\n\nUpdates must be atomic.\n## Payments F10\nUNRELATED_MODULE\n');
+  write('decisions.md', '# Decisions\n- T1 uses memory.\n  Revisit after persistence is requested.\n- T10 UNRELATED_DECISION\n\n## Global policy\nPreserve public API compatibility.\n');
+  ok(cwd, 'feature', 'add', '--json', JSON.stringify({ id: 'F1', title: 'Booking', status: 'accepted', priority: 'must', acceptance: ['Reject overlaps'] }));
+  ok(cwd, 'task', 'add', '--json', JSON.stringify({ id: 'T1', title: 'Core', features: ['F1'], acceptance: ['FR-1 is satisfied'] }));
+  const brief = ok(cwd, 'task', 'context', 'T1');
+  for (const text of ['Help tutors book lessons.', 'No payments.', 'Offline only.', 'Reject overlaps with SLOT_UNAVAILABLE.', 'Use UTC.', 'Never persist secrets.', 'Updates must be atomic.', 'Revisit after persistence is requested.', 'Preserve public API compatibility.', 'request.md']) assert.ok(brief.includes(text), text);
+  assert.doesNotMatch(brief, /UNRELATED_/);
+  const checked = JSON.parse(ok(cwd, 'check', '--json'));
+  assert.ok(checked.warnings.some((w) => w.startsWith('FR-10 in prd.md')));
+  ok(cwd, 'task', 'update', 'T1', '--json', JSON.stringify({ acceptance: ['FR-10 is satisfied'] }));
+  const rechecked = JSON.parse(ok(cwd, 'check', '--json'));
+  assert.ok(rechecked.warnings.some((w) => w.startsWith('FR-1 in prd.md')));
+});
+
+test('task ready lists every eligible task without starting or launching workers', async (t) => {
+  const cwd = project(t); await init(cwd, { tools: 'generic' });
+  fs.writeFileSync(path.join(cwd, 'plan.json'), JSON.stringify(plan())); ok(cwd, 'task', 'add', '--file', 'plan.json');
+  ok(cwd, 'task', 'add', '--json', JSON.stringify({ title: 'Independent docs', priority: 'high', acceptance: ['Commands documented'] }));
+  assert.deepEqual(JSON.parse(ok(cwd, 'task', 'ready', '--json')).map((x) => x.id), ['T3', 'T1']);
+  assert.match(ok(cwd, 'task', 'ready'), /ownership/);
+  ok(cwd, 'task', 'start', 'T1');
+  assert.deepEqual(JSON.parse(ok(cwd, 'task', 'ready', '--json')).map((x) => x.id), ['T3']);
+  ok(cwd, 'task', 'block', 'T3', '--reason', 'Waiting on docs source');
+  assert.deepEqual(JSON.parse(ok(cwd, 'task', 'ready', '--json')), []);
+});
+
+test('briefs keep table column context, dependency evidence and requested model precedence', async (t) => {
+  const cwd = project(t); await init(cwd, { tools: 'generic' });
+  const dir = path.join(cwd, '.product-planner');
+  fs.writeFileSync(path.join(cwd, 'plan.json'), JSON.stringify(plan())); ok(cwd, 'task', 'add', '--file', 'plan.json');
+  for (const sub of ['start', 'review', 'done']) { if (sub === 'done') verify(cwd, 'T1'); ok(cwd, 'task', sub, 'T1', '--note', 'API exported by core.js; node --test passed'); }
+  fs.writeFileSync(path.join(dir, 'prd.md'), '# PRD\n| Requirement | Rule |\n|---|---|\n| FR-2 | Reject stale input |\n| FR-20 | UNRELATED_TABLE_ROW |\n');
+  ok(cwd, 'task', 'update', 'T2', '--json', JSON.stringify({ acceptance: ['FR-2 is satisfied'] }));
+  ok(cwd, 'state', 'set', 'models.default', 'default-model');
+  ok(cwd, 'state', 'set', 'models.developer', 'role-model');
+  let brief = ok(cwd, 'task', 'context', 'T2');
+  assert.match(brief, /Requested model: role-model/);
+  assert.match(brief, /\| Requirement \| Rule \|/);
+  assert.match(brief, /FR-2 \| Reject stale input/);
+  assert.doesNotMatch(brief, /UNRELATED_TABLE_ROW/);
+  assert.match(brief, /T1 Foundation \[done\]/); assert.match(brief, /Starts locally/);
+  assert.match(brief, /API exported by core.js; node --test passed/);
+  assert.match(brief, /concept.md missing/);
+  ok(cwd, 'task', 'update', 'T2', '--json', '{"model":"task-model"}');
+  brief = ok(cwd, 'task', 'context', 'T2'); assert.match(brief, /Requested model: task-model/);
+  assert.deepEqual(loadTasks(cwd).tasks[1].workedBy, []);
 });

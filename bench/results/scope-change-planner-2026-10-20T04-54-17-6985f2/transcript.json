@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I built the inventory core and documented its API. All 15 tests pass under `npm test`, and the project's final acceptance check passed.\n\n**What's in it**\n- **`inventory.js`**: a plain JavaScript ES module with no dependencies. It exports `createInventory()`. Each inventory keeps its own data in memory, so changing one never affects another. `add`, `reserve` and `stock` behave and throw errors exactly as you specified. Every check runs before anything is written, so a failed call never changes stock and quantities can't go negative.\n- **`inventory.test.js` and `readme.test.js`**: they use Node's built-in test runner, so there's nothing to install. Each test is named after the rule it checks. I wrote the tests before the code and saw them fail first.\n- **`README.md`**: covers the API, validation rules, error codes, examples and how to run the tests.\n- **`package.json`**: has no dependencies. It declares the module type and the test command (`npm test`) and needs Node 18 or later.\n\n**Choices I made for details you didn't specify**\n- **SKUs are exact strings.** They're case-sensitive and not trimmed, so `'Bolt'`, `'bolt'` and `' bolt'` are three different items. Names like `'__proto__'` work as normal SKUs.\n- **`stock()` checks its input too.** An invalid SKU throws `INVALID_INPUT` instead of returning 0.\n- **Very large numbers are rejected.** A quantity above `Number.MAX_SAFE_INTEGER` (about 9 quadrillion), or an `add` that would push a total past it, throws `INVALID_INPUT`, because JavaScript can't count exactly beyond that.\n- **Numeric strings are rejected.** `'3'` is not accepted as a quantity.\n- **Bad input wins over low stock.** `reserve('unknown', 0)` throws `INVALID_INPUT`, not `INSUFFICIENT_STOCK`.\n- **Reserving everything leaves 0.** The SKU stays in the inventory with a quantity of 0.\n\n**Limitations**\n- The inventory lives only in memory, as you asked, so it is gone when the program stops.\n- `reserve` simply subtracts stock. There's no reservation ID, release or undo.\n\nNothing is committed. The new files and the product-planner tracking updates in `.product-planner/` and `product-dashboard.html` are in your working tree, ready to review.",
+    "cost": 0.8729156000000002,
+    "ms": 153403,
+    "turns": 35,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 44,
+      "cacheWrite": 44983,
+      "cacheRead": 809678,
+      "output": 17547
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I added `release(sku, quantity)` and the inventory now keeps a running count of reserved items per SKU. All 22 tests pass and the project's final acceptance check passed.\n\n**What changed**\n- **`release(sku, quantity)`** moves items from the SKU's reserved count back into stock and returns the new stock quantity.\n  - Releasing more than is currently reserved throws `INVALID_RELEASE` and changes nothing. That includes an unknown SKU or one that was never reserved.\n  - It uses the same `INVALID_INPUT` checks as `add` and `reserve`.\n- **`reserve`** now also adds the amount to the SKU's reserved count. Its return value and errors are unchanged.\n- **`add`, `stock`**, `INVALID_INPUT`, `INSUFFICIENT_STOCK`, separate inventories and \"a failed call changes nothing\" all work as before. The original 12 tests pass without edits, and a new test checks that reserved counts are also separate between inventories.\n\n**Choices I made where you left details open**\n- **New `reserved(sku)` method.** It returns how much of a SKU is currently reserved (0 for an unknown SKU), so callers can see how much they're allowed to release. It only reads data and doesn't change any existing method.\n- **Bad input is reported first.** `release('unknown', 0)` throws `INVALID_INPUT` rather than `INVALID_RELEASE`, the same order `reserve` already uses.\n- **Reservations are one running total per SKU.** There are no individual reservation IDs, so any release up to the total is accepted.\n- **Very large totals are rejected.** As `add` already did, a `reserve` or `release` that would push a count above `Number.MAX_SAFE_INTEGER` (about 9 quadrillion) throws `INVALID_INPUT` and changes nothing.\n\n**How it was checked**\n- I added 6 tests in `inventory.test.js` and a new README test, and saw each fail before writing the code or docs.\n- For a short time between the code change and the docs update, the README test failed because it caught the two new methods before they were documented. I noted that on the task rather than recording it as passing.\n- `README.md` now covers `release`, `reserved`, how reservations work, `INVALID_RELEASE` and the updated guarantees. I ran its example code to confirm the values it shows are correct.\n\n**Planning records**\n- The change request is added word for word to `.product-planner/request.md`.\n- It is recorded as a new feature with two new tasks, both done. The earlier tasks were left as they were.\n- The choices above are written up in a new `.product-planner/decisions.md`, and the plan was re-approved using the approval you gave.\n\nNothing is committed yet.",
+    "cost": 1.7884796000000003,
+    "ms": 182015,
+    "turns": 33,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 36,
+      "cacheWrite": 31393,
+      "cacheRead": 1302280,
+      "output": 20191
+    }
+  }
+]

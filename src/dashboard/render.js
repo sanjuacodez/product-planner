@@ -1,4 +1,5 @@
 import { mdToHtml, escapeHtml as esc, inline } from '../util/md.js';
+import { PRICING, modelLabel, baseModelId } from '../pricing.js';
 
 export const STATUS_META = {
   todo: { label: 'To do', color: '#c3c2b7', dark: '#6b6a66', icon: '○' },
@@ -35,6 +36,7 @@ export function renderDashboard(d) {
       kpis(d),
       blocked.length ? blockedCallout(blocked) : '',
       hasTasks ? section('overview-charts', 'Progress', `<div class="charts">${donut(d)}${stackedBars('Tasks per epic', 'Tasks per epic by status', d.byEpic.filter((g) => g.tasks.length).map((g) => ({ label: g.epic.title || g.epic.id, tasks: g.tasks })))}${stackedBars('Tasks by agent and AI model', 'Tasks by agent and model, by status', agentGroups(d).map((g) => ({ label: g.label, tasks: g.tasks })))}${burnup(d)}</div>${chartTables(d)}`) : '',
+      d.profile?.selected?.length ? profileSection(d) : '',
       d.usage?.all ? usageSection(d) : '',
       hasTasks ? section('overview-tables', 'Summary tables', `<div class="two-col">${epicTable(d)}${agentTable(d)}</div>`) : '',
       ...custom.overview,
@@ -133,13 +135,25 @@ function agentGroups(d) {
   const groups = new Map();
   for (const task of d.tasks.tasks) for (const a of assignees(task, d)) {
     const key = `${a.agent}\u0000${a.model}`;
-    if (!groups.has(key)) groups.set(key, { agent: a.agent, model: a.model, label: `${a.agent} · ${a.model || 'model not recorded'}`, tasks: [], recorded: 0 });
+    if (!groups.has(key)) groups.set(key, { agent: a.agent, model: a.model, label: `${roleName(a.agent)} · ${a.model ? modelLabel(a.model, d.config.dashboard?.modelNames) : 'model not recorded'}`, tasks: [], recorded: 0 });
     const g = groups.get(key); g.tasks.push(task); if (a.recorded) g.recorded++;
   }
   return [...groups.values()].sort((a, b) => b.tasks.length - a.tasks.length || a.label.localeCompare(b.label));
 }
+/** Models seen in this task's transcripts that differ from what the agents reported. */
+function modelMismatch(task, d) {
+  const seen = d.usage?.taskModels?.[task.id];
+  const reported = (task.workedBy || []).map((w) => w.model).filter(Boolean);
+  if (!seen?.length || !reported.length) return null;
+  const base = (m) => baseModelId(m);
+  const missing = reported.filter((m) => !seen.some((s) => base(s) === base(m)));
+  return missing.length ? { reported: missing, seen } : null;
+}
 function whoChips(task, d) {
-  return assignees(task, d).map((a) => `<span class="who-chip${a.recorded ? '' : ' planned'}" title="${a.recorded ? 'Recorded when the task moved' : 'Planned assignment'}"><b>${esc(a.agent)}</b>${a.model ? ` · ${esc(a.model)}` : ' · <i>model not recorded</i>'}${a.recorded ? '' : ' <small>(planned)</small>'}</span>`).join('');
+  const names = d.config.dashboard?.modelNames || {};
+  const mismatch = modelMismatch(task, d);
+  return assignees(task, d).map((a) => `<span class="who-chip${a.recorded ? '' : ' planned'}" title="${esc(`${a.recorded ? 'Recorded when the task moved' : 'Planned assignment'}${a.model ? ` · model id ${a.model}` : ''}`)}"><b>${esc(roleName(a.agent))}</b>${a.model ? ` · ${esc(modelLabel(a.model, names))}` : ' · <i>model not recorded</i>'}${a.recorded ? '' : ' <small>(planned)</small>'}</span>`).join('')
+    + (mismatch ? `<span class="who-chip warn" title="The agent reported ${esc(mismatch.reported.join(', '))}; the transcripts for this task show ${esc(mismatch.seen.join(', '))}">⚠ transcript model: ${esc(mismatch.seen.map((m) => modelLabel(m, names)).join(', '))}</span>` : '');
 }
 
 /* ---------- charts (inline SVG, palette from the dataviz reference) ---------- */
@@ -212,26 +226,55 @@ function blockedCallout(blocked) {
     `<li><strong>${esc(t.id)}</strong> ${esc(t.title)} — ${esc(t.blockedReason || 'no reason given')}</li>`).join('')}</ul></section>`;
 }
 function usageSection(d) {
-  const u = d.usage; const n = (x) => Number(x).toLocaleString('en-US');
-  const rows = [...Object.entries(u.byPhase).map(([k, v]) => [`${k} (no task active)`, v]), ...Object.entries(u.byTask).sort((a, b) => u.sum(b[1]) - u.sum(a[1])).map(([k, v]) => [`${k} ${d.tasks.tasks.find((t) => t.id === k)?.title || ''}`, v])];
-  const table = `<table><caption>Tokens by phase and task (from the AI tool's transcripts)</caption><thead><tr><th>Where</th><th class="num">Total</th><th class="num">Output</th><th class="num">Cache read</th><th class="num">Cache write</th><th class="num">Input</th></tr></thead><tbody>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${n(u.sum(v))}</td><td class="num">${n(v.output)}</td><td class="num">${n(v.cacheRead)}</td><td class="num">${n(v.cacheWrite)}</td><td class="num">${n(v.input)}</td></tr>`).join('')}</tbody></table>`;
-  const models = Object.entries(u.byModel).map(([m, v]) => `${esc(m)}: ${n(u.sum(v))}`).join(' · ');
-  return section('overview-usage', 'Token usage', `<div class="tiles"><div class="tile"><div class="tile-l">Total tokens</div><div class="tile-v">${n(u.all)}</div><div class="tile-s">${models}</div></div><div class="tile"><div class="tile-l">Output tokens</div><div class="tile-v">${n(u.total.output)}</div><div class="tile-s">written by the model</div></div><div class="tile"><div class="tile-l">Cache reads</div><div class="tile-v">${u.all ? Math.round((u.total.cacheRead / u.all) * 100) : 0}%</div><div class="tile-s">of all tokens (cheapest kind)</div></div></div>${table}`);
+  const u = d.usage, c = u.cost; const n = (x) => Number(x).toLocaleString('en-US');
+  const priced = c && u.all > c.unpricedTokens;
+  const title = (id) => d.tasks.tasks.find((t) => t.id === id)?.title || '';
+  const rows = [...Object.entries(u.byPhase).map(([k, v]) => [`${k} (no task active)`, v, c?.byPhase[k]]), ...Object.entries(u.byTask).sort((a, b) => u.sum(b[1]) - u.sum(a[1])).map(([k, v]) => [`${k} ${title(k)}`, v, c?.byTask[k]])];
+  const table = `<table><caption>Tokens and estimated cost by phase and task (from the AI tool's transcripts)</caption><thead><tr><th>Where</th>${priced ? '<th class="num">Est. cost</th>' : ''}<th class="num">Total</th><th class="num">Output</th><th class="num">Cache read</th><th class="num">Cache write</th><th class="num">Input</th></tr></thead><tbody>${rows.map(([k, v, usd]) => `<tr><td>${esc(k)}</td>${priced ? `<td class="num">${money(usd)}</td>` : ''}<td class="num">${n(u.sum(v))}</td><td class="num">${n(v.output)}</td><td class="num">${n(v.cacheRead)}</td><td class="num">${n(v.cacheWrite)}</td><td class="num">${n(v.input)}</td></tr>`).join('')}</tbody></table>`;
+  const names = d.config.dashboard?.modelNames || {};
+  const models = Object.entries(u.byModel).map(([m, v]) => `${esc(modelLabel(m, names))}: ${n(u.sum(v))}${priced && c.byModel[m] != null ? ` (${money(c.byModel[m])})` : ''}`).join(' · ');
+  const done = d.tasks.tasks.filter((t) => t.status === 'done').length;
+  const stages = priced ? Object.entries(c.byStage).map(([k, v]) => `${esc(k)} ${money(v)}`).join(' · ') : '';
+  const costTiles = priced ? `<div class="tile"><div class="tile-l">Estimated cost</div><div class="tile-v">${money(c.total)}</div><div class="tile-s">${stages}</div></div><div class="tile"><div class="tile-l">Per completed task</div><div class="tile-v">${done ? money(c.total / done) : '—'}</div><div class="tile-s">${done} task${done === 1 ? '' : 's'} done</div></div>` : '';
+  const note = `<p class="small">Costs are estimates at API list prices (verified ${esc(PRICING.verifiedOn)}; edit <code>pricing.models</code> in config.json). Subscription plans are billed differently.${c?.unpricedTokens ? ` ${n(c.unpricedTokens)} tokens from ${esc(c.unpricedModels.join(', '))} have no known price and are not included.` : ''} Tokens are recorded only by hosts with a usage hook (Claude Code); other hosts show nothing rather than a guess.</p>`;
+  return section('overview-usage', priced ? 'Cost and token usage' : 'Token usage', `<div class="tiles">${costTiles}<div class="tile"><div class="tile-l">Total tokens</div><div class="tile-v">${n(u.all)}</div><div class="tile-s">${models}</div></div><div class="tile"><div class="tile-l">Cache reads</div><div class="tile-v">${u.all ? Math.round((u.total.cacheRead / u.all) * 100) : 0}%</div><div class="tile-s">of all tokens (cheapest kind)</div></div></div>${table}${note}`);
+}
+function profileSection(d) {
+  const p = d.profile;
+  const tasksFor = (id) => d.tasks.tasks.filter((t) => t.gates?.includes(id)).map((t) => t.id);
+  const chosen = `<ul class="small">${p.selected.map((s) => `<li><strong>${esc(s.title)}</strong> · ${esc(s.because)} · ${s.verified ? `verified ${esc(s.verified.at.slice(0, 10))} against ${s.verified.sources.length} source(s)` : '<em>not yet verified against official sources</em>'}</li>`).join('')}</ul>`;
+  const rows = p.gates.map((g) => { const r = p.results?.[g.id]; const tasks = tasksFor(g.id);
+    return `<tr><td class="mono">${esc(g.id)}</td><td>${esc(g.title)}</td><td>${esc(g.type === 'legal' ? 'legal review' : g.type)}</td><td>${g.type === 'legal' ? '—' : tasks.length ? esc(tasks.join(', ')) : '<em>no task</em>'}</td><td>${g.type === 'legal' ? 'needs legal review' : r ? `${r.pass ? '✓ pass' : '✗ fail'} <span class="small">${esc(r.at.slice(0, 16).replace('T', ' '))}</span>` : g.type === 'automated' ? 'not run yet' : 'checked in verification'}</td></tr>`; }).join('');
+  const removed = p.removed?.length ? `<p class="small">Removed with approval: ${p.removed.map((r) => `${esc(r.id)} (${esc(r.reason)})`).join('; ')}</p>` : '';
+  return section('overview-profile', 'Quality and compliance profile', `${chosen}<table><caption>Gates: platform and regulatory checks this product must meet</caption><thead><tr><th>Gate</th><th>Requirement</th><th>Type</th><th>Tasks</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>${removed}<p class="small">Legal items are listed for review by a qualified person; tests can show the technical controls work but cannot establish legal compliance.</p>`);
+}
+function money(usd) { return usd == null ? '—' : usd >= 100 ? `$${Math.round(usd).toLocaleString('en-US')}` : `$${usd.toFixed(2)}`; }
+/** "Developer", "QA", "UX designer" from persona ids. */
+export function roleName(agent) {
+  const a = String(agent || 'unassigned').replace(/^pp-/, '');
+  const special = { qa: 'QA', pm: 'PM', 'ux-designer': 'UX designer' };
+  return special[a] || a.charAt(0).toUpperCase() + a.slice(1).replace(/-/g, ' ');
 }
 function epicTable(d) {
+  const cost = d.usage?.cost; const priced = cost && Object.keys(cost.byTask).length;
   const rows = d.byEpic.map(({ epic, tasks }) => {
     const c = (k) => tasks.filter((t) => t.status === k).length;
     const pct = tasks.length ? Math.round((c('done') / tasks.length) * 100) : 0;
-    return `<tr><td><strong>${esc(epic.id)}</strong> ${esc(epic.title)}</td><td class="num">${tasks.length}</td><td class="num">${c('done')}</td><td class="num">${c('in_progress') + c('review')}</td><td class="num">${c('blocked')}</td><td><div class="mini"><div class="bar-track small"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div></td></tr>`;
+    const review = epic.review ? `<span class="small" title="${esc(epic.review.evidence)}"> ✓ increment reviewed</span>` : '';
+    return `<tr><td><strong>${esc(epic.id)}</strong> ${esc(epic.title)}${review}</td><td class="num">${tasks.length}</td><td class="num">${c('done')}</td><td class="num">${c('in_progress') + c('review')}</td><td class="num">${c('blocked')}</td>${priced ? `<td class="num">${money(tasks.reduce((a, t) => a + (cost.byTask[t.id] || 0), 0))}</td>` : ''}<td><div class="mini"><div class="bar-track small"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div></td></tr>`;
   }).join('');
-  return `<table><caption>Epic progress</caption><thead><tr><th>Epic</th><th class="num">Tasks</th><th class="num">Done</th><th class="num">Active</th><th class="num">Blocked</th><th>Progress</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table><caption>Epic progress</caption><thead><tr><th>Epic</th><th class="num">Tasks</th><th class="num">Done</th><th class="num">Active</th><th class="num">Blocked</th>${priced ? '<th class="num">Est. cost</th>' : ''}<th>Progress</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function agentTable(d) {
+  const cost = d.usage?.cost;
+  const priced = cost && Object.keys(cost.byTask).length;
+  // A task's estimated cost is shared equally by the role-and-model pairs that worked on it.
+  const share = (task) => (cost?.byTask[task.id] || 0) / assignees(task, d).length;
   const rows = agentGroups(d).map((g) => {
     const c = (k) => g.tasks.filter((t) => t.status === k).length;
-    return `<tr><td><strong>${esc(g.agent)}</strong></td><td class="mono">${g.model ? esc(g.model) : '<i>not recorded</i>'}</td><td class="num">${g.tasks.length}</td><td class="num">${c('done')}</td><td class="num">${c('in_progress') + c('review')}</td><td class="small">${g.recorded === g.tasks.length ? 'recorded' : g.recorded ? 'recorded + planned' : 'planned'}</td></tr>`;
+    return `<tr><td title="${esc(g.model || '')}"><strong>${esc(g.label)}</strong></td><td class="num">${g.tasks.length}</td><td class="num">${c('done')}</td><td class="num">${c('in_progress') + c('review')}</td>${priced ? `<td class="num">${money(g.tasks.reduce((a, t) => a + share(t), 0))}</td>` : ''}<td class="small">${g.recorded === g.tasks.length ? 'recorded' : g.recorded ? 'recorded + planned' : 'planned'}</td></tr>`;
   }).join('');
-  return `<table><caption>Agents and AI models</caption><thead><tr><th>Agent</th><th>Model</th><th class="num">Tasks</th><th class="num">Done</th><th class="num">Active</th><th>Source</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table><caption>Agents and AI models (role · model)</caption><thead><tr><th>Role · model</th><th class="num">Tasks</th><th class="num">Done</th><th class="num">Active</th>${priced ? '<th class="num">Est. cost</th>' : ''}<th>Source</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function taskAttrs(t, d, epicTitle) {
   const who = assignees(t, d).map((a) => `${a.agent} ${a.model}`).join(' ');
@@ -417,7 +460,7 @@ details summary{cursor:pointer}.task-detail{padding:8px 0 4px;color:var(--ink2);
 .tcard{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--status-todo);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:13px}.tcard.st-in_progress{border-left-color:var(--status-in_progress)}.tcard.st-review{border-left-color:var(--status-review)}.tcard.st-done{border-left-color:var(--status-done)}.tcard.st-blocked{border-left-color:var(--status-blocked)}
 .tcard-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px}.tcard-h .prio{margin-left:auto}.tcard-t{font-weight:600;margin-bottom:4px}.tcard .blocked{color:var(--crit)}
 .who{display:flex;flex-direction:column;gap:3px;align-items:flex-start;margin:4px 0}td.who{display:table-cell}td.who .who-chip{display:inline-block;margin:0 0 3px}
-.who-chip{font-size:12px;background:var(--page);border:1px solid var(--border);border-radius:6px;padding:1px 7px;white-space:nowrap}.who-chip b{color:var(--accent);font-weight:600}.who-chip.planned{border-style:dashed}.tcard .who-chip{white-space:normal}.who-chip small{color:var(--muted)}
+.who-chip{font-size:12px;background:var(--page);border:1px solid var(--border);border-radius:6px;padding:1px 7px;white-space:nowrap}.who-chip b{color:var(--accent);font-weight:600}.who-chip.planned{border-style:dashed}.who-chip.warn{border-color:var(--status-blocked);color:var(--status-blocked)}.tcard .who-chip{white-space:normal}.who-chip small{color:var(--muted)}
 .egroup{margin-bottom:16px}.egroup-h{margin-bottom:6px}.egroup .cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 .two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:20px}caption{text-align:left;font-weight:600;font-size:13px;color:var(--ink2);padding-bottom:6px}.num{text-align:right;font-variant-numeric:tabular-nums}
 .mini{display:flex;align-items:center;gap:8px}.mini .bar-track{flex:1;margin:0;min-width:60px}.mini span{font-size:12px;color:var(--ink2);width:36px;text-align:right}

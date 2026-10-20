@@ -20,7 +20,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/planner.test.js",
+    "test": "node --test test/*.test.js",
     "link": "npm link",
     "check": "node --check bin/product-planner.js && node --check src/cli.js"
   },

@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I built the inventory core in `inventory.js` and tested it; all 17 tests pass with `npm test`. The public API is documented in `README.md`. It is plain JavaScript with no dependencies at all, not even for testing, since the tests use Node's built-in `node:test`.\n\nI ran it through the project's product-planner workflow on its quickest setting. Because you said not to ask about choices, I took your request as approval of the plan. Both build tasks and the final acceptance audit passed, and the project is marked done.\n\n**What it does**\n- **Separate inventories:** each `createInventory()` call returns its own object with `add`, `reserve` and `stock`, and inventories never share stock.\n- **`add` and `reserve`** return the resulting quantity. `reserve` throws `INSUFFICIENT_STOCK` if you ask for more than is there, including for an unknown SKU. `stock` returns 0 for an unknown SKU.\n- **Bad input** throws an `Error` with code `INVALID_INPUT`.\n- **Safe failures:** every check runs before anything changes, so a failed call leaves stock exactly as it was. A test runs 2,000 random operations and confirms stock never goes negative.\n\n**Choices I made for details you didn't specify** (also logged in `.product-planner/decisions.md`):\n- A SKU made only of spaces counts as empty and is rejected. SKUs are case-sensitive and never trimmed, so `'Bolt'` and `'bolt'` are different SKUs.\n- A quantity must be a whole number that JavaScript can store exactly (`Number.isSafeInteger`). Text like `'1'`, `1.5`, `NaN`, `Infinity` and BigInt values like `1n` are rejected.\n- An `add` that would push a total above `Number.MAX_SAFE_INTEGER` (about 9 quadrillion) throws `INVALID_INPUT`, so you only ever get your two error codes.\n- If a call has both a bad input and too little stock, `INVALID_INPUT` wins.\n- `stock()` also rejects an invalid SKU with `INVALID_INPUT` rather than returning 0.\n- SKUs named `__proto__` or `constructor` work like any other SKU.\n- There's no way to release a reservation or list SKUs. Those are noted as possible later additions in `.product-planner/plan.md`.\n\n**Housekeeping**\n- **Not committed:** your request didn't give permission to commit, so I turned off the project's commit-after-each-task setting. Everything is left in the working tree for you to review.\n- **Scratch file left behind:** `.product-planner/features-import.json` was only used to load the feature list. Deleting it needed your approval, so it's still there and you can delete it.\n\nThe progress dashboard is at `product-dashboard.html`.",
+    "cost": 1.1830216,
+    "ms": 245680,
+    "turns": 37,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 38,
+      "cacheWrite": 65798,
+      "cacheRead": 940928,
+      "output": 23415
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I added `release(sku, quantity)` and per-SKU reservation tracking. All 29 tests pass, the 17 original ones included, and the README is updated.\n\n**How release works**\n- **Tracking:** each inventory now also keeps a count of outstanding reservations per SKU. A successful `reserve` adds to it, and failed reserves leave it alone.\n- **Release:** `release(sku, quantity)` returns the units to stock, lowers the reserved count, and returns the new stock.\n- **Releasing too much:** asking to release more than is reserved throws `INVALID_RELEASE` and changes neither stock nor reservations. This includes an unknown SKU or one with nothing reserved.\n- **Validation:** `release` uses the same `INVALID_INPUT` checks as the other methods, and they run first, so `release('ghost', -1)` throws `INVALID_INPUT`.\n- **Unchanged:** `add`, `reserve`, `stock`, both original error codes, isolation between inventories, and \"failed calls change nothing\" all behave exactly as before. The only edit to an existing test is the one listing the inventory's methods, which now includes the two new ones.\n\n**What I checked**\n- **Tests:** 12 new tests, including a 3,000-step random run that checks stock and reserved stay consistent and never go negative.\n- **Independent review:** a separate QA agent reviewed the change, passed all six points it checked, and found no defects.\n- **Final audit:** the project's acceptance check against both of your requests passed, and the project is marked done again.\n\n**Choices I made** (logged in `.product-planner/decisions.md`):\n- **New method `reserved(sku)`:** returns the outstanding reserved count, or 0 for an unknown SKU, so the tracking is visible to callers. It's purely an addition.\n- **Overflow limit now counts reservations:** `add` throws `INVALID_INPUT` if stock plus reserved for a SKU would go above `Number.MAX_SAFE_INTEGER`. That way `reserve` and `release` can never overflow. This only affects totals above about 9 quadrillion units.\n  - **Edge case that changed:** before, after reserving the maximum you could add again; now that `add` throws.\n  - **Alternative:** I can drop this rule. Then `release` would need its own overflow check, which means a valid release could fail.\n- **Pooled reservations:** reservations for a SKU are one shared count, with no reservation IDs. Any reserved units can be released, in any amounts. Reservation IDs are listed as a possible later addition.\n\nNothing is committed, the same as last time. `.product-planner/features-import.json` is still there because deleting it needs your approval; you can delete it.",
+    "cost": 2.4297964000000003,
+    "ms": 244374,
+    "turns": 29,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 28,
+      "cacheWrite": 43776,
+      "cacheRead": 1384079,
+      "output": 26531
+    }
+  }
+]

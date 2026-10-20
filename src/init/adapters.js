@@ -61,45 +61,40 @@ export function installKit(cwd) {
 /** Intent routing that lets the agent start workflows without slash commands (automatic mode). */
 export function autoRunSection() {
   return `### Automatic mode (on)
-Do not wait for a slash command. At the start of each request, match the user's intent and run the matching workflow, announcing it in one line ("Starting pp-plan; say stop to skip"):
+Match each request to a workflow and announce it in one line ("Starting pp-plan; say stop to skip"):
 
 | The user… | Run |
 |---|---|
+| asks to build something small and precisely specified (exact behaviour stated, about 5 tasks or fewer, no open product decisions) and authorizes building | \`pp-direct\` |
 | describes a product, app or feature to build and no approved plan covers it | \`pp-plan\` |
-| wants to add, change, remove or defer a feature, or change users, platform, stack, design or deadline after the plan was approved ("replan", "change the plan", "also add…", "drop…") | \`pp-replan\` |
-| says build, continue, next task, keep going, or opens a new session to carry on | \`pp-resume\` (it continues pp-plan or pp-build from saved state) |
+| changes scope after approval: adds, changes, removes or defers a feature, or changes users, platform, stack, design or deadline | \`pp-replan\` |
+| says build, continue, next task or keep going, or starts a new session on a planned project | \`pp-resume\` |
 | asks for status, progress or the dashboard | \`pp-status\` |
-| asks a question about the plan, decisions or code | \`pp-ask\` |
+| asks about the plan, decisions or code | \`pp-ask\` |
 
-Do not start a workflow for small work that does not change the agreed scope (a bug fix, a typo, a question about code, a one-off script): just do it, and if it belongs to a task, note it on that task. When unsure whether a request changes scope, ask one short question instead of starting a workflow. The user can turn this off with \`product-planner auto off\`.`;
+Small work that does not change the agreed scope (a bug fix, a typo, a code question): just do it and note it on the related task. If unsure whether a request changes scope, ask one short question. The user can turn this off with \`product-planner auto off\`.`;
 }
 
+/** The always-loaded instruction block. Kept short: every agent turn pays for it. Workflows carry the detail. */
 export function universalBlock(kit, { autoRun = true } = {}) {
-  const wf = kit.workflows.map((w) => `| \`/${w.meta.name}\` | ${w.meta.description} |`).join('\n');
-  const ag = kit.agents.map((a) => `- **${a.meta.name}** – ${a.meta.description}`).join('\n');
+  const wf = kit.workflows.map((w) => `- \`${w.meta.name}\`: ${w.meta.description}`).join('\n');
   return `## Product Planner
 
-This project uses **product-planner**, a multi-agent product planning and build kit. Run its CLI as \`product-planner …\`; if that command is not found, use \`npx -y github:sanjuacodez/product-planner …\` with the same arguments instead of skipping the workflow. The full operating manual is in \`${STATE_DIR}/kit/README.md\` – read it before doing any planning or build work. Project state (concept, research, PRD, UX, architecture, tasks, dashboard data) lives in \`${STATE_DIR}/\` and is committed to git.
+This project uses **product-planner**: CLI \`product-planner\` (alias \`pp\`; if not found, use \`npx -y github:sanjuacodez/product-planner …\` with the same arguments). Planning state lives in \`${STATE_DIR}/\` and is committed to git. Each workflow is a file in \`${STATE_DIR}/kit/workflows/\` that lists the commands it needs: open the matching one and follow it step by step. \`${STATE_DIR}/kit/README.md\` is a reference manual: read only the section a step points to.
 
-### Workflows
-When the user types one of these (as a slash command, or in plain words such as "run pp-plan" / "start planning" / "build the next task"), open the matching file in \`${STATE_DIR}/kit/workflows/\` and follow it step by step.
+${autoRun ? autoRunSection() : `### Workflows
+Run one when the user asks for it by name (\`/pp-plan\`) or in plain words ("start planning", "build the next task"):
 
-| Command | Purpose |
-|---|---|
-${wf}
+${wf}`}
 
-${autoRun ? autoRunSection() + '\n\n' : ''}### Agents
-Specialist personas live in \`${STATE_DIR}/kit/agents/\`. If this tool supports sub-agents, delegate to them by name; otherwise adopt the persona file yourself for that step.
-
-${ag}
-
-### Ground rules
-- All questions for the human are asked during planning (\`/pp-plan\`). The build phase (\`/pp-build\`) runs without stopping for input unless every remaining task is blocked.
-- Track work only through \`product-planner task …\` commands (or by editing \`${STATE_DIR}/tasks.json\` when the CLI is unavailable). Never keep a parallel to-do list.
-- After each task completes, the dashboard (\`product-dashboard.html\`) is regenerated automatically; the human watches that file, not the terminal.`;
+### Rules
+- Questions for the human happen only in planning. The build runs without stopping unless every remaining task is blocked.
+- Track work only with \`product-planner task …\` (edit \`${STATE_DIR}/tasks.json\` only if the CLI is unavailable); never keep a parallel to-do list.
+- Every task: tests written with the code, the full test suite passing and verification recorded. The product is done only when the acceptance audit passes.
+- Specialist personas are in \`${STATE_DIR}/kit/agents/\`: delegate to them when the host supports sub-agents, otherwise adopt the persona for that step. The dashboard (\`product-dashboard.html\`) updates itself.`;
 }
 
-const PREAMBLE = (w) => `${w.meta.description}\n\nThis is the \`${w.meta.name}\` workflow from product-planner. Read \`${STATE_DIR}/kit/README.md\` once for the operating manual; agent personas are in \`${STATE_DIR}/kit/agents/\`.\n\nUser input / arguments: $ARGUMENTS\n\n---\n\n`;
+const PREAMBLE = (w) => `${w.meta.description}\n\nThis is the \`${w.meta.name}\` workflow from product-planner. Each step names the commands it needs; \`${STATE_DIR}/kit/README.md\` is a reference manual, so read a section only when a step points to it. Agent personas are in \`${STATE_DIR}/kit/agents/\`.\n\nUser input / arguments: $ARGUMENTS\n\n---\n\n`;
 const toolsList = (a) => Array.isArray(a.meta.tools) ? a.meta.tools : (a.meta.tools ? String(a.meta.tools).split(',').map((s) => s.trim()) : []);
 
 const ADAPTERS = {
