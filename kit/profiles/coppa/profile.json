@@ -1,0 +1,33 @@
+{
+  "id": "coppa",
+  "kind": "regulation",
+  "title": "COPPA (US children under 13)",
+  "appliesWhen": "The product is directed to children under 13 in the US, or knowingly collects their personal information.",
+  "ask": "Is the product aimed at children, or could children under 13 sign up?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "FTC: COPPA Rule",
+      "url": "https://www.ftc.gov/legal-library/browse/rules/childrens-online-privacy-protection-rule-coppa"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-COPPA-CONSENT",
+      "type": "manual",
+      "title": "Age screening and verifiable parental consent",
+      "architecture": "Record the age gate and the parental consent method before any personal information of a child is collected.",
+      "acceptance": [
+        "No personal information is collected from a user identified as under 13 before verifiable parental consent"
+      ]
+    },
+    {
+      "id": "G-COPPA-LEGAL",
+      "type": "legal",
+      "title": "Children's privacy notice and consent method need legal review",
+      "architecture": "",
+      "acceptance": []
+    }
+  ]
+}

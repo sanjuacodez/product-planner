@@ -261,6 +261,7 @@ export function uninstallTools(cwd, kit = loadKit()) {
   const removed = [];
   const rm = (p) => { if (fs.existsSync(p)) { fs.rmSync(p, { recursive: true, force: true }); removed.push(p); } };
   for (const f of ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md']) { const p = path.join(cwd, f); if (fs.existsSync(p)) { removeBlock(p, MARKER); removed.push(p); } }
+  for (const dir of [path.join(cwd, '.claude', 'skills'), path.join(cwd, '.agents', 'skills')]) if (fs.existsSync(dir)) for (const e of fs.readdirSync(dir)) if (e.startsWith('pp-profile-')) fs.rmSync(path.join(dir, e), { recursive: true, force: true });
   for (const a of kit.agents) for (const f of [['.claude', 'agents', `${a.meta.name}.md`], ['.opencode', 'agents', `${a.meta.name}.md`], ['.codex', 'agents', `${a.meta.name}.toml`], ['.cursor', 'agents', `${a.meta.name}.md`], ['.agents', 'agents', `${a.meta.name}.md`], ['.gemini', 'agents', `${a.meta.name}.md`]]) rm(path.join(cwd, ...f));
   for (const w of kit.workflows) {
     rm(path.join(cwd, '.claude', 'commands', `${w.meta.name}.md`));

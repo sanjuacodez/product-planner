@@ -1,0 +1,42 @@
+{
+  "id": "pci-dss",
+  "kind": "regulation",
+  "title": "PCI DSS (card payments)",
+  "appliesWhen": "The product stores, processes or transmits payment card data.",
+  "ask": "Will card payments be taken, and through a payment provider's hosted fields/checkout or your own forms?",
+  "detect": {
+    "packages": [
+      "stripe",
+      "@stripe/stripe-js",
+      "braintree",
+      "razorpay",
+      "@paypal/checkout-server-sdk"
+    ]
+  },
+  "sources": [
+    {
+      "title": "PCI Security Standards Council",
+      "url": "https://www.pcisecuritystandards.org/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-PCI-SCOPE",
+      "type": "manual",
+      "title": "Card data never touches the product's servers",
+      "architecture": "Use the payment provider's hosted checkout or hosted fields so card numbers go straight to the provider; record the integration and webhook verification.",
+      "acceptance": [
+        "No card number, CVV or track data is stored, logged or transmitted by the product's servers",
+        "Payment webhooks are signature-verified"
+      ]
+    },
+    {
+      "id": "G-PCI-LEGAL",
+      "type": "legal",
+      "title": "Self-assessment questionnaire type and attestation need review with the payment provider",
+      "architecture": "",
+      "acceptance": []
+    }
+  ]
+}

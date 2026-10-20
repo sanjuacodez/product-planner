@@ -18,7 +18,7 @@ import { planningProfile, approvePlan } from './planning.js';
 import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
-import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates, setNoProfile } from './profile.js';
+import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates, setNoProfile, installProfileSkills, newProfile, saveProfile, renderSkill, validateProfileDef } from './profile.js';
 import { syncAgentModels } from './init/adapters.js';
 const agentSyncNote = (out) => { const parts = Object.entries(out).map(([t, f]) => `${t} ${f.length}`); return parts.length ? `agent files updated (${parts.join(', ')})` : ''; };
 import { loadModelCatalog, modelPool, setPool, modelStats, recommend, applyRecommendations } from './router.js';
@@ -51,6 +51,8 @@ Usage: product-planner <command> [options]
   task validate                       Check tasks.json for errors and feature coverage
   profile catalog | detect | show     Quality profiles: platform and regulatory checks, repository signals, the selection
   profile none --because "…"          Record that no platform or regulatory profile applies
+  profile new <id> | save <id> | validate <id>   Create a profile for an uncovered platform or law; save it to your library for every project
+  profile show <id>                   A profile's gates, decisions, checks and sources (as installed as a skill)
   profile set <ids> --because "…"     Select profiles; their gates need architecture decisions and tasks (check enforces)
   profile verify <id> --sources "…" --note "…"   Record checking a profile against its official sources
   profile gate <id> --command "…" | --remove --reason "…"   Adjust a gate for this project
@@ -216,19 +218,24 @@ function cmdPlan(cwd, rest) {
 /** Quality profiles: which platform and regulatory checks apply, verified, planned and run. */
 function cmdProfile(cwd, rest) {
   requireInit(cwd);
-  const { values, positionals } = args(rest, { because: { type: 'string' }, sources: { type: 'string' }, note: { type: 'string' }, command: { type: 'string' }, remove: { type: 'boolean' }, reason: { type: 'string' }, json: { type: 'boolean' } });
+  const { values, positionals } = args(rest, { because: { type: 'string' }, sources: { type: 'string' }, note: { type: 'string' }, command: { type: 'string' }, remove: { type: 'boolean' }, reason: { type: 'string' }, title: { type: 'string' }, kind: { type: 'string' }, json: { type: 'boolean' } });
+  const skills = () => { const n = installProfileSkills(cwd).length; return n ? `; ${n} skill file(s) updated` : ''; };
   const [sub, ...ids] = positionals;
   const out = (v, text) => { if (values.json) console.log(JSON.stringify(v, null, 2)); else console.log(text); };
   switch (sub) {
-    case 'catalog': { const c = loadCatalog(cwd); return out(c, `${c.profiles.map((p) => `${p.id.padEnd(22)} ${p.kind.padEnd(10)} ${p.title}\n${' '.repeat(34)}applies when: ${p.appliesWhen}${p.lastVerified ? '' : ' (catalog entry not verified: check its sources)'}`).join('\n')}\n\nAsk during the interview:\n${c.questions.map((q) => `- ${q}`).join('\n')}`); }
+    case 'catalog': { const c = loadCatalog(cwd); return out(c, `${c.profiles.map((p) => `${p.id.padEnd(22)} ${p.kind.padEnd(10)} ${p.title}${p.origin !== 'kit' ? ` [${p.origin}]` : ''}\n${' '.repeat(34)}applies when: ${p.appliesWhen}${p.lastVerified ? '' : ' (not verified by the kit: check its sources)'}`).join('\n')}\n\nAsk during the interview:\n${c.questions.map((q) => `- ${q}`).join('\n')}`); }
     case 'detect': { const d = detectProfiles(cwd); return out(d, d.length ? d.map((x) => `${x.id}: ${x.reasons.join('; ')}`).join('\n') + '\nSuggestions from repository signals: confirm them in the interview, then profile set.' : 'no repository signals; decide from the interview answers (profile catalog lists the questions)'); }
-    case 'set': { if (!ids.length) throw new Error('usage: profile set <id> [<id> …] --because "…"'); const p = setProfiles(cwd, ids, values.because); refreshDashboard(cwd); return out(p, `selected: ${p.selected.map((x) => x.id).join(', ')}\ngates: ${p.gates.map((g) => `${g.id} (${g.type})`).join(', ')}\nNext: verify each profile against its sources, write one architecture decision per gate, and link gates to tasks.`); }
-    case 'verify': { const s = verifyProfile(cwd, ids[0], values); refreshDashboard(cwd); return out(s, `${s.id} verified ${s.verified.at.slice(0, 10)} against ${s.verified.sources.length} source(s)`); }
-    case 'gate': { const g = editGate(cwd, ids[0], values); refreshDashboard(cwd); return out(g, values.remove ? `${ids[0]} removed` : `${g.id} command: ${g.command}`); }
-    case 'none': { const p = setNoProfile(cwd, values.because); refreshDashboard(cwd); return out(p, `recorded: no quality profile applies (${p.none.because})`); }
+    case 'set': { if (!ids.length) throw new Error('usage: profile set <id> [<id> …] --because "…"'); const p = setProfiles(cwd, ids, values.because); const sk = skills(); refreshDashboard(cwd); return out(p, `selected: ${p.selected.map((x) => x.id).join(', ')}\ngates: ${p.gates.map((g) => `${g.id} (${g.type})`).join(', ')}${sk}\nNext: verify each profile against its sources, write one architecture decision per gate, and link gates to tasks.`); }
+    case 'verify': { const s = verifyProfile(cwd, ids[0], values); const sk = skills(); refreshDashboard(cwd); return out(s, `${s.id} verified ${s.verified.at.slice(0, 10)} against ${s.verified.sources.length} source(s)${sk}`); }
+    case 'gate': { const g = editGate(cwd, ids[0], values); skills(); refreshDashboard(cwd); return out(g, values.remove ? `${ids[0]} removed` : `${g.id} command: ${g.command}`); }
+    case 'none': { const p = setNoProfile(cwd, values.because); skills(); refreshDashboard(cwd); return out(p, `recorded: no quality profile applies (${p.none.because})`); }
     case 'run': { const r = runGates(cwd, ids); refreshDashboard(cwd); if (r.some((x) => !x.pass)) process.exitCode = 1; return out(r, r.length ? r.map((x) => `${x.pass ? 'pass' : 'FAIL'} ${x.id}: ${x.command}${x.pass ? '' : `\n${x.output.split('\n').slice(-15).join('\n')}`}`).join('\n') : 'no automated gates selected'); }
-    case 'show': case undefined: { const p = loadProfile(cwd); if (!p) return out(null, 'no quality profile selected; run profile detect and profile catalog'); return out(p, `${p.selected.map((x) => `${x.id}${x.verified ? ` (verified ${x.verified.at.slice(0, 10)})` : ' (not verified)'}: ${x.because}`).join('\n')}\n\n${p.gates.map((g) => `${g.id.padEnd(26)} ${g.type.padEnd(9)} ${g.title}${p.results[g.id] ? ` [last run: ${p.results[g.id].pass ? 'pass' : 'fail'}]` : ''}`).join('\n')}${p.removed.length ? `\n\nremoved: ${p.removed.map((r) => `${r.id} (${r.reason})`).join('; ')}` : ''}`); }
-    default: throw new Error('usage: profile catalog | detect | set <ids> --because "…" | verify <id> --sources "…" --note "…" | gate <id> --command "…" | --remove --reason "…" | run [ids] | show');
+    case 'new': { if (!ids[0]) throw new Error('usage: profile new <id> [--title "…"] [--kind platform|regulation|baseline]'); const r = newProfile(cwd, ids[0], values); return out(r, `created ${path.relative(cwd, r.path)}: fill appliesWhen, detect (files, packages, requestWords), official sources and gates (architecture decision, acceptance, command for automated checks) from the official documentation, then profile set ${ids[0]} --because "…" and, to reuse it in other projects, profile save ${ids[0]}`); }
+    case 'save': { if (!ids[0]) throw new Error('usage: profile save <id>'); const dest = saveProfile(cwd, ids[0]); return out({ saved: dest }, `saved to your profile library: ${dest} (available to every project)`); }
+    case 'validate': { const p = loadCatalog(cwd).profiles.find((x) => x.id === ids[0]); if (!p) throw new Error(`unknown profile ${ids[0]}`); const errors = validateProfileDef(p); if (errors.length) process.exitCode = 1; return out(errors, errors.length ? errors.join('\n') : `${p.id}: ok`); }
+    case 'show': case undefined: {
+      if (ids[0]) { const p = loadCatalog(cwd).profiles.find((x) => x.id === ids[0]); if (!p) throw new Error(`unknown profile ${ids[0]}`); return out(p, renderSkill(p, loadProfile(cwd))); } const p = loadProfile(cwd); if (!p) return out(null, 'no quality profile selected; run profile detect and profile catalog'); return out(p, `${p.selected.map((x) => `${x.id}${x.verified ? ` (verified ${x.verified.at.slice(0, 10)})` : ' (not verified)'}: ${x.because}`).join('\n')}\n\n${p.gates.map((g) => `${g.id.padEnd(26)} ${g.type.padEnd(9)} ${g.title}${p.results[g.id] ? ` [last run: ${p.results[g.id].pass ? 'pass' : 'fail'}]` : ''}`).join('\n')}${p.removed.length ? `\n\nremoved: ${p.removed.map((r) => `${r.id} (${r.reason})`).join('; ')}` : ''}`); }
+    default: throw new Error('usage: profile catalog | detect | show [id] | new <id> | save <id> | validate <id> | set <ids> --because "…" | verify <id> --sources "…" --note "…" | gate <id> --command "…" | --remove --reason "…" | run [ids] | show');
   }
 }
 

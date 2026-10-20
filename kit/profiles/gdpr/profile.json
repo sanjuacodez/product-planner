@@ -1,0 +1,62 @@
+{
+  "id": "gdpr",
+  "kind": "regulation",
+  "title": "GDPR (EU/EEA)",
+  "appliesWhen": "Personal data of people in the EU/EEA is processed, or goods/services are offered to them, wherever the business is based.",
+  "ask": "Will people in the EU/EEA use the product or have their personal data processed?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "Regulation (EU) 2016/679",
+      "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-PRIV-INVENTORY",
+      "type": "manual",
+      "title": "Personal data inventory and lawful basis",
+      "architecture": "List each personal data field, its purpose, lawful basis, storage location and retention period.",
+      "acceptance": [
+        "Every stored personal data field has a recorded purpose, basis, location and retention period"
+      ]
+    },
+    {
+      "id": "G-PRIV-RIGHTS",
+      "type": "manual",
+      "title": "Access, export, correction and deletion requests",
+      "architecture": "Record how a data subject request reaches every data store, backups and processors.",
+      "acceptance": [
+        "A user's data can be exported in a machine-readable format",
+        "Deleting a user removes or anonymises their data in every store, with tests"
+      ]
+    },
+    {
+      "id": "G-PRIV-CONSENT",
+      "type": "manual",
+      "title": "Consent captured and recorded where consent is the basis",
+      "architecture": "Record what needs consent (for example marketing email, non-essential cookies) and how consent and withdrawal are stored.",
+      "acceptance": [
+        "Consent is opt-in, recorded with time and version, and can be withdrawn as easily as given"
+      ]
+    },
+    {
+      "id": "G-PRIV-SECURITY",
+      "type": "manual",
+      "title": "Security of processing and breach detection",
+      "architecture": "Record encryption in transit and at rest, access control to personal data and the access/audit log.",
+      "acceptance": [
+        "Personal data is encrypted in transit and at rest",
+        "Access to personal data is logged"
+      ]
+    },
+    {
+      "id": "G-GDPR-LEGAL",
+      "type": "legal",
+      "title": "Privacy notice, processor agreements, international transfers and DPIA need legal review",
+      "architecture": "Record the hosting region and every processor (sub-processor list).",
+      "acceptance": []
+    }
+  ]
+}

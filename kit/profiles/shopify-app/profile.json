@@ -1,0 +1,85 @@
+{
+  "id": "shopify-app",
+  "kind": "platform",
+  "title": "Shopify app",
+  "appliesWhen": "An app for Shopify merchants, especially a public app in the Shopify App Store.",
+  "ask": "Will this be a public Shopify App Store app, and does it embed in the Shopify admin?",
+  "detect": {
+    "files": [
+      "shopify.app.toml"
+    ],
+    "packages": [
+      "@shopify/shopify-app-remix",
+      "@shopify/shopify-app-express",
+      "@shopify/shopify-api",
+      "@shopify/polaris",
+      "@shopify/app-bridge-react"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Privacy law compliance (mandatory webhooks)",
+      "url": "https://shopify.dev/docs/apps/build/privacy-law-compliance"
+    },
+    {
+      "title": "App Store requirements",
+      "url": "https://shopify.dev/docs/apps/launch/app-requirements-checklist"
+    },
+    {
+      "title": "Built for Shopify requirements",
+      "url": "https://shopify.dev/docs/apps/launch/built-for-shopify/requirements"
+    },
+    {
+      "title": "Polaris",
+      "url": "https://polaris.shopify.com/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-SHOP-PRIVACY-WEBHOOKS",
+      "type": "manual",
+      "title": "Mandatory privacy webhooks implemented",
+      "architecture": "Record how customers/data_request, customers/redact and shop/redact reach every store of merchant and customer data.",
+      "acceptance": [
+        "customers/data_request, customers/redact and shop/redact are subscribed and handled, with tests"
+      ]
+    },
+    {
+      "id": "G-SHOP-WEBHOOK-HMAC",
+      "type": "manual",
+      "title": "Webhook HMAC verification",
+      "architecture": "Record where webhook signatures are verified before processing.",
+      "acceptance": [
+        "Webhooks with a missing or invalid HMAC are rejected with 401, with tests"
+      ]
+    },
+    {
+      "id": "G-SHOP-AUTH",
+      "type": "manual",
+      "title": "Embedded app authentication with session tokens",
+      "architecture": "Record the OAuth/token exchange flow and session storage.",
+      "acceptance": [
+        "Embedded requests authenticate with session tokens, not third-party cookies"
+      ]
+    },
+    {
+      "id": "G-SHOP-UI",
+      "type": "manual",
+      "title": "Admin UI follows Polaris and App Bridge",
+      "architecture": "Record the UI component approach (Polaris components, App Bridge for navigation, modals and toasts).",
+      "acceptance": [
+        "Admin screens use Polaris components and App Bridge navigation"
+      ]
+    },
+    {
+      "id": "G-SHOP-REQUIREMENTS",
+      "type": "manual",
+      "title": "App Store requirements checklist (and Built for Shopify where targeted)",
+      "architecture": "Record which requirements apply and which Built for Shopify criteria are targeted.",
+      "acceptance": [
+        "The App Store requirements checklist is completed with evidence before submission"
+      ]
+    }
+  ]
+}

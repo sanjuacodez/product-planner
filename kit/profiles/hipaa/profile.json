@@ -1,0 +1,34 @@
+{
+  "id": "hipaa",
+  "kind": "regulation",
+  "title": "HIPAA (US health information)",
+  "appliesWhen": "A US covered entity or business associate handles protected health information.",
+  "ask": "Will the product handle health information for US healthcare providers, plans or their vendors?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "HHS: HIPAA",
+      "url": "https://www.hhs.gov/hipaa/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-HIPAA-SAFEGUARDS",
+      "type": "manual",
+      "title": "Technical safeguards for PHI",
+      "architecture": "Record access control, unique user identification, audit controls, integrity controls and transmission security for PHI.",
+      "acceptance": [
+        "PHI access requires authenticated, authorised users and is audit-logged",
+        "PHI is encrypted in transit and at rest"
+      ]
+    },
+    {
+      "id": "G-HIPAA-LEGAL",
+      "type": "legal",
+      "title": "Business associate agreements and risk analysis need legal review",
+      "architecture": "Record every vendor that can access PHI.",
+      "acceptance": []
+    }
+  ]
+}

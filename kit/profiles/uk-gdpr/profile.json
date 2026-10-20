@@ -1,0 +1,43 @@
+{
+  "id": "uk-gdpr",
+  "kind": "regulation",
+  "title": "UK GDPR and Data Protection Act 2018",
+  "appliesWhen": "Personal data of people in the UK is processed.",
+  "ask": "Will people in the UK use the product?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "ICO guide to the UK GDPR",
+      "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-PRIV-INVENTORY",
+      "type": "manual",
+      "title": "Personal data inventory and lawful basis",
+      "architecture": "As for GDPR.",
+      "acceptance": [
+        "Every stored personal data field has a recorded purpose, basis, location and retention period"
+      ]
+    },
+    {
+      "id": "G-PRIV-RIGHTS",
+      "type": "manual",
+      "title": "Access, export, correction and deletion requests",
+      "architecture": "As for GDPR.",
+      "acceptance": [
+        "A user's data can be exported",
+        "Deleting a user removes or anonymises their data in every store, with tests"
+      ]
+    },
+    {
+      "id": "G-UKGDPR-LEGAL",
+      "type": "legal",
+      "title": "UK privacy notice, transfers and ICO registration need legal review",
+      "architecture": "Record the hosting region.",
+      "acceptance": []
+    }
+  ]
+}
