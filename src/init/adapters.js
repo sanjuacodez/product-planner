@@ -33,10 +33,11 @@ export const MARKER = 'product-planner';
 export const TOOLS = {
   claude: { label: 'Claude Code', detect: ['.claude', '~/.claude'], bins: ['claude'] },
   codex: { label: 'OpenAI Codex CLI', detect: ['.codex', '~/.codex'], bins: ['codex'] },
-  gemini: { label: 'Gemini CLI', detect: ['.gemini', '~/.gemini'], bins: ['gemini'] },
+  gemini: { label: 'Gemini CLI (legacy; replaced by Antigravity CLI for consumers)', detect: ['.gemini', '~/.gemini'], bins: ['gemini'] },
+  antigravity: { label: 'Google Antigravity (app, IDE and agy CLI)', detect: ['.agents/agents', '~/.gemini/config/agents'], bins: ['agy', 'antigravity'] },
   opencode: { label: 'OpenCode', detect: ['.opencode', '~/.config/opencode'], bins: ['opencode'] },
   cursor: { label: 'Cursor', detect: ['.cursor', '~/.cursor'], bins: ['cursor'] },
-  windsurf: { label: 'Windsurf', detect: ['.windsurf', '~/.codeium'], bins: ['windsurf'] },
+  windsurf: { label: 'Windsurf / Devin Desktop', detect: ['.windsurf', '~/.codeium'], bins: ['windsurf'] },
   generic: { label: 'Any other tool via AGENTS.md (Monocode, T3 Code, Cline, Roo, Kilo, Zed, Aider, …)', detect: [], bins: [] },
 };
 
@@ -103,22 +104,77 @@ export function agentModel(a, models = {}) {
   const role = a.meta.name.replace(/^pp-/, '');
   return models[role] || a.meta.model || null;
 }
-function writeClaudeAgent(cwd, a, models) {
-  const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
-  const model = agentModel(a, models);
-  writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\n${toolsList(a).length ? `tools: ${toolsList(a).join(', ')}\n` : ''}${model ? `model: ${model}\n` : ''}---\n\n${a.body}\n`);
-  return p;
+/** The id a tool uses for a planned model: catalog ids map per tool (models/catalog.json "ids");
+ * a model the tool cannot run maps to null, so its agent inherits the session model. */
+let catalogCache = null;
+function modelCatalog() {
+  if (!catalogCache) { try { catalogCache = JSON.parse(fs.readFileSync(path.join(KIT_SRC, 'models', 'catalog.json'), 'utf8')); } catch { catalogCache = { models: [] }; } }
+  return catalogCache;
 }
-/** Rewrite Claude Code agent files after the planned models change (only where Claude Code is installed). */
+export function hostModel(value, host) {
+  if (!value || value === 'inherit') return null;
+  const m = modelCatalog().models.find((x) => x.id === value || Object.values(x.ids || {}).includes(value));
+  if (m) return m.ids?.[host] ?? null;
+  return value; // not in the catalog: the user's own id for this tool, written as given
+}
+const agentModelFor = (a, models, host) => hostModel(agentModel(a, models), host);
+
+/** Per-tool agent files with each role's model, where the tool reads a model from project files. */
+const AGENT_WRITERS = {
+  claude: (cwd, a, models) => {
+    const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
+    const model = agentModelFor(a, models, 'claude-code');
+    writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\n${toolsList(a).length ? `tools: ${toolsList(a).join(', ')}\n` : ''}${model ? `model: ${model}\n` : ''}---\n\n${a.body}\n`);
+    return p;
+  },
+  codex: (cwd, a, models) => {
+    const p = path.join(cwd, '.codex', 'agents', `${a.meta.name}.toml`);
+    const model = agentModelFor(a, models, 'codex');
+    const body = a.body.includes("'''") ? `"""\n${a.body.replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"')}\n"""` : `'''\n${a.body}\n'''`;
+    writeText(p, `name = ${JSON.stringify(a.meta.name)}\ndescription = ${JSON.stringify(a.meta.description)}\n${model ? `model = ${JSON.stringify(model)}\n` : ''}developer_instructions = ${body}\n`);
+    return p;
+  },
+  opencode: (cwd, a, models) => {
+    const p = path.join(cwd, '.opencode', 'agents', `${a.meta.name}.md`);
+    const model = agentModelFor(a, models, 'opencode');
+    writeText(p, `---\ndescription: ${a.meta.description}\nmode: ${a.meta.name === 'pp-orchestrator' ? 'primary' : 'subagent'}\n${model ? `model: ${model}\n` : ''}---\n\n${a.body}\n`);
+    return p;
+  },
+  cursor: (cwd, a, models) => {
+    // Cursor also reads .claude/agents; its own folder wins on a name clash, so Claude aliases never reach Cursor.
+    const p = path.join(cwd, '.cursor', 'agents', `${a.meta.name}.md`);
+    writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\nmodel: ${agentModelFor(a, models, 'cursor') || 'inherit'}\n---\n\n${a.body}\n`);
+    return p;
+  },
+  antigravity: (cwd, a, models) => {
+    // Antigravity agent files accept only inherit, flash or pro (Gemini tiers); other models are chosen in its UI.
+    const p = path.join(cwd, '.agents', 'agents', `${a.meta.name}.md`);
+    writeText(p, `---\nname: ${a.meta.name}\ndescription: ${JSON.stringify(a.meta.description)}\nsubagent: true\nmainAgent: false\nmodel: ${agentModelFor(a, models, 'antigravity') || 'inherit'}\n---\n\n${a.body}\n`);
+    return p;
+  },
+  gemini: (cwd, a, models) => {
+    const p = path.join(cwd, '.gemini', 'agents', `${a.meta.name}.md`);
+    writeText(p, `---\nname: ${a.meta.name}\ndescription: ${JSON.stringify(a.meta.description)}\nmodel: ${agentModelFor(a, models, 'gemini') || 'inherit'}\n---\n\n${a.body}\n`);
+    return p;
+  },
+};
+/** Rewrite agent files for every installed tool after the planned models change. Returns files per tool. */
+export function syncAgentModels(cwd, models, kit = loadKit(), tools = null) {
+  const installed = tools || (() => { try { return JSON.parse(fs.readFileSync(path.join(cwd, STATE_DIR, 'config.json'), 'utf8')).tools || []; } catch { return []; } })();
+  const out = {};
+  for (const t of installed) if (AGENT_WRITERS[t]) out[t] = kit.agents.map((a) => AGENT_WRITERS[t](cwd, a, models));
+  return out;
+}
+/** Back-compatible: Claude Code agent files only (when installed). */
 export function syncClaudeAgents(cwd, models, kit = loadKit()) {
   if (!fs.existsSync(path.join(cwd, '.claude', 'agents'))) return [];
-  return kit.agents.map((a) => writeClaudeAgent(cwd, a, models));
+  return kit.agents.map((a) => AGENT_WRITERS.claude(cwd, a, models));
 }
 
 const ADAPTERS = {
   claude(cwd, kit, opts = {}) {
     const files = [];
-    for (const a of kit.agents) files.push(writeClaudeAgent(cwd, a, opts.models));
+    for (const a of kit.agents) files.push(AGENT_WRITERS.claude(cwd, a, opts.models));
     for (const w of kit.workflows) {
       const p = path.join(cwd, '.claude', 'commands', `${w.meta.name}.md`);
       writeText(p, `---\ndescription: ${w.meta.description}\n---\n\n${PREAMBLE(w)}${w.body}\n`);
@@ -130,7 +186,7 @@ const ADAPTERS = {
     return files;
   },
   codex(cwd, kit, opts = {}) {
-    const files = [];
+    const files = kit.agents.map((a) => AGENT_WRITERS.codex(cwd, a, opts.models));
     for (const w of kit.workflows) {
       const p = path.join(cwd, '.agents', 'skills', w.meta.name, 'SKILL.md');
       writeText(p, `---\nname: ${w.meta.name}\ndescription: ${w.meta.description}\n---\n\n${PREAMBLE(w).replace('$ARGUMENTS', '(the user\'s message)')}${w.body}\n`);
@@ -139,7 +195,7 @@ const ADAPTERS = {
     return files; // AGENTS.md block is written by the universal step
   },
   gemini(cwd, kit, opts = {}) {
-    const files = [];
+    const files = kit.agents.map((a) => AGENT_WRITERS.gemini(cwd, a, opts.models));
     for (const w of kit.workflows) {
       const short = w.meta.name.replace(/^pp-/, '');
       const p = path.join(cwd, '.gemini', 'commands', 'pp', `${short}.toml`);
@@ -153,11 +209,7 @@ const ADAPTERS = {
   },
   opencode(cwd, kit, opts = {}) {
     const files = [];
-    for (const a of kit.agents) {
-      const p = path.join(cwd, '.opencode', 'agents', `${a.meta.name}.md`);
-      writeText(p, `---\ndescription: ${a.meta.description}\nmode: ${a.meta.name === 'pp-orchestrator' ? 'primary' : 'subagent'}\n---\n\n${a.body}\n`);
-      files.push(p);
-    }
+    for (const a of kit.agents) files.push(AGENT_WRITERS.opencode(cwd, a, opts.models));
     for (const w of kit.workflows) {
       const p = path.join(cwd, '.opencode', 'commands', `${w.meta.name}.md`);
       writeText(p, `---\ndescription: ${w.meta.description}\n---\n\n${PREAMBLE(w)}${w.body}\n`);
@@ -166,7 +218,7 @@ const ADAPTERS = {
     return files;
   },
   cursor(cwd, kit, opts = {}) {
-    const files = [];
+    const files = kit.agents.map((a) => AGENT_WRITERS.cursor(cwd, a, opts.models));
     const p = path.join(cwd, '.cursor', 'rules', 'product-planner.mdc');
     writeText(p, `---\ndescription: Product Planner multi-agent planning and build kit – how to run /pp-plan, /pp-build and friends\nalwaysApply: true\n---\n\n${universalBlock(kit, opts)}\n`);
     files.push(p);
@@ -189,6 +241,7 @@ const ADAPTERS = {
     }
     return files;
   },
+  antigravity(cwd, kit, opts = {}) { return kit.agents.map((a) => AGENT_WRITERS.antigravity(cwd, a, opts.models)); },
   generic() { return []; },
 };
 
@@ -208,7 +261,7 @@ export function uninstallTools(cwd, kit = loadKit()) {
   const removed = [];
   const rm = (p) => { if (fs.existsSync(p)) { fs.rmSync(p, { recursive: true, force: true }); removed.push(p); } };
   for (const f of ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md']) { const p = path.join(cwd, f); if (fs.existsSync(p)) { removeBlock(p, MARKER); removed.push(p); } }
-  for (const a of kit.agents) { rm(path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`)); rm(path.join(cwd, '.opencode', 'agents', `${a.meta.name}.md`)); }
+  for (const a of kit.agents) for (const f of [['.claude', 'agents', `${a.meta.name}.md`], ['.opencode', 'agents', `${a.meta.name}.md`], ['.codex', 'agents', `${a.meta.name}.toml`], ['.cursor', 'agents', `${a.meta.name}.md`], ['.agents', 'agents', `${a.meta.name}.md`], ['.gemini', 'agents', `${a.meta.name}.md`]]) rm(path.join(cwd, ...f));
   for (const w of kit.workflows) {
     rm(path.join(cwd, '.claude', 'commands', `${w.meta.name}.md`));
     rm(path.join(cwd, '.agents', 'skills', w.meta.name));

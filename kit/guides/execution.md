@@ -14,12 +14,49 @@ Record the actual worker model with `--model` on each transition; when the host 
 identify it, omit the value and note that it is unknown. Never substitute the requested
 model for an unknown actual model.
 
-In Claude Code the planned model of a role is written into its agent file (`.claude/agents/pp-<role>.md`,
-`model:`), which Claude Code honours for that sub-agent: `product-planner state set models.developer sonnet`
-or the `product-planner models tiered` preset (developer on Sonnet, QA on Haiku, every build task delegated
-to sub-agents with fresh contexts). Cost falls only when delegated work runs on a cheaper model and with a
-smaller context than the coordinator's; sub-agents on the same model mainly add re-reading. Measure with
-`product-planner usage` and the benchmark's `tiered` arm before relying on a saving.
+### Recommended models (the router)
+
+`product-planner models recommend` proposes a model for every open task from the models this
+project can use (`models available`, or inferred from the installed tools):
+
+- A minimum tier from the task: architecture, high risk, security or privacy gates and tasks QA
+  returned need the frontier tier; implementation needs the strong tier; mechanical QA,
+  documentation and small low-risk changes may use the fast tier.
+- The cheapest available model that meets it, priced at this project's measured token mix
+  (agent sessions are mostly cache reads, so cache prices matter more than output prices).
+- Equally suitable tasks are spread across providers when the pool has several, and an
+  independent review goes to a different provider; with one provider it runs in a fresh context.
+- Evidence: a model that keeps failing a role in this project (three or more tasks, under 60%
+  first pass) is skipped for that role (`models stats`).
+
+`models apply` writes each task's requested model (`model`) and reviewer (`reviewModel`) and sets
+the role defaults; `models auto` also turns on delegated build tasks. The user's own choices win.
+
+### Applying a recommendation in each tool
+
+The kit writes each role's model into the agent files of every installed tool, translated to that
+tool's own id, and only where the tool can run the model (otherwise the agent inherits the session
+model). Formats were checked against each tool's documentation on 2026-10-20:
+
+| Tool | Agent files the kit writes | Models | Per task |
+|---|---|---|---|
+| Claude Code | `.claude/agents/pp-<role>.md`, `model:` alias or id | Claude only | The Agent tool takes a `model` per call: pass the task's `model` / `reviewModel` |
+| Codex | `.codex/agents/pp-<role>.toml`, `model = "…"` | OpenAI only; agents inherit the session provider | Name the model when spawning |
+| OpenCode | `.opencode/agents/pp-<role>.md`, `model: provider/model` | Any configured provider, per agent | Delegate to the agent whose model matches |
+| Cursor | `.cursor/agents/pp-<role>.md`, `model:` (inherit unless a Cursor id is known) | Several vendors per sub-agent | Choose the model per sub-agent call |
+| Antigravity | `.agents/agents/pp-<role>.md`, `model: inherit|flash|pro` | Gemini tiers in files; Claude and others in its UI | UI for non-Gemini models |
+| Gemini CLI (legacy) | `.gemini/agents/pp-<role>.md`, `model:` | Gemini | — |
+| Windsurf / Devin Desktop, Copilot, others | Instructions only (AGENTS.md and rules) | Chosen in the tool's UI | The brief names the model; record what ran |
+
+When the build tool runs a single provider, recommendations stay within it; tools with several
+providers use the whole declared pool.
+- Several providers in one tool (OpenCode, Cursor, Devin Desktop, Copilot, Kiro): give parallel
+  batch slots and reviews the providers the router chose, so work is split across them rather
+  than queued on one.
+
+Cost falls only when delegated work runs on a cheaper model and with a smaller context than the
+coordinator's; sub-agents on the same model mainly add re-reading. Measure with `product-planner
+usage`, `models stats` and the benchmark before relying on a saving.
 
 Prefer a lower-cost available model for bounded, low-risk work with clear acceptance;
 use a stronger available model for architecture, ambiguous requirements, security-sensitive

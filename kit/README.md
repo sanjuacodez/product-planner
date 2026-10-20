@@ -68,7 +68,7 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Planning depth | `product-planner plan profile` (quick track: one plan.md from `templates/quick-plan.md`) |
 | Pick the next task | `product-planner task next` (exit code 2 and `ALL_DONE` / `ALL_BLOCKED` / `NONE_READY` when nothing is ready) |
 | Move a task | `product-planner task start|review|done|block|unblock|reopen <id> [--note "…"] [--reason "…"] [--agent name] [--model id]` |
-| Plan models per persona | `product-planner state set models.<agent> <model-id>` (or `models.default`) |
+| Models for each task | `product-planner models available <ids>` (what this project can use), `models recommend` (best model per task, with reasons), `models apply` / `models auto` (write them; auto also delegates), `models stats` (first-pass rate and cost per model and role) |
 | Browser access | `product-planner browser status`, `browser use host|none`, `browser setup` (after approval) |
 | Validate the plan | `product-planner task validate` (also checks every accepted MVP feature has tasks) |
 | Analyse the whole plan (no model) | `product-planner check` — coverage, FR→task traceability, vague criteria, unfilled templates |

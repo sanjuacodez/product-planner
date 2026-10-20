@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /**
  * Estimated cost from recorded tokens. These are API list prices: subscription plans bill
  * differently, so the dashboard labels every figure as an estimate. Override or extend the
@@ -31,8 +35,13 @@ export function baseModelId(id) {
   return String(id || '').toLowerCase().replace(/^(?:anthropic\.|us\.anthropic\.|global\.anthropic\.)/, '').replace(/\[[^\]]*\]$/, '').replace(/[@-]\d{8}$/, '').replace(/-v\d+(?::\d+)?$/, '');
 }
 
+/** Verified prices from the model catalog (any provider), so new providers need no second table. */
+function catalogPrices() {
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'kit', 'models', 'catalog.json');
+  try { return Object.fromEntries(JSON.parse(fs.readFileSync(file, 'utf8')).models.filter((m) => m.price?.input != null && m.price?.output != null).map((m) => [m.id, { input: m.price.input, output: m.price.output, cacheRead: m.price.cacheRead ?? m.price.input * 0.1 }])); } catch { return {}; }
+}
 export function priceFor(id, overrides = {}) {
-  const models = { ...PRICING.models, ...overrides };
+  const models = { ...PRICING.models, ...catalogPrices(), ...overrides };
   const base = baseModelId(id);
   if (models[base]) return { model: base, ...models[base] };
   // Longest known id that prefixes the reported one (for example a dated snapshot).

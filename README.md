@@ -203,6 +203,19 @@ pp feature check                   # is the scope ready for requirements and tas
 
 ## Model selection and concurrent tasks
 
+The kit recommends a model for every task instead of asking you to pick one per role.
+`pp models available …` records what your tools, keys and plans give you (Claude, GPT, Gemini,
+DeepSeek and others; inferred from the installed tools when you don't say). `pp models recommend`
+then explains each choice: the minimum tier the task needs (architecture, high risk, security or
+privacy checks and tasks QA returned need the strongest models; mechanical checks and small edits
+can use fast ones), the cheapest available model that meets it at your project's real token mix,
+review on a different provider from the implementation, and equally suitable tasks spread across
+providers. Models that keep failing a kind of task in your project are skipped (`pp models stats`).
+The recommendations appear in the final plan review and are applied when you approve; each tool's
+agent files get the models that tool can run (Claude Code, Codex, OpenCode, Cursor, Antigravity),
+and tools that choose models only in their UI get the recommendation in the brief.
+
+
 The host runs models and creates subagents. Product Planner supplies the task graph,
 briefs and delegation instructions. A task's `model` takes precedence over
 `state.models.<agent>` and `state.models.default` as the requested model. These settings

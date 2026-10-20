@@ -19,7 +19,9 @@ import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
 import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates } from './profile.js';
-import { syncClaudeAgents } from './init/adapters.js';
+import { syncAgentModels } from './init/adapters.js';
+const agentSyncNote = (out) => { const parts = Object.entries(out).map(([t, f]) => `${t} ${f.length}`); return parts.length ? `agent files updated (${parts.join(', ')})` : ''; };
+import { loadModelCatalog, modelPool, setPool, modelStats, recommend, applyRecommendations } from './router.js';
 import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
 import { writeJson } from './util/fs.js';
 
@@ -74,7 +76,10 @@ Usage: product-planner <command> [options]
                                       After user approval: install free Playwright MCP + Chromium and register it
   browser remove                      Remove the Playwright MCP entry from this project's tool configs
   usage [summary] [--json] | bind --file transcript --task T# | hook              Token usage per task/phase (recorded by the Claude Code hook)
-  models show | tiered | inherit      Planned models per role; tiered = developer on Sonnet, QA on Haiku, each task delegated
+  models available [ids] [--provider p --tier t]   The models this project can use (declared, or inferred from tools)
+  models recommend | apply | auto     Best model per task with reasons; apply writes them; auto also delegates tasks
+  models catalog | stats | show       Known models and prices; first-pass rate and cost per model and role
+  models tiered | inherit             Fixed presets (tiered: developer Sonnet, QA Haiku, delegated)
   auto on|off|status                  Automatic mode: agents start pp-plan/pp-replan/pp-resume from plain requests
   doctor                              Environment checks (node, git, web, memory)
   version | help
@@ -188,6 +193,7 @@ function cmdPlan(cwd, rest) {
   if (positionals[0] === 'approve') {
     const r = approvePlan(cwd, { reason: values.reason, check: checkPlan });
     for (const w of r.warnings) console.log(`warning: ${w}`);
+    if (r.routing) console.log(`models applied: ${r.routing.tasks.filter((x) => x.model).map((x) => `${x.id} ${x.model.label || x.model.id}${x.reviewer ? ` (review ${x.reviewer.label || x.reviewer.id})` : ''}`).join(', ')}; change any with task update T# --json '{"model":"…"}'`);
     console.log(`plan approved and locked (${r.lock.reason}); phase: build`);
     const out = refreshDashboard(cwd); if (out && loadState(cwd).options?.autoOpenDashboard !== false) openInBrowser(out);
     return;
@@ -232,21 +238,55 @@ const MODEL_PRESETS = {
 };
 function cmdModels(cwd, rest) {
   requireInit(cwd);
-  const [sub] = rest;
+  const { values, positionals } = args(rest, { provider: { type: 'string' }, tier: { type: 'string' }, json: { type: 'boolean' } });
+  const [sub, ...ids] = positionals;
   const st = loadState(cwd);
+  const label = (m) => (m ? `${m.label || m.id} (${m.provider})` : '—');
+  if (sub === 'catalog') {
+    const c = loadModelCatalog(cwd);
+    if (values.json) { console.log(JSON.stringify(c, null, 2)); return; }
+    for (const m of c.models) console.log(`${m.id.padEnd(22)} ${m.provider.padEnd(10)} ${String(m.tier).padEnd(9)} ${m.price?.input != null ? `$${m.price.input}/$${m.price.output} per 1M in/out (verified ${m.priceVerified})` : 'price not verified'}${m.legacy ? ' · legacy' : ''}`);
+    return;
+  }
+  if (sub === 'available') {
+    if (!ids.length) { const p = modelPool(cwd); console.log(`${p.models.length ? p.models.map(label).join(', ') : 'none'} — ${p.source}`); return; }
+    const pool = setPool(cwd, ids, values); console.log(`available models: ${pool.join(', ')}`); refreshDashboard(cwd); return;
+  }
+  if (sub === 'stats') {
+    const s = modelStats(cwd);
+    if (values.json) { console.log(JSON.stringify(s, null, 2)); return; }
+    if (!s.length) { console.log('no completed tasks with a recorded model yet'); return; }
+    for (const x of s) console.log(`${x.model.padEnd(22)} ${x.role.padEnd(12)} done ${x.done} · first pass ${Math.round(x.firstPassRate * 100)}% · QA returns ${x.qaReturns}${x.costPerTask != null ? ` · $${x.costPerTask.toFixed(2)}/task (est.)` : ''}`);
+    return;
+  }
+  if (sub === 'recommend' || sub === 'apply' || sub === 'auto') {
+    const rec = recommend(cwd);
+    if (values.json && sub === 'recommend') { console.log(JSON.stringify(rec, null, 2)); return; }
+    console.log(`pool: ${rec.pool.models.length ? rec.pool.models.map(label).join(', ') : 'none'} — ${rec.pool.source}`);
+    console.log(`price basis: blended per 1M tokens at the ${rec.mixSource} token mix\n`);
+    for (const r of rec.tasks) console.log(`${r.id.padEnd(5)} ${label(r.model).padEnd(28)} review: ${label(r.reviewer).padEnd(26)} ${r.why}`);
+    if (sub === 'recommend') { console.log('\nApply with: product-planner models apply (or models auto to also delegate each task to sub-agents)'); return; }
+    const { roles } = applyRecommendations(cwd, rec);
+    st.models = { ...roles };
+    if (sub === 'auto') st.options.delegateTasks = true;
+    saveState(cwd, st);
+    const note = agentSyncNote(syncAgentModels(cwd, st.models));
+    console.log(`\napplied: each open task's requested model and reviewer are set; role defaults ${Object.entries(roles).map(([k, v]) => `${k}=${v}`).join(', ')}${sub === 'auto' ? '; build tasks are delegated to sub-agents' : ''}${note ? `; ${note} (each tool gets only models it can run)` : ''}`);
+    refreshDashboard(cwd); return;
+  }
   if (!sub || sub === 'show') {
     console.log(`planned models: ${Object.keys(st.models || {}).length ? Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ') : 'none (every role inherits the session model)'}`);
     console.log(`delegate each build task to sub-agents: ${st.options?.delegateTasks ? 'yes' : 'no'}`);
     return;
   }
   const preset = MODEL_PRESETS[sub];
-  if (!preset) throw new Error(`usage: models show | ${Object.keys(MODEL_PRESETS).join(' | ')}`);
+  if (!preset) throw new Error(`usage: models show | catalog | available [ids] [--provider p --tier t] | recommend | apply | auto | stats | ${Object.keys(MODEL_PRESETS).join(' | ')}`);
   st.models = { ...preset.models };
   st.options.delegateTasks = preset.delegateTasks;
   saveState(cwd, st);
-  const n = syncClaudeAgents(cwd, st.models).length;
+  const note = agentSyncNote(syncAgentModels(cwd, st.models));
   appendLog(cwd, { type: 'note', message: `models preset ${sub}: ${JSON.stringify(st.models)}, delegateTasks ${preset.delegateTasks}` });
-  console.log(`models: ${sub}${Object.keys(st.models).length ? ` (${Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ')})` : ''}; delegate tasks: ${preset.delegateTasks ? 'yes' : 'no'}${n ? `; ${n} Claude Code agent files updated` : ''}`);
+  console.log(`models: ${sub}${Object.keys(st.models).length ? ` (${Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ')})` : ''}; delegate tasks: ${preset.delegateTasks ? 'yes' : 'no'}${note ? `; ${note}` : ''}`);
   refreshDashboard(cwd);
 }
 
@@ -345,7 +385,7 @@ function cmdState(cwd, rest) {
   const st = loadState(cwd);
   switch (sub) {
     case undefined: case 'get': { if (!key) { console.log(JSON.stringify(st, null, 2)); return; } const v = key.split('.').reduce((o, k) => o?.[k], st); console.log(typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)); return; }
-    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const n = syncClaudeAgents(cwd, st.models).length; if (n) console.log(`Claude Code agents updated with the planned models (${n} files)`); } refreshDashboard(cwd); return; }
+    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const note = agentSyncNote(syncAgentModels(cwd, st.models)); if (note) console.log(note); } refreshDashboard(cwd); return; }
     case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
     case 'step': { const status = vals[0]; if (!PLANNING_STEPS.includes(key)) throw new Error(`step must be one of ${PLANNING_STEPS.join(', ')}`); if (!['pending', 'in_progress', 'done', 'skipped'].includes(status)) throw new Error('status must be pending|in_progress|done|skipped'); st.planning[key] = status; if (st.phase === 'init') st.phase = 'planning'; saveState(cwd, st); appendLog(cwd, { type: 'planning', step: key, to: status }); console.log(`planning.${key} = ${status}`); refreshDashboard(cwd); return; }
     case 'product': { const { values } = args([key, ...vals].filter(Boolean), { name: { type: 'string' }, tagline: { type: 'string' }, summary: { type: 'string' } }); Object.assign(st.product, Object.fromEntries(Object.entries(values).filter(([, v]) => v != null))); saveState(cwd, st); console.log(JSON.stringify(st.product, null, 2)); refreshDashboard(cwd); return; }
