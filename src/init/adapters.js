@@ -66,7 +66,7 @@ Match each request to a workflow and announce it in one line ("Starting pp-plan;
 
 | The user… | Run |
 |---|---|
-| asks to build something small and precisely specified (exact behaviour stated, about 5 tasks or fewer, no open product decisions) and authorizes building | \`pp-direct\` |
+| asks to build something small and precisely specified (exact behaviour stated, about 5 tasks or fewer, no open product decisions) and authorizes building, and it is not for a platform or marketplace (WordPress, WooCommerce, Shopify, app stores) and handles no personal data, payments, health or children's data | \`pp-direct\` |
 | describes a product, app or feature to build and no approved plan covers it | \`pp-plan\` |
 | changes scope after approval: adds, changes, removes or defers a feature, or changes users, platform, stack, design or deadline | \`pp-replan\` |
 | says build, continue, next task or keep going, or starts a new session on a planned project | \`pp-resume\` |

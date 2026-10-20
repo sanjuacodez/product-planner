@@ -18,7 +18,7 @@ import { planningProfile, approvePlan } from './planning.js';
 import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
-import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates } from './profile.js';
+import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates, setNoProfile } from './profile.js';
 import { syncAgentModels } from './init/adapters.js';
 const agentSyncNote = (out) => { const parts = Object.entries(out).map(([t, f]) => `${t} ${f.length}`); return parts.length ? `agent files updated (${parts.join(', ')})` : ''; };
 import { loadModelCatalog, modelPool, setPool, modelStats, recommend, applyRecommendations } from './router.js';
@@ -50,6 +50,7 @@ Usage: product-planner <command> [options]
   task context <id>                   Compact brief for one task (acceptance, features, requirements, deps)
   task validate                       Check tasks.json for errors and feature coverage
   profile catalog | detect | show     Quality profiles: platform and regulatory checks, repository signals, the selection
+  profile none --because "…"          Record that no platform or regulatory profile applies
   profile set <ids> --because "…"     Select profiles; their gates need architecture decisions and tasks (check enforces)
   profile verify <id> --sources "…" --note "…"   Record checking a profile against its official sources
   profile gate <id> --command "…" | --remove --reason "…"   Adjust a gate for this project
@@ -224,6 +225,7 @@ function cmdProfile(cwd, rest) {
     case 'set': { if (!ids.length) throw new Error('usage: profile set <id> [<id> …] --because "…"'); const p = setProfiles(cwd, ids, values.because); refreshDashboard(cwd); return out(p, `selected: ${p.selected.map((x) => x.id).join(', ')}\ngates: ${p.gates.map((g) => `${g.id} (${g.type})`).join(', ')}\nNext: verify each profile against its sources, write one architecture decision per gate, and link gates to tasks.`); }
     case 'verify': { const s = verifyProfile(cwd, ids[0], values); refreshDashboard(cwd); return out(s, `${s.id} verified ${s.verified.at.slice(0, 10)} against ${s.verified.sources.length} source(s)`); }
     case 'gate': { const g = editGate(cwd, ids[0], values); refreshDashboard(cwd); return out(g, values.remove ? `${ids[0]} removed` : `${g.id} command: ${g.command}`); }
+    case 'none': { const p = setNoProfile(cwd, values.because); refreshDashboard(cwd); return out(p, `recorded: no quality profile applies (${p.none.because})`); }
     case 'run': { const r = runGates(cwd, ids); refreshDashboard(cwd); if (r.some((x) => !x.pass)) process.exitCode = 1; return out(r, r.length ? r.map((x) => `${x.pass ? 'pass' : 'FAIL'} ${x.id}: ${x.command}${x.pass ? '' : `\n${x.output.split('\n').slice(-15).join('\n')}`}`).join('\n') : 'no automated gates selected'); }
     case 'show': case undefined: { const p = loadProfile(cwd); if (!p) return out(null, 'no quality profile selected; run profile detect and profile catalog'); return out(p, `${p.selected.map((x) => `${x.id}${x.verified ? ` (verified ${x.verified.at.slice(0, 10)})` : ' (not verified)'}: ${x.because}`).join('\n')}\n\n${p.gates.map((g) => `${g.id.padEnd(26)} ${g.type.padEnd(9)} ${g.title}${p.results[g.id] ? ` [last run: ${p.results[g.id].pass ? 'pass' : 'fail'}]` : ''}`).join('\n')}${p.removed.length ? `\n\nremoved: ${p.removed.map((r) => `${r.id} (${r.reason})`).join('; ')}` : ''}`); }
     default: throw new Error('usage: profile catalog | detect | set <ids> --because "…" | verify <id> --sources "…" --note "…" | gate <id> --command "…" | --remove --reason "…" | run [ids] | show');

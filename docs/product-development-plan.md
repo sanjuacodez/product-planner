@@ -178,6 +178,37 @@ edits to planning documents appear only with `pp dashboard --watch` running.
   would rebuild when nothing has changed and still lag behind real events. No server is
   needed either; the dashboard stays a single local HTML file.
 
+**W10. Model router: the best model per task, across providers.** Today a role's model is
+whatever the user names (`state.models`) or the session model; the `models tiered` preset is one
+fixed guess (the user's example, used only as a benchmark candidate). The router replaces guesses
+with a recommendation the user accepts or edits, works with any provider, and spreads work across
+every provider a tool offers.
+- *Model catalog* (`kit/models/catalog.json`): provider, model id, tier (frontier, strong, fast),
+  strengths (coding, reasoning, review, UI, long context), context size, list prices with a
+  "verified on" date and source, and which tools can run it. Unverified prices are left empty
+  rather than guessed.
+- *Available pool:* detected from the installed tools and declared by the user
+  (`models available …`), because subscriptions and API keys decide what a project can use.
+- *Recommendation rules, explained per task:* a minimum tier from the task's risk, size, role,
+  quality gates and QA history (architecture, security, high risk or a failed attempt need the
+  strongest tier; mechanical QA and documentation can use the fast tier); then the cheapest
+  available model that meets it. Review runs on a different provider from the implementation when
+  the pool has more than one (independent review catches different mistakes); otherwise a
+  different model. Parallel batches spread equally suitable tasks across providers.
+- *Evidence loop:* per model and role, the project's own history (first-pass verification rate,
+  QA returns, cost per task) and benchmark results adjust the recommendation: escalate a model
+  that keeps failing a kind of task, keep the cheaper one where it passes first time.
+- *Applying it per tool:* where a tool reads per-agent models from files (Claude Code agents, and
+  other tools as verified), the kit writes them; where the host's agent tool takes a model per
+  call, the coordinator passes the task's model; where models are chosen only in the tool's UI,
+  the brief and dashboard show the recommendation and the actual model is recorded, never assumed.
+- *Planning:* the interview no longer asks the user to name models; it shows the recommended
+  routing table with reasons and costs, for approval or edits.
+- *Dashboard:* recommended versus actual model per task, cost per provider and model, and the
+  evidence behind each recommendation.
+- *Proof:* a `router` benchmark arm against the single-model planner and the fixed `tiered`
+  preset, on quality and cost.
+
 **W7. Proof: benchmark v2.**
 - *Simulated product owner:* the request is incomplete, and a hidden fact sheet holds the
   owner's answers. When the agent asks, a small model answers strictly from the fact
@@ -256,3 +287,28 @@ edits to planning documents appear only with `pp dashboard --watch` running.
 - One planner run on scope-change after the overhead work: $2.66 and 5.6 minutes, against $4.04 and 9.9 minutes before (mean of 3) and $0.98 for plain. Repeat before claiming the saving.
 - Next scenarios, chosen to stress what a single session cannot hold: a product built over several sessions with a fresh context each time (resume from files only); a vague one-paragraph idea with a simulated owner; 5+ epics; the same scenarios on cheaper models (Sonnet 5.5, Haiku 5.5) where plain prompting is more likely to drop rules; and a compliance scenario (personal data with export and deletion) scored on the controls.
 - The M5 comparison (plain, planner, spec-kit, BMAD × 3 runs) waits for approval of its budget.
+
+### Comparison results (2026-10-20, stopped early at the user's request)
+
+Five set-ups on three scenarios, Claude Code on Opus 5.5, scored by hidden tests and quality checks.
+Complete for scope-change and product-owner (3 runs each); partial for woo-extension; the router
+set-up was not measured. Costs are API-equivalent; these runs drew on a Claude subscription.
+
+| Scenario | Plain | Planner | Tiered (fixed Sonnet/Haiku) | BMAD 6.12.4 | spec-kit 1.2.1 |
+|---|---|---|---|---|---|
+| scope-change, hidden tests | 100% | 100% | 100% | 100% | 100% |
+| scope-change, mean cost | $0.98 | $2.29 | $3.54 | $2.98 | $7.87 |
+| product-owner, hidden tests | 99% (4 runs) | 100% | 100% | 100% | 100% |
+| product-owner, mean cost | $0.61 | $2.25 | $2.62 | $2.92 | $4.72 |
+| woo-extension, mean cost (runs) | $1.61 (3) | $3.39 (1) | — | $5.17 (2) | $5.81 (1) |
+
+- The overhead work cut the planner from $4.04 to $2.29 on scope-change; it is now cheaper than
+  BMAD and spec-kit on both complete scenarios, and still 2.3–3.7× plain.
+- The fixed Sonnet/Haiku delegation cost more than a single model: the Opus coordinator still took
+  about 77% of the spend and each sub-agent re-read context; it also took about twice as long.
+- WooCommerce platform quality was mixed for every set-up: plain passed every check in 1 of 3 runs
+  (the others failed the security scan, one also coding standards); the single planner run failed
+  coding standards and the security scan. Cause: the planner chose the direct path, which skips the
+  quality profile. Fixed: routing excludes platform and regulated work from the direct path, and
+  `check` now blocks a plan whose request mentions a platform or regulated data until a profile is
+  selected or `profile none` records why none applies. Not yet re-measured.

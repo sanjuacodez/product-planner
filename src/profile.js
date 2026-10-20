@@ -116,9 +116,33 @@ export function runGates(cwd, ids = []) {
 }
 
 /** Plan-check rules: every non-legal gate needs an architecture decision and a task; profiles need verification. */
-export function profileCheck(cwd, { architecture, tasks }) {
+/** Words in the request that point to a platform or regulated data, mapped to the profiles they suggest. */
+const REQUEST_SIGNALS = [
+  [/\bwoo ?commerce\b/i, 'woocommerce-extension'], [/\bword ?press\b|\bwp plugin\b/i, 'wordpress-plugin'], [/\bshopify\b/i, 'shopify-app'],
+  [/\b(app store|play store|marketplace)\b/i, null], [/\bpersonal data|\bpii\b|\bgdpr\b|\bdpdp\b|\bccpa\b|\bprivacy\b|\bcustomer (data|records|details)\b/i, null],
+  [/\b(card payments?|credit cards?|checkout payments?|pci)\b/i, 'pci-dss'], [/\b(health|medical|patient)\b/i, null], [/\bchildren|\bkids\b|\bunder 13\b/i, 'coppa'],
+];
+export function requestSignals(text) {
+  return REQUEST_SIGNALS.filter(([re]) => re.test(text)).map(([re, id]) => ({ match: text.match(re)[0], profile: id }));
+}
+/** Record that no profile applies, with the reason the user agreed (so check stops asking). */
+export function setNoProfile(cwd, because) {
+  if (!because?.trim()) throw new Error('--because "…" is required: why no platform or regulatory profile applies');
+  const current = loadProfile(cwd) || { selected: [], gates: [], removed: [], results: {} };
+  current.none = { because: because.trim(), at: nowIso() };
+  writeJson(profilePath(cwd), current);
+  appendLog(cwd, { type: 'note', message: `quality profile: none applies (${because.trim()})` });
+  return current;
+}
+export function profileCheck(cwd, { architecture, tasks, request = '' }) {
   const p = loadProfile(cwd);
   const errors = [], warnings = [];
+  // The request mentions a platform or regulated data: a profile must be chosen, or "none applies" recorded.
+  const signals = requestSignals(request);
+  if (signals.length && !p?.selected?.length && !p?.none) {
+    const ids = [...new Set(signals.map((x) => x.profile).filter(Boolean))];
+    errors.push(`the request mentions ${[...new Set(signals.map((x) => `"${x.match}"`))].join(', ')}: select a quality profile${ids.length ? ` (suggested: ${ids.join(', ')})` : ''} with profile set … --because "…", or record profile none --because "…"; on the direct path, switch to pp-plan`);
+  }
   if (!p) return { errors, warnings };
   const taskText = (t) => [t.title, t.description, ...(t.acceptance || [])].join(' ');
   for (const g of p.gates) {

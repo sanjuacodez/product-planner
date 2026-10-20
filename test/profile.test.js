@@ -104,3 +104,17 @@ test('automated gates run and record results; gates can be adjusted or removed w
   setProfiles(cwd, ['node-package'], 'again');
   assert.ok(!loadProfile(cwd).gates.some((g) => g.id === 'G-NODE-TYPES'));
 });
+
+test('a request that mentions a platform or regulated data blocks the plan until a profile is chosen or ruled out', async (t) => {
+  const cwd = await project(t);
+  write(cwd, '.product-planner/request.md', 'A WooCommerce extension for the Marketplace that stores customer data.');
+  write(cwd, 'plan.json', { features: [{ id: 'F1', title: 'Min order', status: 'accepted', priority: 'must', release: 'MVP', requests: ['R1'], acceptance: ['Works'] }], tasks: [{ id: 'T1', title: 'Min order', features: ['F1'], risk: 'low', writes: ['x/'], acceptance: ['Works'] }] });
+  const r = run(cwd, 'plan', 'import', '--file', 'plan.json');
+  assert.equal(r.status, 1); assert.match(r.stdout, /mentions "WooCommerce", "Marketplace", "customer data".*suggested: woocommerce-extension/);
+  assert.notEqual(run(cwd, 'plan', 'approve', '--reason', 'x').status, 0);
+  ok(cwd, 'profile', 'none', '--because', 'internal demo only; no real customers (user confirmed)');
+  assert.match(ok(cwd, 'check'), /ok:/);
+  const plain = await project(t); write(plain, '.product-planner/request.md', 'A command-line tip calculator.');
+  write(plain, 'plan.json', { features: [{ id: 'F1', title: 'Tip', status: 'accepted', priority: 'must', release: 'MVP', requests: ['R1'], acceptance: ['Works'] }], tasks: [{ id: 'T1', title: 'Tip', features: ['F1'], risk: 'low', writes: ['tip.js'], acceptance: ['Works'] }] });
+  assert.match(ok(plain, 'plan', 'import', '--file', 'plan.json'), /plan check: ok/);
+});

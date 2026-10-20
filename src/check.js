@@ -34,7 +34,7 @@ export function checkPlan(cwd) {
     if (loadState(cwd).options?.requestCoverage && items.length) errors.push(...requestCoverage(features, items).errors.map((e) => `request coverage: ${e}`));
   }
   // Quality profile: each platform/regulatory gate needs an architecture decision and a delivering task.
-  const prof = profileCheck(cwd, { architecture: planningText(cwd, 'architecture.md'), tasks: tasks.tasks });
+  const prof = profileCheck(cwd, { architecture: planningText(cwd, 'architecture.md'), tasks: tasks.tasks, request: readText(path.join(dir, 'request.md'), '') });
   errors.push(...prof.errors.map((e) => `quality profile: ${e}`)); warnings.push(...prof.warnings.map((w) => `quality profile: ${w}`));
   const drift = lockDrift(cwd);
   if (drift.length) warnings.push(`changed since the plan was approved: ${drift.join(', ')}. Record scope changes with pp-replan and approve again (plan approve).`);

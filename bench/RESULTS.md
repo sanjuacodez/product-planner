@@ -16,18 +16,27 @@ Planner and tiered runs are grouped by kit digest (a hash of kit/ and src/ at ru
 | change-sequence | plain | n/a | 1 | 1/1 | 100% | $4.83 | 5.2 | 1.71M | $0.242 |
 | existing-codebase | plain | n/a | 1 | 1/1 | 100% | $0.67 | 2.1 | 411k | $0.037 |
 | long-spec | plain | n/a | 1 | 1/1 | 100% | $1.34 | 2.4 | 358k | $0.033 |
-| product-owner | plain | n/a | 1 | 1/1 | 94% | $0.61 | 1.8 | 193k | $0.038 |
-| scope-change | bmad | n/a | 1 | 1/1 | 100% | $3.12 | 7.2 | 1.64M | $0.390 |
-| scope-change | plain | n/a | 4 | 4/4 | 100% (100%–100%) | $1.00 ($0.89–$1.07) | 2.7 (2.2–3.1) | 368k | $0.125 |
+| product-owner | bmad | n/a | 3 | 3/3 | 100% (100%–100%) | $2.92 ($2.82–$3.06) | 6.2 (5.7–6.6) | 1.42M | $0.172 |
+| product-owner | plain | n/a | 4 | 4/4 | 99% (94%–100%) | $0.61 ($0.59–$0.63) | 1.8 (1.8–1.8) | 240k | $0.037 |
+| product-owner | planner | 5b098095bd2f | 3 | 3/3 | 100% (100%–100%) | $2.25 ($1.84–$2.84) | 6.2 (5.2–8.0) | 2.22M | $0.133 |
+| product-owner | speckit | n/a | 3 | 3/3 | 100% (100%–100%) | $4.72 ($4.07–$5.87) | 6.4 (6.0–6.8) | 1.89M | $0.278 |
+| product-owner | tiered | 5b098095bd2f | 3 | 3/3 | 100% (100%–100%) | $2.62 ($2.54–$2.67) | 11.4 (10.8–12.0) | 2.43M | $0.154 |
+| scope-change | bmad | n/a | 3 | 3/3 | 100% (100%–100%) | $2.98 ($2.82–$3.12) | 6.6 (6.3–7.2) | 1.71M | $0.372 |
+| scope-change | plain | n/a | 6 | 6/6 | 100% (100%–100%) | $0.98 ($0.89–$1.07) | 2.6 (2.2–3.1) | 368k | $0.122 |
 | scope-change | planner | 325d2f103fca | 3 | 3/3 | 100% (100%–100%) | $4.04 ($2.82–$5.69) | 9.9 (6.1–15.3) | 2.67M | $0.505 |
 | scope-change | planner | 1f38bae76bfa | 1 | 1/1 | 100% | $2.66 | 5.6 | 2.23M | $0.333 |
 | scope-change | planner | 547e4704c868 | 1 | 1/1 | 100% | $3.14 | 6.5 | 3.17M | $0.392 |
-| scope-change | speckit | n/a | 1 | 1/1 | 100% | $7.15 | 9.0 | 3.61M | $0.893 |
+| scope-change | planner | 5b098095bd2f | 3 | 3/3 | 100% (100%–100%) | $2.29 ($2.23–$2.34) | 5.0 (4.8–5.4) | 2.05M | $0.287 |
+| scope-change | speckit | n/a | 3 | 3/3 | 100% (100%–100%) | $7.87 ($6.14–$10.31) | 8.9 (8.0–9.6) | 3.22M | $0.983 |
 | scope-change | tiered | 547e4704c868 | 1 | 1/1 | 100% | $2.47 | 5.5 | 2.07M | $0.308 |
+| scope-change | tiered | 5b098095bd2f | 3 | 3/3 | 100% (100%–100%) | $3.54 ($3.42–$3.77) | 9.7 (9.1–10.1) | 2.85M | $0.442 |
 | todo-cli | plain | n/a | 1 | 1/1 | 100% | $0.25 | 0.9 | 159k | $0.031 |
 | todo-cli | planner | — | 1 | 1/1 | 100% | $1.09 | 3.1 | 1.50M | $0.136 |
 | todo-cli | speckit | n/a | 1 | 1/1 | 100% | $4.04 | 4.7 | 1.72M | $0.505 |
-| woo-extension | plain | n/a | 1 | 1/1 | 100% | $1.59 | 6.5 | 1.38M | $0.113 |
+| woo-extension | bmad | n/a | 2 | 2/2 | 100% (100%–100%) | $5.17 ($4.42–$5.92) | 15.7 (13.4–18.0) | 550k | $0.369 |
+| woo-extension | plain | n/a | 3 | 3/3 | 100% (100%–100%) | $1.61 ($1.57–$1.66) | 6.6 (6.5–6.8) | 1.31M | $0.115 |
+| woo-extension | planner | 5b098095bd2f | 1 | 1/1 | 100% | $3.39 | 10.9 | 1.29M | $0.242 |
+| woo-extension | speckit | n/a | 1 | 1/1 | 100% | $5.81 | 11.1 | 3.64M | $0.415 |
 
 ## Hidden tests by group
 
@@ -37,13 +46,19 @@ Groups come from test-name prefixes: `prompt` is behaviour stated in the request
 |---|---|---|---|
 | change-sequence | plain | n/a | base 10/10 · change 1 3/3 · change 2 2/2 · change 3 2/2 · change 4 3/3 |
 | existing-codebase | plain | n/a | existing 8/8 · discount 4/4 · removeline 3/3 · summarizebycurrency 2/2 · modified 1/1 |
-| product-owner | plain | n/a | prompt 5/5 · points 2/3 · tiers 3/3 · redeem 2/2 · refunds 4/4 |
-| scope-change | bmad | n/a | original api 5/5 · change 3/3 |
-| scope-change | plain | n/a | original api 5/5 · change 3/3 |
+| product-owner | bmad | n/a | prompt 15/15 · points 9/9 · tiers 9/9 · redeem 6/6 · refunds 12/12 |
+| product-owner | plain | n/a | prompt 20/20 · points 11/12 · tiers 12/12 · redeem 8/8 · refunds 16/16 |
+| product-owner | planner | 5b098095bd2f | prompt 15/15 · points 9/9 · tiers 9/9 · redeem 6/6 · refunds 12/12 |
+| product-owner | speckit | n/a | prompt 15/15 · points 9/9 · tiers 9/9 · redeem 6/6 · refunds 12/12 |
+| product-owner | tiered | 5b098095bd2f | prompt 15/15 · points 9/9 · tiers 9/9 · redeem 6/6 · refunds 12/12 |
+| scope-change | bmad | n/a | original api 15/15 · change 9/9 |
+| scope-change | plain | n/a | original api 15/15 · change 9/9 |
 | scope-change | planner | 1f38bae76bfa | original api 5/5 · change 3/3 |
 | scope-change | planner | 547e4704c868 | original api 5/5 · change 3/3 |
-| scope-change | speckit | n/a | original api 5/5 · change 3/3 |
+| scope-change | planner | 5b098095bd2f | original api 15/15 · change 9/9 |
+| scope-change | speckit | n/a | original api 15/15 · change 9/9 |
 | scope-change | tiered | 547e4704c868 | original api 5/5 · change 3/3 |
+| scope-change | tiered | 5b098095bd2f | original api 15/15 · change 9/9 |
 
 ## Quality checks per run
 
@@ -54,14 +69,47 @@ Run after the build and never shown to the agent: committed secrets, the agent's
 | change-sequence | plain | 2026-10-20T04:59 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | existing-codebase | plain | 2026-10-20T04:56 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | long-spec | plain | 2026-10-20T04:56 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | bmad | 2026-10-20T05:59 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | bmad | 2026-10-20T06:00 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | bmad | 2026-10-20T10:29 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | product-owner | plain | 2026-10-20T04:56 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | plain | 2026-10-20T05:29 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | plain | 2026-10-20T05:54 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | plain | 2026-10-20T10:24 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | planner | 2026-10-20T06:00 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | planner | 2026-10-20T06:05 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | planner | 2026-10-20T06:08 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | speckit | 2026-10-20T05:33 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | speckit | 2026-10-20T05:55 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | speckit | 2026-10-20T06:00 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | tiered | 2026-10-20T06:08 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | tiered | 2026-10-20T06:11 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| product-owner | tiered | 2026-10-20T06:12 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | bmad | 2026-10-20T05:25 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | bmad | 2026-10-20T05:44 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | bmad | 2026-10-20T05:47 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | plain | 2026-10-20T05:21 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | plain | 2026-10-20T05:40 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | plain | 2026-10-20T05:40 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | planner | 2026-10-20T04:59 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | planner | 2026-10-20T05:25 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | planner | 2026-10-20T05:52 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | planner | 2026-10-20T05:52 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | planner | 2026-10-20T05:53 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | speckit | 2026-10-20T05:27 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | speckit | 2026-10-20T05:48 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | speckit | 2026-10-20T05:48 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
 | scope-change | tiered | 2026-10-20T05:24 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | tiered | 2026-10-20T05:37 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | tiered | 2026-10-20T05:48 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| scope-change | tiered | 2026-10-20T05:54 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run |
+| woo-extension | bmad | 2026-10-20T06:30 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: pass · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: pass |
+| woo-extension | bmad | 2026-10-20T10:36 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: fail (2) · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: fail (1) |
 | woo-extension | plain | 2026-10-20T05:08 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run · phpcs-wordpress: pass · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: pass |
+| woo-extension | plain | 2026-10-20T06:11 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: pass · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: fail (2) |
+| woo-extension | plain | 2026-10-20T06:19 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: fail (1) · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: fail (2) |
+| woo-extension | planner | 2026-10-20T06:30 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: fail (2) · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: fail (2) |
+| woo-extension | speckit | 2026-10-20T06:23 | no committed secrets: pass · own test suite passes: fail (1) · semgrep findings: not run · phpcs-wordpress: pass · php-compatibility-7.4: pass · phpstan-level5: fail (1) · security-scan: fail (2) |
 
 ## Cost by model per run
 
@@ -69,11 +117,44 @@ From Claude Code's per-model usage (main session and sub-agents). The tiered arm
 
 | Scenario | Arm | Run | Cost by model |
 |---|---|---|---|
+| product-owner | bmad | 2026-10-20T05:59 | opus-5-5 $2.82 (100%) |
+| product-owner | bmad | 2026-10-20T06:00 | opus-5-5 $2.89 (100%) |
+| product-owner | bmad | 2026-10-20T10:29 | opus-5-5 $3.06 (100%) |
+| product-owner | plain | 2026-10-20T05:29 | opus-5-5 $0.63 (100%) |
+| product-owner | plain | 2026-10-20T05:54 | opus-5-5 $0.63 (100%) |
+| product-owner | plain | 2026-10-20T10:24 | opus-5-5 $0.59 (100%) |
+| product-owner | planner | 2026-10-20T06:00 | opus-5-5 $2.08 (100%) |
+| product-owner | planner | 2026-10-20T06:05 | opus-5-5 $1.84 (100%) |
+| product-owner | planner | 2026-10-20T06:08 | opus-5-5 $2.84 (100%) |
+| product-owner | speckit | 2026-10-20T05:33 | opus-5-5 $4.07 (100%) |
+| product-owner | speckit | 2026-10-20T05:55 | opus-5-5 $5.87 (100%) |
+| product-owner | speckit | 2026-10-20T06:00 | opus-5-5 $4.22 (100%) |
+| product-owner | tiered | 2026-10-20T06:08 | opus-5-5 $1.97 (74%) · sonnet-5-5 $0.63 (24%) · haiku-5-5 $0.06 (2%) |
+| product-owner | tiered | 2026-10-20T06:11 | opus-5-5 $1.96 (77%) · sonnet-5-5 $0.55 (21%) · haiku-5-5 $0.03 (1%) |
+| product-owner | tiered | 2026-10-20T06:12 | opus-5-5 $2.06 (77%) · sonnet-5-5 $0.56 (21%) · haiku-5-5 $0.05 (2%) |
 | scope-change | bmad | 2026-10-20T05:25 | opus-5-5 $3.12 (100%) |
+| scope-change | bmad | 2026-10-20T05:44 | opus-5-5 $3.00 (100%) |
+| scope-change | bmad | 2026-10-20T05:47 | opus-5-5 $2.82 (100%) |
 | scope-change | plain | 2026-10-20T05:21 | opus-5-5 $1.05 (100%) |
+| scope-change | plain | 2026-10-20T05:40 | opus-5-5 $0.91 (100%) |
+| scope-change | plain | 2026-10-20T05:40 | opus-5-5 $0.96 (100%) |
 | scope-change | planner | 2026-10-20T05:25 | opus-5-5 $3.14 (100%) |
+| scope-change | planner | 2026-10-20T05:52 | opus-5-5 $2.34 (100%) |
+| scope-change | planner | 2026-10-20T05:52 | opus-5-5 $2.23 (100%) |
+| scope-change | planner | 2026-10-20T05:53 | opus-5-5 $2.32 (100%) |
 | scope-change | speckit | 2026-10-20T05:27 | opus-5-5 $7.15 (100%) |
+| scope-change | speckit | 2026-10-20T05:48 | opus-5-5 $10.31 (100%) |
+| scope-change | speckit | 2026-10-20T05:48 | opus-5-5 $6.14 (100%) |
 | scope-change | tiered | 2026-10-20T05:24 | opus-5-5 $2.47 (100%) |
+| scope-change | tiered | 2026-10-20T05:37 | opus-5-5 $2.62 (77%) · sonnet-5-5 $0.75 (22%) · haiku-5-5 $0.05 (1%) |
+| scope-change | tiered | 2026-10-20T05:48 | opus-5-5 $2.92 (77%) · sonnet-5-5 $0.81 (21%) · haiku-5-5 $0.05 (1%) |
+| scope-change | tiered | 2026-10-20T05:54 | opus-5-5 $2.67 (78%) · sonnet-5-5 $0.70 (20%) · haiku-5-5 $0.05 (1%) |
+| woo-extension | bmad | 2026-10-20T06:30 | opus-5-5 $5.92 (100%) |
+| woo-extension | bmad | 2026-10-20T10:36 | opus-5-5 $4.42 (100%) |
+| woo-extension | plain | 2026-10-20T06:11 | opus-5-5 $1.57 (100%) |
+| woo-extension | plain | 2026-10-20T06:19 | opus-5-5 $1.66 (100%) |
+| woo-extension | planner | 2026-10-20T06:30 | opus-5-5 $3.39 (100%) |
+| woo-extension | speckit | 2026-10-20T06:23 | opus-5-5 $5.80 (100%) |
 
 
 ## Every run
@@ -86,20 +167,53 @@ From Claude Code's per-model usage (main session and sub-agents). The tiered arm
 | change-sequence | plain | opus | 20/20 (100%) | 2/2 | completed | $4.83 | 5.2 | 5 (0 scripted) | 1.71M | 33k | 1f38bae76bfa | 2026-10-20 |
 | existing-codebase | plain | opus | 18/18 (100%) | 2/2 | completed | $0.67 | 2.1 | 1 (0 scripted) | 411k | 16k | 1f38bae76bfa | 2026-10-20 |
 | long-spec | plain | opus | 40/40 (100%) | 2/2 | completed | $1.34 | 2.4 | 2 (1 scripted) | 358k | 18k | 1f38bae76bfa | 2026-10-20 |
+| product-owner | bmad | opus | 17/17 (100%) | 2/2 | completed | $2.82 | 6.3 | 2 (1 scripted) | 1.85M | 18k | 5b098095bd2f | 2026-10-20 |
+| product-owner | bmad | opus | 17/17 (100%) | 2/2 | completed | $2.89 | 5.7 | 2 (1 scripted) | 598k | 6k | 5b098095bd2f | 2026-10-20 |
+| product-owner | bmad | opus | 17/17 (100%) | 2/2 | completed | $3.06 | 6.6 | 2 (1 scripted) | 1.82M | 26k | 590de62d12b1 | 2026-10-20 |
 | product-owner | plain | opus | 16/17 (94%) | 2/2 | completed | $0.61 | 1.8 | 2 (1 scripted) | 193k | 12k | 1f38bae76bfa | 2026-10-20 |
+| product-owner | plain | opus | 17/17 (100%) | 2/2 | completed | $0.63 | 1.8 | 2 (1 scripted) | 236k | 12k | 547e4704c868 | 2026-10-20 |
+| product-owner | plain | opus | 17/17 (100%) | 2/2 | completed | $0.63 | 1.8 | 2 (1 scripted) | 271k | 12k | 5b098095bd2f | 2026-10-20 |
+| product-owner | plain | opus | 17/17 (100%) | 2/2 | completed | $0.59 | 1.8 | 2 (1 scripted) | 261k | 12k | 590de62d12b1 | 2026-10-20 |
+| product-owner | planner | opus | 17/17 (100%) | 2/2 | completed | $2.08 | 5.2 | 2 (1 scripted) | 2.35M | 35k | 5b098095bd2f | 2026-10-20 |
+| product-owner | planner | opus | 17/17 (100%) | 2/2 | completed | $1.84 | 5.3 | 2 (1 scripted) | 1.42M | 36k | 5b098095bd2f | 2026-10-20 |
+| product-owner | planner | opus | 17/17 (100%) | 2/2 | completed | $2.84 | 8 | 2 (1 scripted) | 2.89M | 47k | 5b098095bd2f | 2026-10-20 |
+| product-owner | speckit | opus | 17/17 (100%) | 2/2 | completed | $4.07 | 6 | 5 (1 scripted) | 1.66M | 39k | 547e4704c868 | 2026-10-20 |
+| product-owner | speckit | opus | 17/17 (100%) | 2/2 | completed | $5.87 | 6.3 | 6 (2 scripted) | 2.01M | 40k | 5b098095bd2f | 2026-10-20 |
+| product-owner | speckit | opus | 17/17 (100%) | 2/2 | completed | $4.22 | 6.8 | 5 (1 scripted) | 2.01M | 45k | 5b098095bd2f | 2026-10-20 |
+| product-owner | tiered | opus | 17/17 (100%) | 2/2 | completed | $2.66 | 12 | 2 (1 scripted) | 2.32M | 28k | 5b098095bd2f | 2026-10-20 |
+| product-owner | tiered | opus | 17/17 (100%) | 2/2 | completed | $2.54 | 10.8 | 2 (1 scripted) | 2.32M | 30k | 5b098095bd2f | 2026-10-20 |
+| product-owner | tiered | opus | 17/17 (100%) | 2/2 | completed | $2.67 | 11.5 | 2 (1 scripted) | 2.66M | 29k | 5b098095bd2f | 2026-10-20 |
 | scope-change | bmad | opus | 8/8 (100%) | 2/2 | completed | $3.12 | 7.2 | 2 (0 scripted) | 1.64M | 35k | 547e4704c868 | 2026-10-20 |
+| scope-change | bmad | opus | 8/8 (100%) | 2/2 | completed | $3.00 | 6.4 | 2 (0 scripted) | 1.92M | 29k | 5b098095bd2f | 2026-10-20 |
+| scope-change | bmad | opus | 8/8 (100%) | 2/2 | completed | $2.82 | 6.3 | 2 (0 scripted) | 1.57M | 31k | 5b098095bd2f | 2026-10-20 |
 | scope-change | plain | opus | 8/8 (100%) | — | completed | $0.89 | 2.2 | 2 (0 scripted) | 308k | 16k | 325d2f103fca | 2026-10-19 |
 | scope-change | plain | opus | 8/8 (100%) | — | completed | $1.07 | 3.1 | 2 (0 scripted) | 413k | 20k | 325d2f103fca | 2026-10-19 |
 | scope-change | plain | opus | 8/8 (100%) | — | completed | $0.98 | 2.5 | 2 (0 scripted) | 289k | 18k | 325d2f103fca | 2026-10-19 |
 | scope-change | plain | opus | 8/8 (100%) | 2/2 | completed | $1.05 | 2.8 | 2 (0 scripted) | 463k | 19k | 547e4704c868 | 2026-10-20 |
+| scope-change | plain | opus | 8/8 (100%) | 2/2 | completed | $0.91 | 2.4 | 2 (0 scripted) | 377k | 15k | 5b098095bd2f | 2026-10-20 |
+| scope-change | plain | opus | 8/8 (100%) | 2/2 | completed | $0.96 | 2.5 | 2 (0 scripted) | 357k | 17k | 5b098095bd2f | 2026-10-20 |
 | scope-change | planner | opus | 8/8 (100%) | — | completed | $3.61 | 8.2 | 2 (0 scripted) | 2.48M | 50k | 325d2f103fca | 2026-10-19 |
 | scope-change | planner | opus | 8/8 (100%) | — | completed | $5.69 | 15.3 | 2 (0 scripted) | 3.22M | 40k | 325d2f103fca | 2026-10-19 |
 | scope-change | planner | opus | 8/8 (100%) | — | completed | $2.82 | 6.1 | 2 (0 scripted) | 2.31M | 40k | 325d2f103fca | 2026-10-20 |
 | scope-change | planner | opus | 8/8 (100%) | 2/2 | completed | $2.66 | 5.6 | 2 (0 scripted) | 2.23M | 38k | 1f38bae76bfa | 2026-10-20 |
 | scope-change | planner | opus | 8/8 (100%) | 2/2 | completed | $3.14 | 6.5 | 2 (0 scripted) | 3.17M | 42k | 547e4704c868 | 2026-10-20 |
+| scope-change | planner | opus | 8/8 (100%) | 2/2 | completed | $2.34 | 5.4 | 2 (0 scripted) | 2.14M | 29k | 5b098095bd2f | 2026-10-20 |
+| scope-change | planner | opus | 8/8 (100%) | 2/2 | completed | $2.23 | 4.8 | 2 (0 scripted) | 2.07M | 31k | 5b098095bd2f | 2026-10-20 |
+| scope-change | planner | opus | 8/8 (100%) | 2/2 | completed | $2.32 | 4.9 | 2 (0 scripted) | 1.94M | 31k | 5b098095bd2f | 2026-10-20 |
 | scope-change | speckit | opus | 8/8 (100%) | 2/2 | completed | $7.15 | 9 | 5 (0 scripted) | 3.61M | 57k | 547e4704c868 | 2026-10-20 |
+| scope-change | speckit | opus | 8/8 (100%) | 2/2 | completed | $10.31 | 9.6 | 6 (1 scripted) | 3.80M | 62k | 5b098095bd2f | 2026-10-20 |
+| scope-change | speckit | opus | 8/8 (100%) | 2/2 | completed | $6.14 | 8 | 5 (0 scripted) | 2.25M | 50k | 5b098095bd2f | 2026-10-20 |
 | scope-change | tiered | opus | 8/8 (100%) | 2/2 | completed | $2.47 | 5.5 | 2 (0 scripted) | 2.07M | 32k | 547e4704c868 | 2026-10-20 |
+| scope-change | tiered | opus | 8/8 (100%) | 2/2 | completed | $3.42 | 9.1 | 2 (0 scripted) | 2.06M | 18k | 5b098095bd2f | 2026-10-20 |
+| scope-change | tiered | opus | 8/8 (100%) | 2/2 | completed | $3.77 | 10 | 2 (0 scripted) | 3.41M | 28k | 5b098095bd2f | 2026-10-20 |
+| scope-change | tiered | opus | 8/8 (100%) | 2/2 | completed | $3.42 | 10.1 | 2 (0 scripted) | 3.07M | 31k | 5b098095bd2f | 2026-10-20 |
 | todo-cli | plain | opus | 8/8 (100%) | — | — | $0.25 | 0.9 | 1 (0 scripted) | 159k | 5k | — | 2026-10-19 |
 | todo-cli | planner | opus | 8/8 (100%) | — | — | $1.09 | 3.1 | 1 (0 scripted) | 1.50M | 18k | — | 2026-10-19 |
 | todo-cli | speckit | opus | 8/8 (100%) | — | — | $4.04 | 4.7 | 4 (0 scripted) | 1.72M | 27k | — | 2026-10-19 |
+| woo-extension | bmad | opus | 14/14 (100%) | 5/6 | completed | $5.92 | 18 | 1 (0 scripted) | 674k | 3k | 5b098095bd2f | 2026-10-20 |
+| woo-extension | bmad | opus | 14/14 (100%) | 3/6 | completed | $4.42 | 13.4 | 1 (0 scripted) | 426k | 3k | 590de62d12b1 | 2026-10-20 |
 | woo-extension | plain | opus | 14/14 (100%) | 6/6 | completed | $1.59 | 6.5 | 1 (0 scripted) | 1.38M | 43k | 1f38bae76bfa | 2026-10-20 |
+| woo-extension | plain | opus | 14/14 (100%) | 4/6 | completed | $1.57 | 6.6 | 1 (0 scripted) | 1.17M | 44k | 5b098095bd2f | 2026-10-20 |
+| woo-extension | plain | opus | 14/14 (100%) | 3/6 | completed | $1.66 | 6.8 | 1 (0 scripted) | 1.38M | 45k | 5b098095bd2f | 2026-10-20 |
+| woo-extension | planner | opus | 14/14 (100%) | 3/6 | completed | $3.39 | 10.9 | 1 (0 scripted) | 1.29M | 15k | 5b098095bd2f | 2026-10-20 |
+| woo-extension | speckit | opus | 14/14 (100%) | 3/6 | completed | $5.81 | 11.1 | 4 (0 scripted) | 3.64M | 74k | 5b098095bd2f | 2026-10-20 |
