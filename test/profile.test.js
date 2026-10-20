@@ -104,3 +104,56 @@ test('automated gates run and record results; gates can be adjusted or removed w
   setProfiles(cwd, ['node-package'], 'again');
   assert.ok(!loadProfile(cwd).gates.some((g) => g.id === 'G-NODE-TYPES'));
 });
+
+test('a request that mentions a platform or regulated data blocks the plan until a profile is chosen or ruled out', async (t) => {
+  const cwd = await project(t);
+  write(cwd, '.product-planner/request.md', 'A WooCommerce extension for the Marketplace that stores customer data.');
+  write(cwd, 'plan.json', { features: [{ id: 'F1', title: 'Min order', status: 'accepted', priority: 'must', release: 'MVP', requests: ['R1'], acceptance: ['Works'] }], tasks: [{ id: 'T1', title: 'Min order', features: ['F1'], risk: 'low', writes: ['x/'], acceptance: ['Works'] }] });
+  const r = run(cwd, 'plan', 'import', '--file', 'plan.json');
+  assert.equal(r.status, 1); assert.match(r.stdout, /mentions "WooCommerce", "Marketplace", "customer data".*suggested: woocommerce-extension/);
+  assert.notEqual(run(cwd, 'plan', 'approve', '--reason', 'x').status, 0);
+  ok(cwd, 'profile', 'none', '--because', 'internal demo only; no real customers (user confirmed)');
+  assert.match(ok(cwd, 'check'), /ok:/);
+  const plain = await project(t); write(plain, '.product-planner/request.md', 'A command-line tip calculator.');
+  write(plain, 'plan.json', { features: [{ id: 'F1', title: 'Tip', status: 'accepted', priority: 'must', release: 'MVP', requests: ['R1'], acceptance: ['Works'] }], tasks: [{ id: 'T1', title: 'Tip', features: ['F1'], risk: 'low', writes: ['tip.js'], acceptance: ['Works'] }] });
+  assert.match(ok(plain, 'plan', 'import', '--file', 'plan.json'), /plan check: ok/);
+});
+
+test('selected profiles are installed as skills for the installed tools; deselected ones are removed', async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-profile-skill-'));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  await init(cwd, { tools: 'claude,codex' });
+  const out = ok(cwd, 'profile', 'set', 'wordpress-plugin', '--because', 'WordPress.org plugin');
+  assert.match(out, /skill file\(s\) updated/);
+  const skill = fs.readFileSync(path.join(cwd, '.claude/skills/pp-profile-wordpress-plugin/SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: pp-profile-wordpress-plugin\ndescription: /); assert.match(skill, /### G-WP-PHPCS/); assert.match(skill, /Applies because: WordPress\.org plugin/);
+  assert.ok(fs.existsSync(path.join(cwd, '.agents/skills/pp-profile-wordpress-plugin/SKILL.md')));
+  assert.match(ok(cwd, 'profile', 'show', 'gdpr'), /### G-GDPR-LEGAL: .*\(needs legal review\)/);
+  ok(cwd, 'uninstall');
+  assert.ok(!fs.existsSync(path.join(cwd, '.claude/skills/pp-profile-wordpress-plugin')));
+});
+
+test('a new profile for an uncovered platform: scaffold, validate, save to the library, reuse in another project', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-home-')); t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const env = { ...process.env, PP_HOME: home };
+  const pp = (cwd, ...a) => { const r = spawnSync(process.execPath, [CLI, ...a], { cwd, encoding: 'utf8', env }); return r; };
+  const a = await project(t);
+  assert.equal(pp(a, 'profile', 'new', 'vscode-extension', '--title', 'VS Code extension').status, 0);
+  const file = path.join(a, '.product-planner/profiles/vscode-extension/profile.json');
+  const v = pp(a, 'profile', 'validate', 'vscode-extension'); assert.equal(v.status, 1); assert.match(v.stdout, /appliesWhen is required/);
+  assert.notEqual(pp(a, 'profile', 'save', 'vscode-extension').status, 0);
+  const def = JSON.parse(fs.readFileSync(file, 'utf8'));
+  Object.assign(def, { appliesWhen: 'An extension published to the VS Code Marketplace.', detect: { files: [], packages: [], requestWords: ['VS Code extension'] },
+    sources: [{ title: 'Publishing extensions', url: 'https://code.visualstudio.com/api/working-with-extensions/publishing-extension' }],
+    gates: [{ id: 'G-VSCODE-MANIFEST', type: 'manual', title: 'Marketplace manifest fields', architecture: 'Record publisher, engines.vscode and activation events.', acceptance: ['package.json declares publisher, engines.vscode and activation events'] }] });
+  fs.writeFileSync(file, JSON.stringify(def));
+  assert.equal(pp(a, 'profile', 'validate', 'vscode-extension').status, 0);
+  assert.equal(pp(a, 'profile', 'save', 'vscode-extension').status, 0);
+  // Another project sees it in the catalog, and its request words trigger the plan check.
+  const b = await project(t);
+  assert.match(pp(b, 'profile', 'catalog').stdout, /vscode-extension .*\[user library\]/);
+  write(b, '.product-planner/request.md', 'Build a VS Code extension that formats YAML.');
+  write(b, 'plan.json', { features: [{ id: 'F1', title: 'Format', status: 'accepted', priority: 'must', release: 'MVP', requests: ['R1'], acceptance: ['Formats'] }], tasks: [{ id: 'T1', title: 'Format', features: ['F1'], risk: 'low', writes: ['src/'], acceptance: ['Formats'] }] });
+  const r = pp(b, 'plan', 'import', '--file', 'plan.json');
+  assert.equal(r.status, 1); assert.match(r.stdout, /mentions "VS Code extension".*suggested: vscode-extension/);
+});

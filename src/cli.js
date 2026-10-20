@@ -18,8 +18,10 @@ import { planningProfile, approvePlan } from './planning.js';
 import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
-import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates } from './profile.js';
-import { syncClaudeAgents } from './init/adapters.js';
+import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates, setNoProfile, installProfileSkills, newProfile, saveProfile, renderSkill, validateProfileDef } from './profile.js';
+import { syncAgentModels, hostModel } from './init/adapters.js';
+const agentSyncNote = (out) => { const parts = Object.entries(out).map(([t, f]) => `${t} ${f.length}`); return parts.length ? `agent files updated (${parts.join(', ')})` : ''; };
+import { loadModelCatalog, modelPool, setPool, modelStats, recommend, applyRecommendations } from './router.js';
 import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
 import { writeJson } from './util/fs.js';
 
@@ -48,6 +50,9 @@ Usage: product-planner <command> [options]
   task context <id>                   Compact brief for one task (acceptance, features, requirements, deps)
   task validate                       Check tasks.json for errors and feature coverage
   profile catalog | detect | show     Quality profiles: platform and regulatory checks, repository signals, the selection
+  profile none --because "…"          Record that no platform or regulatory profile applies
+  profile new <id> | save <id> | validate <id>   Create a profile for an uncovered platform or law; save it to your library for every project
+  profile show <id>                   A profile's gates, decisions, checks and sources (as installed as a skill)
   profile set <ids> --because "…"     Select profiles; their gates need architecture decisions and tasks (check enforces)
   profile verify <id> --sources "…" --note "…"   Record checking a profile against its official sources
   profile gate <id> --command "…" | --remove --reason "…"   Adjust a gate for this project
@@ -74,7 +79,10 @@ Usage: product-planner <command> [options]
                                       After user approval: install free Playwright MCP + Chromium and register it
   browser remove                      Remove the Playwright MCP entry from this project's tool configs
   usage [summary] [--json] | bind --file transcript --task T# | hook              Token usage per task/phase (recorded by the Claude Code hook)
-  models show | tiered | inherit      Planned models per role; tiered = developer on Sonnet, QA on Haiku, each task delegated
+  models available [ids] [--provider p --tier t]   The models this project can use (declared, or inferred from tools)
+  models recommend | apply | auto     Best model per task with reasons; apply writes them; auto also delegates tasks
+  models catalog | stats | show       Known models and prices; first-pass rate and cost per model and role
+  models tiered | inherit             Fixed presets (tiered: developer Sonnet, QA Haiku, delegated)
   auto on|off|status                  Automatic mode: agents start pp-plan/pp-replan/pp-resume from plain requests
   doctor                              Environment checks (node, git, web, memory)
   version | help
@@ -143,6 +151,14 @@ function args(rest, options, allowPositionals = true) {
 /** Write a JSON template for the agent to fill in, creating directories, so no shell redirection is needed. */
 function writeOut(cwd, file, value) { const full = path.resolve(cwd, file); writeJson(full, value); return path.relative(cwd, full); }
 function requireInit(cwd) { if (!isInitialised(cwd)) throw new Error(`not initialised here – run \`product-planner init\` in the project root`); }
+/** Open the dashboard in the browser the first time the project reaches build only. Afterwards the
+ * file is rewritten in place and the open tab reloads itself, so no new tabs pile up. */
+function openDashboardOnce(cwd, out) {
+  const st = loadState(cwd);
+  if (!out || st.options?.autoOpenDashboard === false || st.dashboardOpenedAt) { if (out) console.log(`dashboard updated: ${path.relative(cwd, out)} (an open tab reloads itself)`); return; }
+  openInBrowser(out); st.dashboardOpenedAt = new Date().toISOString(); saveState(cwd, st);
+  console.log(`opened ${path.relative(cwd, out)} in the browser; later updates reload that tab`);
+}
 function refreshDashboard(cwd) { try { return buildDashboard(cwd); } catch (e) { if (process.env.PP_DEBUG) console.error(e); return null; } }
 
 async function cmdInit(cwd, rest) {
@@ -188,8 +204,9 @@ function cmdPlan(cwd, rest) {
   if (positionals[0] === 'approve') {
     const r = approvePlan(cwd, { reason: values.reason, check: checkPlan });
     for (const w of r.warnings) console.log(`warning: ${w}`);
+    if (r.routing) console.log(`models applied: ${r.routing.tasks.filter((x) => x.model).map((x) => `${x.id} ${x.model.label || x.model.id}${x.reviewer ? ` (review ${x.reviewer.label || x.reviewer.id})` : ''}`).join(', ')}; change any with task update T# --json '{"model":"…"}'`);
     console.log(`plan approved and locked (${r.lock.reason}); phase: build`);
-    const out = refreshDashboard(cwd); if (out && loadState(cwd).options?.autoOpenDashboard !== false) openInBrowser(out);
+    const out = refreshDashboard(cwd); openDashboardOnce(cwd, out);
     return;
   }
   if (positionals[0] !== 'import' || !values.file) throw new Error('usage: plan profile | plan import --file plan.json | plan approve --reason "…"');
@@ -209,18 +226,24 @@ function cmdPlan(cwd, rest) {
 /** Quality profiles: which platform and regulatory checks apply, verified, planned and run. */
 function cmdProfile(cwd, rest) {
   requireInit(cwd);
-  const { values, positionals } = args(rest, { because: { type: 'string' }, sources: { type: 'string' }, note: { type: 'string' }, command: { type: 'string' }, remove: { type: 'boolean' }, reason: { type: 'string' }, json: { type: 'boolean' } });
+  const { values, positionals } = args(rest, { because: { type: 'string' }, sources: { type: 'string' }, note: { type: 'string' }, command: { type: 'string' }, remove: { type: 'boolean' }, reason: { type: 'string' }, title: { type: 'string' }, kind: { type: 'string' }, json: { type: 'boolean' } });
+  const skills = () => { const n = installProfileSkills(cwd).length; return n ? `; ${n} skill file(s) updated` : ''; };
   const [sub, ...ids] = positionals;
   const out = (v, text) => { if (values.json) console.log(JSON.stringify(v, null, 2)); else console.log(text); };
   switch (sub) {
-    case 'catalog': { const c = loadCatalog(cwd); return out(c, `${c.profiles.map((p) => `${p.id.padEnd(22)} ${p.kind.padEnd(10)} ${p.title}\n${' '.repeat(34)}applies when: ${p.appliesWhen}${p.lastVerified ? '' : ' (catalog entry not verified: check its sources)'}`).join('\n')}\n\nAsk during the interview:\n${c.questions.map((q) => `- ${q}`).join('\n')}`); }
+    case 'catalog': { const c = loadCatalog(cwd); return out(c, `${c.profiles.map((p) => `${p.id.padEnd(22)} ${p.kind.padEnd(10)} ${p.title}${p.origin !== 'kit' ? ` [${p.origin}]` : ''}\n${' '.repeat(34)}applies when: ${p.appliesWhen}${p.lastVerified ? '' : ' (not verified by the kit: check its sources)'}`).join('\n')}\n\nAsk during the interview:\n${c.questions.map((q) => `- ${q}`).join('\n')}`); }
     case 'detect': { const d = detectProfiles(cwd); return out(d, d.length ? d.map((x) => `${x.id}: ${x.reasons.join('; ')}`).join('\n') + '\nSuggestions from repository signals: confirm them in the interview, then profile set.' : 'no repository signals; decide from the interview answers (profile catalog lists the questions)'); }
-    case 'set': { if (!ids.length) throw new Error('usage: profile set <id> [<id> …] --because "…"'); const p = setProfiles(cwd, ids, values.because); refreshDashboard(cwd); return out(p, `selected: ${p.selected.map((x) => x.id).join(', ')}\ngates: ${p.gates.map((g) => `${g.id} (${g.type})`).join(', ')}\nNext: verify each profile against its sources, write one architecture decision per gate, and link gates to tasks.`); }
-    case 'verify': { const s = verifyProfile(cwd, ids[0], values); refreshDashboard(cwd); return out(s, `${s.id} verified ${s.verified.at.slice(0, 10)} against ${s.verified.sources.length} source(s)`); }
-    case 'gate': { const g = editGate(cwd, ids[0], values); refreshDashboard(cwd); return out(g, values.remove ? `${ids[0]} removed` : `${g.id} command: ${g.command}`); }
+    case 'set': { if (!ids.length) throw new Error('usage: profile set <id> [<id> …] --because "…"'); const p = setProfiles(cwd, ids, values.because); const sk = skills(); refreshDashboard(cwd); return out(p, `selected: ${p.selected.map((x) => x.id).join(', ')}\ngates: ${p.gates.map((g) => `${g.id} (${g.type})`).join(', ')}${sk}\nNext: verify each profile against its sources, write one architecture decision per gate, and link gates to tasks.`); }
+    case 'verify': { const s = verifyProfile(cwd, ids[0], values); const sk = skills(); refreshDashboard(cwd); return out(s, `${s.id} verified ${s.verified.at.slice(0, 10)} against ${s.verified.sources.length} source(s)${sk}`); }
+    case 'gate': { const g = editGate(cwd, ids[0], values); skills(); refreshDashboard(cwd); return out(g, values.remove ? `${ids[0]} removed` : `${g.id} command: ${g.command}`); }
+    case 'none': { const p = setNoProfile(cwd, values.because); skills(); refreshDashboard(cwd); return out(p, `recorded: no quality profile applies (${p.none.because})`); }
     case 'run': { const r = runGates(cwd, ids); refreshDashboard(cwd); if (r.some((x) => !x.pass)) process.exitCode = 1; return out(r, r.length ? r.map((x) => `${x.pass ? 'pass' : 'FAIL'} ${x.id}: ${x.command}${x.pass ? '' : `\n${x.output.split('\n').slice(-15).join('\n')}`}`).join('\n') : 'no automated gates selected'); }
-    case 'show': case undefined: { const p = loadProfile(cwd); if (!p) return out(null, 'no quality profile selected; run profile detect and profile catalog'); return out(p, `${p.selected.map((x) => `${x.id}${x.verified ? ` (verified ${x.verified.at.slice(0, 10)})` : ' (not verified)'}: ${x.because}`).join('\n')}\n\n${p.gates.map((g) => `${g.id.padEnd(26)} ${g.type.padEnd(9)} ${g.title}${p.results[g.id] ? ` [last run: ${p.results[g.id].pass ? 'pass' : 'fail'}]` : ''}`).join('\n')}${p.removed.length ? `\n\nremoved: ${p.removed.map((r) => `${r.id} (${r.reason})`).join('; ')}` : ''}`); }
-    default: throw new Error('usage: profile catalog | detect | set <ids> --because "…" | verify <id> --sources "…" --note "…" | gate <id> --command "…" | --remove --reason "…" | run [ids] | show');
+    case 'new': { if (!ids[0]) throw new Error('usage: profile new <id> [--title "…"] [--kind platform|regulation|baseline]'); const r = newProfile(cwd, ids[0], values); return out(r, `created ${path.relative(cwd, r.path)}: fill appliesWhen, detect (files, packages, requestWords), official sources and gates (architecture decision, acceptance, command for automated checks) from the official documentation, then profile set ${ids[0]} --because "…" and, to reuse it in other projects, profile save ${ids[0]}`); }
+    case 'save': { if (!ids[0]) throw new Error('usage: profile save <id>'); const dest = saveProfile(cwd, ids[0]); return out({ saved: dest }, `saved to your profile library: ${dest} (available to every project)`); }
+    case 'validate': { const p = loadCatalog(cwd).profiles.find((x) => x.id === ids[0]); if (!p) throw new Error(`unknown profile ${ids[0]}`); const errors = validateProfileDef(p); if (errors.length) process.exitCode = 1; return out(errors, errors.length ? errors.join('\n') : `${p.id}: ok`); }
+    case 'show': case undefined: {
+      if (ids[0]) { const p = loadCatalog(cwd).profiles.find((x) => x.id === ids[0]); if (!p) throw new Error(`unknown profile ${ids[0]}`); return out(p, renderSkill(p, loadProfile(cwd))); } const p = loadProfile(cwd); if (!p) return out(null, 'no quality profile selected; run profile detect and profile catalog'); return out(p, `${p.selected.map((x) => `${x.id}${x.verified ? ` (verified ${x.verified.at.slice(0, 10)})` : ' (not verified)'}: ${x.because}`).join('\n')}\n\n${p.gates.map((g) => `${g.id.padEnd(26)} ${g.type.padEnd(9)} ${g.title}${p.results[g.id] ? ` [last run: ${p.results[g.id].pass ? 'pass' : 'fail'}]` : ''}`).join('\n')}${p.removed.length ? `\n\nremoved: ${p.removed.map((r) => `${r.id} (${r.reason})`).join('; ')}` : ''}`); }
+    default: throw new Error('usage: profile catalog | detect | show [id] | new <id> | save <id> | validate <id> | set <ids> --because "…" | verify <id> --sources "…" --note "…" | gate <id> --command "…" | --remove --reason "…" | run [ids] | show');
   }
 }
 
@@ -232,22 +255,83 @@ const MODEL_PRESETS = {
 };
 function cmdModels(cwd, rest) {
   requireInit(cwd);
-  const [sub] = rest;
+  const { values, positionals } = args(rest, { provider: { type: 'string' }, tier: { type: 'string' }, json: { type: 'boolean' } });
+  const [sub, ...ids] = positionals;
   const st = loadState(cwd);
+  const label = (m) => (m ? `${m.label || m.id} (${m.provider})` : '—');
+  if (sub === 'catalog') {
+    const c = loadModelCatalog(cwd);
+    if (values.json) { console.log(JSON.stringify(c, null, 2)); return; }
+    for (const m of c.models) console.log(`${m.id.padEnd(22)} ${m.provider.padEnd(10)} ${String(m.tier).padEnd(9)} ${m.price?.input != null ? `$${m.price.input}/$${m.price.output} per 1M in/out (verified ${m.priceVerified})` : 'price not verified'}${m.legacy ? ' · legacy' : ''}`);
+    return;
+  }
+  if (sub === 'available') {
+    if (!ids.length) { const p = modelPool(cwd); console.log(`${p.models.length ? p.models.map(label).join(', ') : 'none'} — ${p.source}`); return; }
+    const pool = setPool(cwd, ids, values); console.log(`available models: ${pool.join(', ')}`); refreshDashboard(cwd); return;
+  }
+  if (sub === 'stats') {
+    const s = modelStats(cwd);
+    if (values.json) { console.log(JSON.stringify(s, null, 2)); return; }
+    if (!s.length) { console.log('no completed tasks with a recorded model yet'); return; }
+    for (const x of s) console.log(`${x.model.padEnd(22)} ${x.role.padEnd(12)} done ${x.done} · first pass ${Math.round(x.firstPassRate * 100)}% · QA returns ${x.qaReturns}${x.costPerTask != null ? ` · $${x.costPerTask.toFixed(2)}/task (est.)` : ''}`);
+    return;
+  }
+  if (sub === 'recommend' || sub === 'apply' || sub === 'auto') {
+    const rec = recommend(cwd);
+    if (values.json && sub === 'recommend') { console.log(JSON.stringify(rec, null, 2)); return; }
+    console.log(`pool: ${rec.pool.models.length ? rec.pool.models.map(label).join(', ') : 'none'} — ${rec.pool.source}`);
+    console.log(`price basis: blended per 1M tokens at the ${rec.mixSource} token mix\n`);
+    for (const r of rec.tasks) console.log(`${r.id.padEnd(5)} ${label(r.model).padEnd(28)} review: ${label(r.reviewer).padEnd(26)} ${r.why}`);
+    if (sub === 'recommend') { console.log('\nApply with: product-planner models apply (or models auto to also delegate each task to sub-agents)'); return; }
+    const { roles } = applyRecommendations(cwd, rec);
+    st.models = { ...roles };
+    if (sub === 'auto') st.options.delegateTasks = true;
+    saveState(cwd, st);
+    const note = agentSyncNote(syncAgentModels(cwd, st.models));
+    console.log(`\napplied: each open task's requested model and reviewer are set; role defaults ${Object.entries(roles).map(([k, v]) => `${k}=${v}`).join(', ')}${sub === 'auto' ? '; build tasks are delegated to sub-agents' : ''}${note ? `; ${note} (each tool gets only models it can run)` : ''}`);
+    refreshDashboard(cwd); return;
+  }
   if (!sub || sub === 'show') {
     console.log(`planned models: ${Object.keys(st.models || {}).length ? Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ') : 'none (every role inherits the session model)'}`);
     console.log(`delegate each build task to sub-agents: ${st.options?.delegateTasks ? 'yes' : 'no'}`);
     return;
   }
   const preset = MODEL_PRESETS[sub];
-  if (!preset) throw new Error(`usage: models show | ${Object.keys(MODEL_PRESETS).join(' | ')}`);
+  if (!preset) throw new Error(`usage: models show | catalog | available [ids] [--provider p --tier t] | recommend | apply | auto | stats | ${Object.keys(MODEL_PRESETS).join(' | ')}`);
   st.models = { ...preset.models };
   st.options.delegateTasks = preset.delegateTasks;
   saveState(cwd, st);
-  const n = syncClaudeAgents(cwd, st.models).length;
+  const note = agentSyncNote(syncAgentModels(cwd, st.models));
   appendLog(cwd, { type: 'note', message: `models preset ${sub}: ${JSON.stringify(st.models)}, delegateTasks ${preset.delegateTasks}` });
-  console.log(`models: ${sub}${Object.keys(st.models).length ? ` (${Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ')})` : ''}; delegate tasks: ${preset.delegateTasks ? 'yes' : 'no'}${n ? `; ${n} Claude Code agent files updated` : ''}`);
+  console.log(`models: ${sub}${Object.keys(st.models).length ? ` (${Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ')})` : ''}; delegate tasks: ${preset.delegateTasks ? 'yes' : 'no'}${note ? `; ${note}` : ''}`);
   refreshDashboard(cwd);
+}
+
+/** At task start: make sure the task has a recommended model (projects approved before routing, or new
+ * tasks), and say how to run it. A session cannot change its own model, so a different model means
+ * handing the task to the role's sub-agent with that model. */
+function routeAtStart(cwd, id) {
+  const st = loadState(cwd);
+  if (st.options?.modelRouting === 'off') return [];
+  let task = getTask(loadTasks(cwd), id);
+  const lines = [];
+  if (!task.model) {
+    const rec = recommend(cwd).tasks.find((r) => r.id === id);
+    if (rec?.model) {
+      const graph = loadTasks(cwd); const tk = getTask(graph, id);
+      tk.model = rec.model.id; if (rec.reviewer) tk.reviewModel = rec.reviewer.id;
+      saveTasks(cwd, graph); task = tk;
+      appendLog(cwd, { type: 'note', task: id, message: `model routing at start: ${rec.model.id}${rec.reviewer ? `, review ${rec.reviewer.id}` : ''} (${rec.why})` });
+      lines.push(`recommended model for ${id}: ${rec.model.label || rec.model.id} — ${rec.why}`);
+    }
+  }
+  if (!task.model) return lines;
+  const tools = loadConfig(cwd).tools || [];
+  const host = tools.includes('claude') ? 'claude-code' : tools.find((t) => !['generic'].includes(t)) || null;
+  const run = (m) => (host ? hostModel(m, host) : null) || m;
+  if (task.risk === 'high') lines.push(`${id} is high risk: implement and verify it on the strongest available model (${run(task.model)}).`);
+  else lines.push(`run ${id} on ${run(task.model)}${task.reviewModel ? ` and its QA review on ${run(task.reviewModel)}` : ''}: if your session is on a different model, do not implement it here; give the pp-${task.agent || 'developer'} sub-agent the brief (product-planner task context ${id}) with model ${run(task.model)}${task.reviewModel ? `, then the pp-qa sub-agent with model ${run(task.reviewModel)}` : ''}, review their evidence and run task complete. Record the model that actually ran with --model.`);
+  return lines;
 }
 
 function cmdTask(cwd, rest) {
@@ -302,7 +386,7 @@ function cmdTask(cwd, rest) {
         recordVerification(cwd, getTask(loadTasks(cwd), id), report);
       }
       if (sub === 'start') for (const w of readinessWarnings(getTask(t, id), loadFeatures(cwd))) console.log(`definition of ready: ${w}`);
-      if (sub === 'start' && loadState(cwd).options?.delegateTasks) { const tk = getTask(t, id); console.log(tk.risk === 'high' ? `delegated mode: ${id} is high risk, so implement and verify it in this session on the strongest model.` : `delegated mode: do not implement ${id} here. Give the pp-developer sub-agent the brief (product-planner task context ${id}), owned paths and acceptance; then the pp-qa sub-agent the brief, changed paths and the report template; review their evidence and run task complete.`); }
+      if (sub === 'start') for (const line of routeAtStart(cwd, id)) console.log(line);
       const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent, model: values.model });
       console.log(`${task.id} → ${task.status}`);
       if ((task.qaReturns || 0) >= LOOP_LIMIT && task.status === 'in_progress') { console.log(`warning: QA has returned ${task.id} ${task.qaReturns} times. Possible loop: change approach, or block it with a precise reason and continue with other work.`); appendLog(cwd, { type: 'note', task: task.id, message: `possible loop: QA returned ${task.id} ${task.qaReturns} times` }); }
@@ -345,8 +429,8 @@ function cmdState(cwd, rest) {
   const st = loadState(cwd);
   switch (sub) {
     case undefined: case 'get': { if (!key) { console.log(JSON.stringify(st, null, 2)); return; } const v = key.split('.').reduce((o, k) => o?.[k], st); console.log(typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)); return; }
-    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const n = syncClaudeAgents(cwd, st.models).length; if (n) console.log(`Claude Code agents updated with the planned models (${n} files)`); } refreshDashboard(cwd); return; }
-    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
+    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const note = agentSyncNote(syncAgentModels(cwd, st.models)); if (note) console.log(note); } refreshDashboard(cwd); return; }
+    case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build') openDashboardOnce(cwd, out); return; }
     case 'step': { const status = vals[0]; if (!PLANNING_STEPS.includes(key)) throw new Error(`step must be one of ${PLANNING_STEPS.join(', ')}`); if (!['pending', 'in_progress', 'done', 'skipped'].includes(status)) throw new Error('status must be pending|in_progress|done|skipped'); st.planning[key] = status; if (st.phase === 'init') st.phase = 'planning'; saveState(cwd, st); appendLog(cwd, { type: 'planning', step: key, to: status }); console.log(`planning.${key} = ${status}`); refreshDashboard(cwd); return; }
     case 'product': { const { values } = args([key, ...vals].filter(Boolean), { name: { type: 'string' }, tagline: { type: 'string' }, summary: { type: 'string' } }); Object.assign(st.product, Object.fromEntries(Object.entries(values).filter(([, v]) => v != null))); saveState(cwd, st); console.log(JSON.stringify(st.product, null, 2)); refreshDashboard(cwd); return; }
     default: throw new Error(`unknown state subcommand "${sub}"`);

@@ -139,20 +139,42 @@ test('planned role models are written into Claude Code agent files; the tiered p
   const cwd = await project(t, 'claude');
   const agent = (role) => fs.readFileSync(path.join(cwd, `.claude/agents/pp-${role}.md`), 'utf8');
   assert.doesNotMatch(agent('developer'), /^model:/m);
-  assert.match(ok(cwd, 'models', 'tiered'), /developer=sonnet, qa=haiku\); delegate tasks: yes; 10 Claude Code agent files updated/);
+  assert.match(ok(cwd, 'models', 'tiered'), /developer=sonnet, qa=haiku\); delegate tasks: yes; agent files updated \(claude 10\)/);
   assert.match(agent('developer'), /^model: sonnet$/m); assert.match(agent('qa'), /^model: haiku$/m); assert.doesNotMatch(agent('architect'), /^model:/m);
   assert.equal(loadState(cwd).options.delegateTasks, true);
   ok(cwd, 'state', 'set', 'models.architect', 'claude-opus-5-5');
-  assert.match(agent('architect'), /^model: claude-opus-5-5$/m);
+  assert.match(agent('architect'), /^model: opus$/m); // catalog id → Claude Code alias
   ok(cwd, 'auto', 'off'); assert.match(agent('qa'), /^model: haiku$/m); // reinstalling keeps planned models
   ok(cwd, 'models', 'inherit'); assert.doesNotMatch(agent('developer'), /^model:/m);
   assert.match(ok(cwd, 'models', 'show'), /none \(every role inherits/);
 });
 
-test('delegated mode: task start tells the coordinator to hand the task to sub-agents, except high-risk tasks', async (t) => {
+test('task start applies the recommended model when missing and says how to run it; high risk stays on the strongest; routing off is silent', async (t) => {
   const cwd = await project(t, 'claude'); write(cwd, '.product-planner/request.md', REQUEST); write(cwd, 'plan.json', PLAN);
-  ok(cwd, 'plan', 'import', '--file', 'plan.json'); ok(cwd, 'models', 'tiered');
-  assert.match(ok(cwd, 'task', 'start', 'T1'), /delegated mode: do not implement T1 here/);
-  ok(cwd, 'models', 'inherit'); ok(cwd, 'task', 'reopen', 'T1');
-  assert.doesNotMatch(ok(cwd, 'task', 'start', 'T1'), /delegated mode/);
+  ok(cwd, 'plan', 'import', '--file', 'plan.json');
+  const out = ok(cwd, 'task', 'start', 'T1');
+  assert.match(out, /recommended model for T1: Sonnet 5\.5 — developer work starts at strong/);
+  assert.match(out, /run T1 on sonnet: if your session is on a different model, do not implement it here; give the pp-developer sub-agent .* with model sonnet/);
+  assert.equal(loadTasks(cwd).tasks[0].model, 'claude-sonnet-5-5');
+  ok(cwd, 'task', 'reopen', 'T1');
+  const graph = JSON.parse(fs.readFileSync(path.join(cwd, '.product-planner/tasks.json'), 'utf8')); graph.tasks[0].risk = 'high'; graph.tasks[0].model = 'claude-opus-5-5'; fs.writeFileSync(path.join(cwd, '.product-planner/tasks.json'), JSON.stringify(graph));
+  assert.match(ok(cwd, 'task', 'start', 'T1'), /T1 is high risk: implement and verify it on the strongest available model \(opus\)/);
+  ok(cwd, 'task', 'reopen', 'T1'); ok(cwd, 'state', 'set', 'options.modelRouting', 'off');
+  assert.doesNotMatch(ok(cwd, 'task', 'start', 'T1'), /recommended model|run T1 on/);
+});
+
+test('the dashboard opens in the browser once; later approvals and phase changes only rewrite the file', async (t) => {
+  const cwd = await project(t, 'claude'); write(cwd, '.product-planner/request.md', REQUEST); write(cwd, 'plan.json', PLAN);
+  const st = loadState(cwd); st.options.autoOpenDashboard = true; st.dashboardOpenedAt = '2026-10-20T00:00:00Z'; saveState(cwd, st); // as if opened earlier
+  ok(cwd, 'plan', 'import', '--file', 'plan.json');
+  const out = ok(cwd, 'plan', 'approve', '--reason', 'approved');
+  assert.match(out, /dashboard updated: product-dashboard\.html \(an open tab reloads itself\)/); assert.doesNotMatch(out, /opened .* in the browser/);
+});
+
+test('dashboard flags a task that ran on a different model from the recommended one', async (t) => {
+  const cwd = await project(t, 'claude'); write(cwd, '.product-planner/request.md', REQUEST); write(cwd, 'plan.json', PLAN);
+  ok(cwd, 'plan', 'import', '--file', 'plan.json');
+  ok(cwd, 'task', 'start', 'T1', '--agent', 'developer', '--model', 'claude-fable-5-1');
+  const html = fs.readFileSync(buildDashboard(cwd), 'utf8');
+  assert.match(html, /⚠ recommended Sonnet 5\.5/);
 });

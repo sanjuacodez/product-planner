@@ -15,7 +15,7 @@ const checks = (r) => { const ran = (r.quality || []).filter((q) => q.pass !== n
 const rows = runs.map((r) => `| ${r.scenario} | ${r.arm} | ${r.model} | ${pct(r)} | ${checks(r)} | ${r.status || '—'} | $${r.costUsd.toFixed(2)} | ${r.minutes} | ${r.messages} (${r.scriptedReplies} scripted) | ${k(r.tokens.total)} | ${k(r.tokens.output)} | ${r.kitDigest || '—'} | ${r.date.slice(0, 10)} |`);
 const groups = new Map();
 // Only the planner arms load the kit; other arms are grouped regardless of the kit digest at run time.
-const kitOf = (r) => (['planner', 'tiered'].includes(r.arm) ? r.kitDigest || '—' : 'n/a');
+const kitOf = (r) => (['planner', 'tiered', 'router'].includes(r.arm) ? r.kitDigest || '—' : 'n/a');
 for (const r of runs) { const key = `${r.scenario}|${r.arm}|${kitOf(r)}`; (groups.get(key) || groups.set(key, []).get(key)).push(r); }
 const avg = (list, f) => list.reduce((a, r) => a + f(r), 0) / list.length;
 // Mean, with the min–max range once there is more than one run.

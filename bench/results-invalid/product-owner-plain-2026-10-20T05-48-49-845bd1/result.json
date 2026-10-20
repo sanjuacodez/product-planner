@@ -1,0 +1,67 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "product-owner",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T05:49:02.543Z",
+  "hiddenExitCode": 1,
+  "hidden": {
+    "pass": 0,
+    "fail": 1,
+    "total": 1,
+    "groups": {
+      "other": {
+        "pass": 0,
+        "total": 1
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "owner": {
+    "answers": 0,
+    "model": "haiku",
+    "costUsd": 0
+  },
+  "costUsd": 0.1148,
+  "costByModel": {
+    "claude-opus-5-5": 0.1148
+  },
+  "minutes": 0.2,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 2,
+  "tokens": {
+    "input": 4,
+    "cacheWrite": 11291,
+    "cacheRead": 34460,
+    "output": 880,
+    "total": 46635
+  },
+  "ownTests": false,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-product-owner-plain-chs3Ix"
+}

@@ -56,7 +56,7 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Request statements | `product-planner request list` (R1, R2, … and the features or notFeatures they map to) |
 | Import the plan | `product-planner plan import --file .product-planner/plan.json` (features, notFeatures, epics and tasks in one validated step; runs the plan check) |
 | Approve and lock the plan | `product-planner plan approve --reason "user approved in chat"` (check must pass; moves to build; later changes go through pp-replan) |
-| Quality profile | `product-planner profile catalog`, `profile detect`, `profile set <ids> --because "…"`, `profile verify <id> --sources "…" --note "…"`, `profile gate <id> --command "…"`, `profile run [ids]`, `profile show` (see [guides/quality-profiles.md](guides/quality-profiles.md)) |
+| Quality profile | `product-planner profile catalog`, `profile detect`, `profile show <id>`, `profile new|validate|save <id>` (uncovered platforms and laws; save to your library), `profile none --because "…"`, `profile set <ids> --because "…"`, `profile verify <id> --sources "…" --note "…"`, `profile gate <id> --command "…"`, `profile run [ids]`, `profile show` (see [guides/quality-profiles.md](guides/quality-profiles.md)) |
 | Add one task later | `product-planner task add --json '{"title":"…","epic":"E1","acceptance":["…"]}'` |
 | List dependency-ready candidates | `product-planner task ready --json` (check ownership before parallel execution) |
 | Propose a parallel batch | `product-planner task batch --json` (ready tasks with disjoint `writes`/`sources`, up to `options.maxConcurrentTasks`; starts nothing) |
@@ -68,7 +68,7 @@ Everything under `.product-planner/` except `memory/node_modules`, `memory/lance
 | Planning depth | `product-planner plan profile` (quick track: one plan.md from `templates/quick-plan.md`) |
 | Pick the next task | `product-planner task next` (exit code 2 and `ALL_DONE` / `ALL_BLOCKED` / `NONE_READY` when nothing is ready) |
 | Move a task | `product-planner task start|review|done|block|unblock|reopen <id> [--note "…"] [--reason "…"] [--agent name] [--model id]` |
-| Plan models per persona | `product-planner state set models.<agent> <model-id>` (or `models.default`) |
+| Models for each task | `product-planner models available <ids>` (what this project can use), `models recommend` (best model per task, with reasons), `models apply` / `models auto` (write them; auto also delegates), `models stats` (first-pass rate and cost per model and role) |
 | Browser access | `product-planner browser status`, `browser use host|none`, `browser setup` (after approval) |
 | Validate the plan | `product-planner task validate` (also checks every accepted MVP feature has tasks) |
 | Analyse the whole plan (no model) | `product-planner check` — coverage, FR→task traceability, vague criteria, unfilled templates |

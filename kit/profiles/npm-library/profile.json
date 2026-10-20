@@ -1,0 +1,157 @@
+{
+  "id": "npm-library",
+  "kind": "platform",
+  "title": "Published npm package (library)",
+  "appliesWhen": "A JavaScript or TypeScript package published to the npm registry for others to install, public or under a scope.",
+  "ask": "Will this be published to npm for others to install? Public or scoped/private, ESM only or ESM and CommonJS, and does it ship TypeScript types?",
+  "extends": "node-package",
+  "detect": {
+    "files": [],
+    "packages": [],
+    "contentPatterns": [
+      {
+        "glob": "package.json",
+        "pattern": "^(?![\\s\\S]*\"private\"\\s*:\\s*true)(?![\\s\\S]*\"manifest_version\")(?=[\\s\\S]*\"name\"\\s*:\\s*\")[\\s\\S]*\"version\"\\s*:\\s*\""
+      }
+    ],
+    "requestWords": [
+      "npm package",
+      "npm library",
+      "npm module",
+      "publish to npm",
+      "JavaScript library",
+      "TypeScript library",
+      "Node.js library",
+      "Node library",
+      "JavaScript SDK",
+      "TypeScript SDK",
+      "Node.js SDK",
+      "SDK",
+      "client library"
+    ]
+  },
+  "sources": [
+    {
+      "title": "npm Docs: package.json",
+      "url": "https://docs.npmjs.com/cli/v11/configuring-npm/package-json"
+    },
+    {
+      "title": "Node.js: Modules: Packages (exports, conditions, type)",
+      "url": "https://nodejs.org/api/packages.html"
+    },
+    {
+      "title": "npm Docs: npm pack",
+      "url": "https://docs.npmjs.com/cli/v11/commands/npm-pack"
+    },
+    {
+      "title": "npm Docs: Trusted publishing for npm packages",
+      "url": "https://docs.npmjs.com/trusted-publishers"
+    },
+    {
+      "title": "npm Docs: Generating provenance statements",
+      "url": "https://docs.npmjs.com/generating-provenance-statements"
+    },
+    {
+      "title": "npm Docs: Configuring two-factor authentication",
+      "url": "https://docs.npmjs.com/configuring-two-factor-authentication"
+    },
+    {
+      "title": "publint CLI",
+      "url": "https://publint.dev/docs/cli"
+    },
+    {
+      "title": "Are The Types Wrong? CLI",
+      "url": "https://github.com/arethetypeswrong/arethetypeswrong.github.io/blob/main/packages/cli/README.md"
+    },
+    {
+      "title": "Semantic Versioning 2.0.0",
+      "url": "https://semver.org/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "Set \"type\" explicitly and define \"exports\" for every public entry point; in each condition object put \"types\" first and \"default\" last (Node.js packages docs, enforced by publint).",
+    "Adding or narrowing \"exports\" in an existing package is a breaking change: consumers lose every subpath not listed. Ship it in a major version, or export every previously used path.",
+    "Use a \"files\" allowlist (for example [\"dist\"]); package.json, README, LICENSE and the main file are always included. Never rely on .npmignore alone: a new secret file at the root ships by default.",
+    "Inspect the tarball with npm pack --dry-run before each release; source maps, tests, fixtures and .env files are the usual surprises.",
+    "ESM-only packages: Are The Types Wrong reports \"ESM (dynamic import only)\" for CommonJS consumers and exits 1; record ESM-only in the architecture and run attw with --profile esm-only. Dual ESM/CJS packages risk loading two copies (instanceof and singleton state break).",
+    "Publish from CI with trusted publishing (GitHub Actions, GitLab CI/CD or CircleCI on cloud runners, npm CLI 11.5.1+ and Node 22.14+). Provenance is generated automatically on GitHub/GitLab for public repos and packages; repository.url must match the repository exactly.",
+    "After trusted publishing works, set Publishing access to \"Require two-factor authentication and disallow tokens\", and delete old automation tokens.",
+    "A published version can never be republished with different contents; fix mistakes with a new patch version and npm deprecate, not by unpublishing.",
+    "Keep runtime dependencies minimal and pinned to compatible ranges; peerDependencies for frameworks the host app provides (React, etc.)."
+  ],
+  "gates": [
+    {
+      "id": "G-NPMLIB-MANIFEST",
+      "type": "automated",
+      "title": "package.json has the publishing fields",
+      "command": "node -e \"const p=require('./package.json');const miss=['name','version','license','repository','files','engines'].filter((k)=>!p[k]);if(!p.exports&&!p.main)miss.push('exports or main');if(p.private)miss.push('private is true');if(miss.length){console.error('package.json needs: '+miss.join(', '));process.exit(1)}console.log(p.name+'@'+p.version+': publishing fields present')\"",
+      "architecture": "Record the package name (scope), licence (SPDX), repository URL, entry points (\"exports\", plus \"main\"/\"types\" for older tooling), the \"files\" allowlist and the supported Node range in \"engines\".",
+      "acceptance": [
+        "package.json has name, version, license (SPDX id), repository, exports or main, files and engines",
+        "package.json is not marked private"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-PUBLINT",
+      "type": "automated",
+      "title": "publint reports no errors or warnings",
+      "command": "npx --yes publint --strict",
+      "architecture": "Record the module format (ESM only, or ESM and CommonJS) and how the build produces each entry point listed in \"exports\".",
+      "acceptance": [
+        "npx publint --strict exits 0",
+        "Every path in exports, main, module, types and bin exists in the packed tarball"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-ATTW",
+      "type": "automated",
+      "title": "Types resolve for every supported module resolution (Are The Types Wrong)",
+      "command": "npx --yes @arethetypeswrong/cli --pack .",
+      "architecture": "Record whether the package ships types (bundled .d.ts or generated) and which consumers it supports: node16 ESM and CJS, bundlers, node10. For an ESM-only package change the command to add --profile esm-only; for an untyped JavaScript package remove the gate with a reason.",
+      "acceptance": [
+        "attw --pack . exits 0 for the chosen profile",
+        "No \"Masquerading as CJS/ESM\", \"Resolution failed\" or \"No types\" problems for supported resolutions"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-CONTENTS",
+      "type": "automated",
+      "title": "The tarball contains only intended files and no secrets",
+      "command": "npm pack --dry-run --json | node -e \"let s='';process.stdin.on('data',(d)=>s+=d).on('end',()=>{const files=JSON.parse(s.slice(s.search(/^\\[/m)))[0].files.map((f)=>f.path);const bad=files.filter((f)=>/(^|\\/)(\\.env(\\..+)?|\\.npmrc|id_(rsa|dsa|ecdsa|ed25519)|[^/]*\\.(pem|key|p12|pfx|jks|keystore)|credentials[^/]*)$/i.test(f));console.log(files.length+' files: '+files.join(', '));if(bad.length){console.error('remove from the package: '+bad.join(', '));process.exit(1)}})\"",
+      "architecture": "Record the files allowlist and the build step that runs before packing (prepack or a CI build step).",
+      "acceptance": [
+        "npm pack --dry-run lists only the built output, README, LICENSE and package.json (plus any documented extras)",
+        "No .env, .npmrc, private key, certificate or credentials file is in the tarball"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-SEMVER",
+      "type": "manual",
+      "title": "Versioning follows SemVer with a changelog",
+      "architecture": "Record what the public API is (the \"exports\" entry points and their types), how versions are bumped (manual, changesets, release-please) and where the changelog lives.",
+      "acceptance": [
+        "Each release has a changelog entry naming breaking changes, features and fixes",
+        "Removing or changing an export, a type, the \"exports\" map, \"engines\" or the module format is released as a major version"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-PUBLISH",
+      "type": "manual",
+      "title": "Releases are published from CI with trusted publishing, provenance and 2FA",
+      "architecture": "Record the release workflow (trigger, CI provider, id-token: write permission, npm CLI version), the trusted publisher configured on npmjs.com, dist-tags, and the account protection (2FA, tokens disallowed).",
+      "acceptance": [
+        "The package is published from a CI workflow configured as a trusted publisher, not from a developer machine",
+        "The npm package page shows provenance for the latest version (public GitHub/GitLab repositories)",
+        "Every maintainer account has 2FA; package publishing access requires 2FA and disallows tokens"
+      ]
+    },
+    {
+      "id": "G-NPMLIB-LICENSES",
+      "type": "legal",
+      "title": "Package licence and dependency licence compatibility need review",
+      "architecture": "Record the chosen licence and list the runtime dependencies (dependencies and bundled code) with their licences.",
+      "acceptance": []
+    }
+  ]
+}

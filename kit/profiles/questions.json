@@ -1,0 +1,9 @@
+{
+  "note": "Starting points, not legal or platform advice. Each selected entry must be checked against its official sources during planning (product-planner profile verify). Entries with lastVerified null have not been checked by the kit maintainers.",
+  "questions": [
+    "Which platform or marketplace will this ship on (WordPress.org, WooCommerce Marketplace, Shopify App Store, app stores, web/SaaS, internal tool, library)?",
+    "Where are the users or the people whose data you process (countries/states, e.g. EU/EEA, UK, India, California)?",
+    "What personal data is handled (accounts, contact details, location, payments/card data, health data, children's data, none)?",
+    "Who pays, and how (card payments in the product, a payment provider's hosted checkout, invoices, free)?"
+  ]
+}

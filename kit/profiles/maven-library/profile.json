@@ -1,0 +1,101 @@
+{
+  "id": "maven-library",
+  "kind": "platform",
+  "title": "Java/Kotlin library published to Maven Central",
+  "appliesWhen": "A JVM library published to Maven Central (through the Sonatype Central Portal) for others to depend on.",
+  "ask": "Will this be published to Maven Central? Which groupId (and is the namespace verified), Maven or Gradle, and which Java versions are supported?",
+  "detect": {
+    "files": [
+      "pom.xml"
+    ],
+    "packages": [],
+    "contentPatterns": [
+      {
+        "glob": "build.gradle",
+        "pattern": "maven-publish"
+      },
+      {
+        "glob": "build.gradle.kts",
+        "pattern": "maven-publish"
+      }
+    ],
+    "requestWords": [
+      "Maven Central",
+      "Java library",
+      "Kotlin library",
+      "JVM library",
+      "Java SDK",
+      "SDK",
+      "client library"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Sonatype Central: Requirements",
+      "url": "https://central.sonatype.org/publish/requirements/"
+    },
+    {
+      "title": "Sonatype Central: Publishing with the Central Publishing Maven Plugin",
+      "url": "https://central.sonatype.org/publish/publish-portal-maven/"
+    },
+    {
+      "title": "Sonatype Central: GPG signing",
+      "url": "https://central.sonatype.org/publish/requirements/gpg/"
+    },
+    {
+      "title": "Sonatype Central: Namespace registration",
+      "url": "https://central.sonatype.org/register/namespace/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "Publish through the Central Portal; with Maven use org.sonatype.central:central-publishing-maven-plugin (0.12.0 at the time of checking) with publishingServerId matching a settings.xml server holding a Portal user token.",
+    "The groupId must be in a namespace verified on the Central Portal (a domain you control or io.github.<user>).",
+    "Every non-pom artifact needs -sources.jar and -javadoc.jar, every file a .asc GPG signature and .md5/.sha1 checksums; release versions cannot end in -SNAPSHOT.",
+    "The POM needs name, description, url, licenses, at least one developer and scm (connection, developerConnection, url).",
+    "Releases on Maven Central are permanent: fix a bad release with a new version.",
+    "Gradle builds: the gate commands are written for Maven; replace them with the Gradle equivalents (profile gate <id> --command \"...\").",
+    "Keep the signing key and Portal token in CI secrets; publish the public key to a keyserver so Central can verify signatures."
+  ],
+  "gates": [
+    {
+      "id": "G-MAVEN-POM",
+      "type": "manual",
+      "title": "POM metadata and coordinates meet Central requirements",
+      "architecture": "Record the groupId (verified namespace), artifactId, packaging, version scheme, licence, developers and SCM URLs.",
+      "acceptance": [
+        "The POM has name, description, url, licenses, developers and scm (connection, developerConnection, url)",
+        "The groupId namespace is verified on the Central Portal and release versions do not end in -SNAPSHOT"
+      ]
+    },
+    {
+      "id": "G-MAVEN-ARTIFACTS",
+      "type": "automated",
+      "title": "The build produces sources and javadoc jars",
+      "setup": "Bind maven-source-plugin (jar-no-fork) and maven-javadoc-plugin (jar) in the build; if they are in a release profile, add -P <profile> to the command.",
+      "command": "mvn -B -ntp verify -Dgpg.skip=true && ls target/*-sources.jar target/*-javadoc.jar",
+      "architecture": "Record the Java release targeted, how sources and javadoc jars are built, and whether they are bound to the default build or a release profile.",
+      "acceptance": [
+        "mvn verify succeeds and target/ contains the main, -sources and -javadoc jars",
+        "Javadoc builds without errors"
+      ]
+    },
+    {
+      "id": "G-MAVEN-PUBLISH",
+      "type": "manual",
+      "title": "Signed releases are published from CI through the Central Portal",
+      "architecture": "Record the release workflow: GPG signing (maven-gpg-plugin) with the key in CI secrets, the Portal user token, central-publishing-maven-plugin settings (autoPublish or manual release) and checksum generation.",
+      "acceptance": [
+        "Every deployed file has a .asc signature verifiable with the published public key, and .md5/.sha1 checksums",
+        "The deployment passes Central Portal validation and the release is published from CI, not a developer machine"
+      ]
+    },
+    {
+      "id": "G-MAVEN-LICENSES",
+      "type": "legal",
+      "title": "Library licence and dependency licence compatibility need review",
+      "architecture": "Record the declared licence and the compile and runtime dependencies (and any shaded code) with their licences.",
+      "acceptance": []
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "tiered",
+  "model": "opus",
+  "date": "2026-10-20T06:43:24.591Z",
+  "hiddenExitCode": 1,
+  "hidden": {
+    "pass": 1,
+    "fail": 13,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 1,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-tiered-Ak9iC5/min-order-by-role\"}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-tiered-Ak9iC5/min-order-by-role\"}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"message\":\"plugin folder not found: /var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-tiered-Ak9iC5/min-order-by-role\"}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"structure\":{\"pass\":false,\"errors\":[\"main plugin file not found: min-order-by-role/min-order-by-role.php\"],\"warnings\":[],\"errorCount\":1}}"
+    }
+  ],
+  "review": null,
+  "costUsd": 0,
+  "costByModel": {},
+  "minutes": 0.1,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 1,
+  "tokens": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0,
+    "total": 0
+  },
+  "ownTests": false,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-tiered-Ak9iC5"
+}

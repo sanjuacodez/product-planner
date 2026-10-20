@@ -50,6 +50,7 @@ export function validateTasks(t) {
     if (task.risk != null && !['low', 'medium', 'high'].includes(task.risk)) errors.push(`${task.id}: risk must be low, medium or high`);
     for (const field of ['writes', 'sources']) if (task[field] != null && (!Array.isArray(task[field]) || task[field].some((p) => { try { projectPath(process.cwd(), p); return false; } catch { return true; } }))) errors.push(`${task.id}: ${field} must be an array of concrete repository-relative paths`);
     if (task.model != null && typeof task.model !== 'string') errors.push(`${task.id}: model must be a string`);
+    if (task.reviewModel != null && typeof task.reviewModel !== 'string') errors.push(`${task.id}: reviewModel must be a string`);
     if (task.gates != null && (!Array.isArray(task.gates) || task.gates.some((g) => !/^G-[A-Z0-9-]+$/.test(g)))) errors.push(`${task.id}: gates must be an array of quality gate ids (G-…)`);
     if (task.epic && !epicIds.has(task.epic)) errors.push(`${task.id}: unknown epic ${task.epic}`);
     if (!Array.isArray(task.acceptance) || !task.acceptance.length || task.acceptance.some((a) => typeof a !== 'string' || !a.trim())) errors.push(`${task.id}: acceptance must contain nonempty criteria`);
@@ -166,7 +167,7 @@ export function addTask(cwd, task) {
   appendLog(cwd, { type: 'task', task: task.id, from: null, to: task.status, note: `added: ${task.title}` });
   return task;
 }
-const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features', 'risk', 'writes', 'sources', 'gates'];
+const EDITABLE = ['title', 'description', 'acceptance', 'epic', 'agent', 'model', 'priority', 'estimate', 'dependsOn', 'features', 'risk', 'writes', 'sources', 'gates', 'reviewModel'];
 export const LOOP_LIMIT = 3;
 
 /** Replanning: revise a task that has not been completed. Done work is never rewritten; add a follow-up task instead. */

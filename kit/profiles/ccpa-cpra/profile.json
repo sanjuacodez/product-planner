@@ -1,0 +1,55 @@
+{
+  "id": "ccpa-cpra",
+  "kind": "regulation",
+  "title": "CCPA/CPRA (California)",
+  "appliesWhen": "A for-profit business above the law's thresholds collects personal information of California residents.",
+  "ask": "Will California residents use the product, and does the business meet CCPA thresholds (revenue, volume of consumers, or share of revenue from selling/sharing data)?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "California Attorney General: CCPA",
+      "url": "https://oag.ca.gov/privacy/ccpa"
+    },
+    {
+      "title": "California Privacy Protection Agency",
+      "url": "https://cppa.ca.gov/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-PRIV-INVENTORY",
+      "type": "manual",
+      "title": "Personal information inventory",
+      "architecture": "List categories of personal information, sources, purposes and whether any is sold or shared.",
+      "acceptance": [
+        "Every category of personal information has a recorded purpose and retention period"
+      ]
+    },
+    {
+      "id": "G-PRIV-RIGHTS",
+      "type": "manual",
+      "title": "Know, delete, correct and opt-out requests",
+      "architecture": "Record how requests are verified and fulfilled across stores and service providers.",
+      "acceptance": [
+        "Know, delete and correct requests are supported end to end, with tests"
+      ]
+    },
+    {
+      "id": "G-CCPA-OPTOUT",
+      "type": "manual",
+      "title": "Opt-out of sale/sharing honoured where applicable",
+      "architecture": "Record whether data is sold or shared for cross-context advertising, and how opt-out (including Global Privacy Control) is honoured.",
+      "acceptance": [
+        "If data is sold or shared, opt-out requests and Global Privacy Control signals stop it"
+      ]
+    },
+    {
+      "id": "G-CCPA-LEGAL",
+      "type": "legal",
+      "title": "Threshold applicability, notice at collection and privacy policy need legal review",
+      "architecture": "",
+      "acceptance": []
+    }
+  ]
+}

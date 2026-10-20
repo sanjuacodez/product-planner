@@ -1,0 +1,66 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 5,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "scope-change",
+  "arm": "speckit",
+  "model": "opus",
+  "date": "2026-10-20T05:48:00.642Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8,
+    "groups": {
+      "original api": {
+        "pass": 5,
+        "total": 5
+      },
+      "change": {
+        "pass": 3,
+        "total": 3
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 9 - invariants # pass 151 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 10.3147,
+  "costByModel": {
+    "claude-opus-5-5": 10.3146
+  },
+  "minutes": 9.6,
+  "messages": 6,
+  "scriptedReplies": 1,
+  "agentTurns": 76,
+  "tokens": {
+    "input": 84,
+    "cacheWrite": 129499,
+    "cacheRead": 3610587,
+    "output": 61990,
+    "total": 3802160
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-scope-change-speckit-ouS8jz"
+}

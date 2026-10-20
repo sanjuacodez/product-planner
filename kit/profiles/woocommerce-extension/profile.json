@@ -1,0 +1,61 @@
+{
+  "id": "woocommerce-extension",
+  "kind": "platform",
+  "title": "WooCommerce extension",
+  "extends": "wordpress-plugin",
+  "appliesWhen": "A WordPress plugin that extends WooCommerce, especially one sold on the WooCommerce Marketplace.",
+  "ask": "Will this extension be sold on the WooCommerce Marketplace?",
+  "detect": {
+    "contentPatterns": [
+      {
+        "glob": "*.php",
+        "pattern": "WC requires at least|Requires Plugins:.*woocommerce"
+      },
+      {
+        "glob": "*/*.php",
+        "pattern": "WC requires at least|Requires Plugins:.*woocommerce"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "WooCommerce developer documentation",
+      "url": "https://developer.woocommerce.com/docs/"
+    },
+    {
+      "title": "WooCommerce Quality Insights Toolkit (QIT)",
+      "url": "https://qit.woo.com/docs/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-WOO-HPOS",
+      "type": "manual",
+      "title": "High-Performance Order Storage compatibility declared and honoured",
+      "architecture": "Record how orders are read and written (WooCommerce CRUD APIs, never direct post meta) and declare compatibility with FeaturesUtil::declare_compatibility('custom_order_tables', ...).",
+      "acceptance": [
+        "The extension declares HPOS compatibility",
+        "Order data is accessed only through WooCommerce CRUD APIs"
+      ]
+    },
+    {
+      "id": "G-WOO-BLOCKS",
+      "type": "manual",
+      "title": "Cart and Checkout blocks behaviour",
+      "architecture": "If the extension touches cart or checkout, record how it works with the Cart and Checkout blocks as well as the classic shortcodes, and declare compatibility.",
+      "acceptance": [
+        "Cart and checkout behaviour is verified with the Cart and Checkout blocks and the classic shortcode pages"
+      ]
+    },
+    {
+      "id": "G-WOO-QIT",
+      "type": "manual",
+      "title": "QIT test suites pass before Marketplace submission",
+      "architecture": "Record which QIT suites apply and who runs them (QIT needs a Woo partner account).",
+      "acceptance": [
+        "The applicable QIT suites pass for the release build, or the gap is recorded for the release owner"
+      ]
+    }
+  ]
+}

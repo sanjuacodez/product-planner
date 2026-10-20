@@ -1,0 +1,86 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "bmad",
+  "model": "opus",
+  "date": "2026-10-20T06:43:59.696Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": false,
+      "errors": 4,
+      "details": "{\"warnings\":1,\"files\":7,\"bySource\":{\"Squiz.Commenting.FileComment.WrongStyle\":2,\"PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket\":1,\"PEAR.Functions.FunctionCallSignature.CloseBracketLine\":1},\"first\":[\"index.php:2 Squiz.Commenting.FileComment.WrongStyle: You must use \\\"/**\\\" style commen"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":7,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"first\":[]}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 2,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":false,\"errors\":[\"includes/class-min-order-by-role-settings.php:95: $_POST['?'] used without sanitising (inside: is_array)\",\"includes/class"
+    }
+  ],
+  "review": null,
+  "costUsd": 8.7936,
+  "costByModel": {
+    "claude-opus-5-5": 8.7936
+  },
+  "minutes": 13.2,
+  "messages": 2,
+  "scriptedReplies": 1,
+  "agentTurns": 18,
+  "tokens": {
+    "input": 26,
+    "cacheWrite": 12012,
+    "cacheRead": 1390570,
+    "output": 4277,
+    "total": 1406885
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-bmad-HNkGrM"
+}

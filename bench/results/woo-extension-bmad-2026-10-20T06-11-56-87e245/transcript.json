@@ -1,0 +1,17 @@
+[
+  {
+    "message": "/bmad-build I want a WooCommerce extension that sets a minimum order amount per customer role. We will sell it on the WooCommerce Marketplace, so it must meet the marketplace's quality, security and c",
+    "result": "I've built the Minimum Order by Role extension in `min-order-by-role/`, and all the tests pass. You get a **WooCommerce > Settings > Minimum Order** tab with one amount per role plus Guest. Customers below their minimum see your exact message on the cart page, and placing the order is blocked with the same message.\n\n**Testing:**\n- **Real store:** 17 scenarios ran against WordPress 7.1.3 and WooCommerce 11.2.1. That's a local install using SQLite instead of Docker, because Docker wasn't permitted in this session. They covered:\n  - saving the settings, including rejecting bad input and requests without permission;\n  - customer, multiple-role and guest minimums;\n  - a subtotal exactly at the minimum, which is allowed;\n  - an empty cart, which never shows the notice;\n  - checkout blocked below the minimum and accepted at it;\n  - the WooCommerce-missing notice and uninstall.\n- **Unit tests and coding standards:** 51 unit tests pass, and the WordPress and WooCommerce coding-standards checker reports no problems.\n- **Review:** an independent review found seven small issues. All are fixed and re-tested. The main one: on stores that write decimals with a comma, editing a saved amount could turn 49.99 into 4999.\n\n**Choices I made:**\n- The cart notice is shown as a red error notice.\n- Amounts are rounded to the store's price decimals, so 50.004 is saved as 50.\n- Deleting the plugin removes its saved setting.\n- The plugin declares itself incompatible with the newer block-based cart and checkout, since it only supports the classic pages.\n\n**Worth knowing before you submit to the Marketplace:**\n- **The minimum can be bypassed.** WooCommerce's built-in checkout endpoint, used by the block checkout and some express-payment buttons, exists even on stores using classic pages. Orders placed through it skip the minimum. I kept to the classic-only scope you gave, but I'd recommend adding enforcement there before selling. It's a small change.\n- **Block-based pages are ignored silently.** If a store uses the block cart or checkout, the plugin does nothing and the settings page gives no warning.\n- **The translation template was written by hand.** The command-line tool that normally generates it isn't installed here, so regenerate it with `wp i18n make-pot` before release.\n- **Some paths aren't tested:** cleanup across a multisite network, and the comma-decimal display in the settings form.\n\nThe installation, settings and filter docs are in `min-order-by-role/README.md` and `min-order-by-role/readme.txt`. The spec with the review log is `_bmad-output/implementation-artifacts/spec-min-order-by-role.md`.\n\nEverything is committed locally as `da94add` on a new branch, `feat/min-order-by-role`; `main` is untouched and nothing was pushed. Next I can open a pull request, give you a guided walkthrough of the change, or add the checkout-endpoint enforcement.",
+    "cost": 5.918375000000003,
+    "ms": 1080808,
+    "turns": 10,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 14,
+      "cacheWrite": 5082,
+      "cacheRead": 665700,
+      "output": 3078
+    }
+  }
+]

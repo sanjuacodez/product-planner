@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: main plugin file loads with WooCommerce active, on the front end and in admin, without PHP errors
+ok 1 - main plugin file loads with WooCommerce active, on the front end and in admin, without PHP errors
+  ---
+  duration_ms: 72.231709
+  type: 'test'
+  ...
+# Subtest: cart below the role minimum shows the exact notice with wc_price amounts
+ok 2 - cart below the role minimum shows the exact notice with wc_price amounts
+  ---
+  duration_ms: 58.283083
+  type: 'test'
+  ...
+# Subtest: cart exactly at or above the minimum shows no notice
+ok 3 - cart exactly at or above the minimum shows no notice
+  ---
+  duration_ms: 122.314334
+  type: 'test'
+  ...
+# Subtest: checkout below the minimum is rejected with the same text as an error
+ok 4 - checkout below the minimum is rejected with the same text as an error
+  ---
+  duration_ms: 58.623834
+  type: 'test'
+  ...
+# Subtest: checkout at or above the minimum is not blocked
+ok 5 - checkout at or above the minimum is not blocked
+  ---
+  duration_ms: 89.603292
+  type: 'test'
+  ...
+# Subtest: each role uses its own minimum
+ok 6 - each role uses its own minimum
+  ---
+  duration_ms: 120.266042
+  type: 'test'
+  ...
+# Subtest: visitors who are not logged in use the guest amount, and have no minimum without one
+ok 7 - visitors who are not logged in use the guest amount, and have no minimum without one
+  ---
+  duration_ms: 114.28925
+  type: 'test'
+  ...
+# Subtest: roles without a minimum, empty or zero amounts and a missing option mean no minimum
+ok 8 - roles without a minimum, empty or zero amounts and a missing option mean no minimum
+  ---
+  duration_ms: 204.251083
+  type: 'test'
+  ...
+# Subtest: a customer with several roles gets the highest configured minimum
+ok 9 - a customer with several roles gets the highest configured minimum
+  ---
+  duration_ms: 122.496542
+  type: 'test'
+  ...
+# Subtest: decimal minimums compare and format exactly
+ok 10 - decimal minimums compare and format exactly
+  ---
+  duration_ms: 86.269917
+  type: 'test'
+  ...
+# Subtest: an empty cart never shows the notice
+ok 11 - an empty cart never shows the notice
+  ---
+  duration_ms: 85.479791
+  type: 'test'
+  ...
+# Subtest: WooCommerce > Settings shows an amount field for every role and for guests
+ok 12 - WooCommerce > Settings shows an amount field for every role and for guests
+  ---
+  duration_ms: 29.511416
+  type: 'test'
+  ...
+# Subtest: saving the settings stores per-role amounts in the option and the cart uses them
+ok 13 - saving the settings stores per-role amounts in the option and the cart uses them
+  ---
+  duration_ms: 87.053292
+  type: 'test'
+  ...
+# Subtest: saving negative or non-numeric amounts results in no minimum for those roles
+ok 14 - saving negative or non-numeric amounts results in no minimum for those roles
+  ---
+  duration_ms: 113.195791
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1406.064875

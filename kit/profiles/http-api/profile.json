@@ -1,0 +1,238 @@
+{
+  "id": "http-api",
+  "kind": "platform",
+  "title": "HTTP API (REST or GraphQL)",
+  "appliesWhen": "The product exposes an HTTP/REST or GraphQL API that other systems, partners or client apps call (public, partner or internal across teams).",
+  "ask": "Does the product expose an API that other systems or client apps call? REST or GraphQL, public, partner or internal, and who are the consumers?",
+  "detect": {
+    "files": [
+      "openapi.yaml",
+      "openapi.yml",
+      "openapi.json",
+      "swagger.yaml",
+      "swagger.yml",
+      "swagger.json",
+      "api/openapi.yaml",
+      "api/openapi.json",
+      "docs/openapi.yaml",
+      "docs/openapi.json",
+      "schema.graphql",
+      "src/schema.graphql"
+    ],
+    "packages": [
+      "@nestjs/core",
+      "@nestjs/swagger",
+      "@fastify/swagger",
+      "express-openapi-validator",
+      "@apollo/server",
+      "graphql-yoga",
+      "@hono/zod-openapi"
+    ],
+    "contentPatterns": [
+      {
+        "glob": "*.yaml",
+        "pattern": "(^|\\n)openapi:\\s*['\"]?3\\."
+      },
+      {
+        "glob": "*/*.yaml",
+        "pattern": "(^|\\n)openapi:\\s*['\"]?3\\."
+      },
+      {
+        "glob": "*/*.yml",
+        "pattern": "(^|\\n)openapi:\\s*['\"]?3\\."
+      },
+      {
+        "glob": "*/*.json",
+        "pattern": "\"openapi\"\\s*:\\s*\"3\\."
+      },
+      {
+        "glob": "*/*.graphql",
+        "pattern": "type\\s+(Query|Mutation)\\b"
+      }
+    ],
+    "requestWords": [
+      "REST API",
+      "GraphQL",
+      "OpenAPI",
+      "public API",
+      "partner API",
+      "API endpoints"
+    ]
+  },
+  "sources": [
+    {
+      "title": "OWASP API Security Top 10 (2023 edition, current)",
+      "url": "https://owasp.org/API-Security/editions/2023/en/0x11-t10/"
+    },
+    {
+      "title": "OpenAPI Specification (latest, v3.2.1)",
+      "url": "https://spec.openapis.org/oas/latest.html"
+    },
+    {
+      "title": "Spectral CLI",
+      "url": "https://docs.stoplight.io/docs/spectral/9ffa04e052cc1-spectral-cli"
+    },
+    {
+      "title": "GraphQL specification",
+      "url": "https://spec.graphql.org/"
+    },
+    {
+      "title": "OWASP GraphQL Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html"
+    },
+    {
+      "title": "RFC 9457: Problem Details for HTTP APIs",
+      "url": "https://www.rfc-editor.org/rfc/rfc9457"
+    },
+    {
+      "title": "RFC 9745: The Deprecation HTTP Response Header Field",
+      "url": "https://www.rfc-editor.org/rfc/rfc9745"
+    },
+    {
+      "title": "RFC 8594: The Sunset HTTP Header Field",
+      "url": "https://www.rfc-editor.org/rfc/rfc8594"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "The OWASP API Security Top 10 current edition is 2023 (API1 to API10); no newer edition was published as of 2026-10-20. Object-level authorisation (API1) is the most common real-world API flaw: check ownership on every request that takes an object id, not only in the UI.",
+    "Detection does not use express or fastify on their own (web-baseline already covers plain web servers); when a project uses them, ask whether other systems or client apps call its endpoints.",
+    "Write the contract first and keep it in the repo (OpenAPI for REST, SDL schema for GraphQL); generate or validate request handling from it so the code and the contract cannot drift.",
+    "Spectral needs a ruleset: without --ruleset or a .spectral.yaml/.spectral.yml/.spectral.json/.spectral.js in the working directory it does not lint. A minimal ruleset is `extends: [\"spectral:oas\"]`. It exits 1 only for error-level results by default; use --fail-severity warn to fail on warnings too.",
+    "Spectral CLI 6.17.0 (current on 2026-10-20) linted OpenAPI 3.1 and 3.2 documents with spectral:oas and exits 2 when no ruleset is found. Pin the version in CI (npx --yes @stoplight/spectral-cli@6.17.0 …) so rule changes do not break builds unexpectedly.",
+    "For GraphQL, replace the contract command (profile gate G-API-CONTRACT --command \"…\") with a schema lint or schema validation step the project already uses, and limit query depth, complexity and batching; disable introspection in production unless the API is public by design.",
+    "Return errors in one format everywhere, for example RFC 9457 problem details (application/problem+json); never return stack traces, SQL or internal hostnames.",
+    "Make POST/PATCH operations that create or move money, stock or messages safe to retry: accept an idempotency key, store the first result and return it for repeats.",
+    "Signal deprecation in responses with the Deprecation header (RFC 9745) and the removal date with the Sunset header (RFC 8594), and in the contract (deprecated: true).",
+    "Pitfall: rate limiting only by IP. Limit per credential/tenant too, and cap page sizes, payload sizes, upload sizes and execution time."
+  ],
+  "gates": [
+    {
+      "id": "G-API-CONTRACT",
+      "type": "automated",
+      "title": "API contract kept in the repo and linted",
+      "setup": "Commit the OpenAPI document (default path openapi.yaml) and a .spectral.yaml at the project root containing `extends: [\"spectral:oas\"]` plus project rules. Pin the CLI version in CI. If the contract lives elsewhere or the API is GraphQL, change the command with profile gate G-API-CONTRACT --command \"…\".",
+      "command": "npx --yes @stoplight/spectral-cli lint openapi.yaml",
+      "architecture": "Record the contract format and location (OpenAPI version or GraphQL SDL), whether it is written first or generated from code, the Spectral ruleset, and how requests and responses are validated against it at runtime or in tests.",
+      "acceptance": [
+        "The contract is in the repo and describes every public operation, request and response schema, auth scheme and error response",
+        "spectral lint exits 0 with the project ruleset; any remaining warnings are reviewed",
+        "Tests fail when an implemented response does not match the contract"
+      ]
+    },
+    {
+      "id": "G-API-AUTHZ",
+      "type": "manual",
+      "title": "Object, property and function level authorisation (OWASP API1, API3, API5)",
+      "architecture": "Record where authorisation is enforced (a central policy layer or middleware, not individual handlers), how ownership/tenant is checked for every object id, which properties each role may read or write (response allow-lists, no mass assignment), and how admin or privileged operations are separated.",
+      "acceptance": [
+        "Every operation that takes an object id checks that the caller may access that object; tests show a second user or tenant gets 403/404",
+        "Responses return only allow-listed properties and writes ignore or reject properties the caller may not set, with tests",
+        "Admin and privileged operations reject ordinary users, with tests for each role"
+      ]
+    },
+    {
+      "id": "G-API-AUTHN",
+      "type": "manual",
+      "title": "Authentication of API callers (OWASP API2)",
+      "architecture": "Record the authentication scheme per consumer type (OAuth 2.0/OIDC tokens, API keys, mTLS, signed webhooks), token lifetime, audience and signature validation, key rotation and revocation, and protection of login, token and password reset endpoints.",
+      "acceptance": [
+        "Every non-public operation rejects missing, expired, wrongly signed or wrong-audience credentials, with tests",
+        "Credential endpoints are rate limited and lock out or slow down brute force attempts",
+        "Credentials are never accepted in URLs and never logged"
+      ]
+    },
+    {
+      "id": "G-API-RESOURCES",
+      "type": "manual",
+      "title": "Rate limits and resource consumption limits (OWASP API4)",
+      "architecture": "Record rate limits per credential/tenant and per IP, maximum request body, upload and page sizes, timeouts, GraphQL depth/complexity limits, and limits on calls that cost money (SMS, email, third-party APIs).",
+      "acceptance": [
+        "Exceeding a rate limit returns 429 with Retry-After, with tests",
+        "Oversized bodies, uploads and page sizes are rejected with 413 or 400",
+        "Requests that cost money per call have per-account limits and spend alerts"
+      ]
+    },
+    {
+      "id": "G-API-SENSITIVE-FLOWS",
+      "type": "manual",
+      "title": "Sensitive business flows protected from automated abuse (OWASP API6)",
+      "architecture": "List the business flows that harm the business if automated (sign-up, purchase, reservations, referrals, comments, password reset) and the protection for each (per-account limits, device or behaviour checks, CAPTCHA or human verification, delays).",
+      "acceptance": [
+        "Each listed flow has a documented protection and a test or check showing scripted repetition is limited"
+      ]
+    },
+    {
+      "id": "G-API-OUTBOUND",
+      "type": "manual",
+      "title": "Server-side requests and third-party API responses handled safely (OWASP API7, API10)",
+      "architecture": "Record every place the API fetches a URL or calls a third party: allow-listed destinations, blocking of private/link-local/metadata addresses, redirect handling, timeouts, and validation of third-party responses before use.",
+      "acceptance": [
+        "User-supplied URLs are checked against an allow-list and requests to internal or cloud metadata addresses are refused, with tests",
+        "Third-party responses are validated and size/time limited before they are stored or acted on"
+      ]
+    },
+    {
+      "id": "G-API-CONFIG",
+      "type": "manual",
+      "title": "Secure configuration (OWASP API8)",
+      "architecture": "Record TLS termination, CORS policy (explicit origins, no wildcard with credentials), security headers, allowed HTTP methods, debug and introspection settings per environment, and how verbose errors are suppressed in production.",
+      "acceptance": [
+        "Production serves HTTPS only; CORS allows only the documented origins",
+        "Production error responses contain no stack traces or internal details",
+        "Unused HTTP methods and debug endpoints are disabled in production"
+      ]
+    },
+    {
+      "id": "G-API-INVENTORY",
+      "type": "manual",
+      "title": "API inventory: hosts, versions and environments (OWASP API9)",
+      "architecture": "Record every deployed API host, version and environment, who owns it, which are public, and how old versions and non-production hosts are retired or kept away from production data.",
+      "acceptance": [
+        "A maintained inventory lists every API host, version, environment, owner and audience",
+        "Non-production APIs do not use production data and are not publicly reachable unless documented"
+      ]
+    },
+    {
+      "id": "G-API-ERRORS",
+      "type": "manual",
+      "title": "One consistent error format",
+      "architecture": "Record the error format for all operations (for example RFC 9457 problem details), the stable error codes clients may rely on, and the mapping of validation, auth, not-found, conflict and rate-limit errors to status codes.",
+      "acceptance": [
+        "Every error response, including framework and gateway errors, uses the documented format and is described in the contract",
+        "Validation errors identify the invalid fields"
+      ]
+    },
+    {
+      "id": "G-API-PAGINATION",
+      "type": "manual",
+      "title": "Pagination for every collection",
+      "architecture": "Record the pagination style (cursor or offset), default and maximum page size, stable sort order, and how filters and next-page links are returned.",
+      "acceptance": [
+        "Every list operation is paginated with an enforced maximum page size",
+        "Paging through a collection while items are added does not skip or duplicate items (cursor pagination) or the behaviour is documented"
+      ]
+    },
+    {
+      "id": "G-API-IDEMPOTENCY",
+      "type": "manual",
+      "title": "Retries are safe (idempotency)",
+      "architecture": "Record which operations are idempotent by method (GET, PUT, DELETE) and how non-idempotent operations that create or charge are made safe to retry (an idempotency key header, stored first result, key expiry, conflict when the same key is reused with a different body). Record the retry and backoff guidance given to clients and for webhooks sent.",
+      "acceptance": [
+        "Repeating a create or payment request with the same idempotency key returns the first result and creates nothing new, with tests",
+        "Reusing a key with a different request body is rejected"
+      ]
+    },
+    {
+      "id": "G-API-VERSIONING",
+      "type": "manual",
+      "title": "Versioning and deprecation policy",
+      "architecture": "Record the versioning scheme (URL, header or date-based), what counts as a breaking change, the minimum notice before removal, and how deprecation is announced (contract deprecated flags, Deprecation and Sunset headers, changelog, consumer notice).",
+      "acceptance": [
+        "Breaking changes are only released under a new version; contract changes are reviewed for breaking changes before merge",
+        "Deprecated operations are marked in the contract and return Deprecation (and Sunset when a date is set) headers",
+        "A public changelog records every contract change"
+      ]
+    }
+  ]
+}

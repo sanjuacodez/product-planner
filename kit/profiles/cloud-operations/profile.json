@@ -1,0 +1,168 @@
+{
+  "id": "cloud-operations",
+  "kind": "baseline",
+  "title": "Cloud operations baseline",
+  "appliesWhen": "Anything deployed to and run on a public cloud or hosting platform (AWS, Azure, Google Cloud, or managed platforms built on them) that holds data or must stay available.",
+  "ask": "Where will this run in production (which cloud or hosting platform), who operates it, and how much data loss and downtime is acceptable?",
+  "detect": {
+    "files": [
+      "fly.toml",
+      "vercel.json",
+      "netlify.toml",
+      "render.yaml",
+      "serverless.yml",
+      "serverless.yaml",
+      "samconfig.toml",
+      "cdk.json",
+      "firebase.json",
+      "wrangler.toml",
+      "app.yaml",
+      "azure.yaml",
+      "amplify.yml"
+    ],
+    "packages": [
+      "aws-sdk",
+      "@aws-sdk/client-s3",
+      "@aws-sdk/client-dynamodb",
+      "@aws-sdk/client-secrets-manager",
+      "@google-cloud/storage",
+      "@google-cloud/firestore",
+      "@azure/identity",
+      "@azure/storage-blob",
+      "firebase-admin"
+    ],
+    "requestWords": [
+      "AWS",
+      "Amazon Web Services",
+      "Azure",
+      "GCP",
+      "Google Cloud",
+      "cloud hosting",
+      "cloud deployment"
+    ]
+  },
+  "sources": [
+    {
+      "title": "AWS Well-Architected Framework",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html"
+    },
+    {
+      "title": "Azure Well-Architected Framework",
+      "url": "https://learn.microsoft.com/en-us/azure/well-architected/"
+    },
+    {
+      "title": "Google Cloud Well-Architected Framework",
+      "url": "https://cloud.google.com/architecture/framework"
+    },
+    {
+      "title": "OWASP Secrets Management Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+    },
+    {
+      "title": "NIST SP 800-61 Rev. 3: Incident Response Recommendations",
+      "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+    },
+    {
+      "title": "Gitleaks",
+      "url": "https://github.com/gitleaks/gitleaks"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "The three providers' well-architected frameworks share the same pillars for this baseline: security, reliability and operational excellence. Use the one for the chosen cloud as the checklist and record which items were reviewed.",
+    "A backup that has never been restored is not a backup: schedule a restore into a separate environment and time it against the recovery time objective.",
+    "Keep backups in a separate account/project or with immutability (object lock, vault lock) so the credentials that run production cannot delete them.",
+    "Alert on symptoms users feel (error rate, latency, failed jobs, queue age) and on cost anomalies; every alert names an owner and a runbook entry.",
+    "Never log secrets, tokens, full card numbers or unnecessary personal data; set log retention deliberately.",
+    "Prefer workload identity and short-lived credentials (OIDC federation from CI, instance/managed identities) over long-lived access keys.",
+    "Gitleaks 8.19 and later use `gitleaks git` (history) and `gitleaks dir` (files); older docs show `gitleaks detect`. On an existing repository, record current findings with --baseline-path so the gate means no new leaks, and rotate anything real that was found.",
+    "Separate production from other environments at the account/subscription/project level, not only by naming."
+  ],
+  "gates": [
+    {
+      "id": "G-OPS-BACKUP",
+      "type": "manual",
+      "title": "Backups with tested restores",
+      "architecture": "Record every data store, its backup method and frequency, retention, where backups are kept (separate account or immutable), the recovery point and recovery time objectives, and the restore procedure.",
+      "acceptance": [
+        "Every persistent data store is backed up automatically to meet the recorded recovery point objective",
+        "A restore has been performed into a non-production environment, timed, and the result recorded; the restore test is scheduled to repeat"
+      ]
+    },
+    {
+      "id": "G-OPS-MONITORING",
+      "type": "manual",
+      "title": "Logging, monitoring and alerting",
+      "architecture": "Record what is logged (structured application logs, access logs, audit/cloud control-plane logs), where logs go and for how long, the health and performance metrics watched, alert thresholds and who is notified, and the budget/cost alerts.",
+      "acceptance": [
+        "Application, access and cloud audit logs are collected centrally with a set retention and contain no secrets",
+        "Alerts exist for availability, error rate, latency and cost, each routed to a named owner, and a test alert has been received",
+        "Health checks or uptime probes cover the main user journeys"
+      ]
+    },
+    {
+      "id": "G-OPS-SECRETS",
+      "type": "manual",
+      "title": "Secrets in a secrets manager, rotated, never in code",
+      "architecture": "Record the secrets manager used, how applications receive secrets at runtime, who can read them, and the rotation procedure for each secret type.",
+      "acceptance": [
+        "No secrets are stored in the repository, images, build logs or plain environment files committed to the repo",
+        "Each secret has an owner and a documented rotation procedure that has been exercised at least once"
+      ]
+    },
+    {
+      "id": "G-OPS-SECRET-SCAN",
+      "type": "automated",
+      "title": "Repository history scanned for leaked secrets",
+      "setup": "Install gitleaks (https://github.com/gitleaks/gitleaks) in CI and locally. On an existing repository, create a baseline report and add --baseline-path to the command with profile gate G-OPS-SECRET-SCAN --command \"…\".",
+      "command": "gitleaks git --redact --no-banner .",
+      "architecture": "Record the secret scanning tool, where it runs (pre-commit and CI), and the procedure when a secret is found (revoke and rotate first, then remove).",
+      "acceptance": [
+        "gitleaks git reports no leaks (or no leaks beyond the recorded baseline)",
+        "Any secret ever found has been revoked and rotated, not only deleted from the code"
+      ]
+    },
+    {
+      "id": "G-OPS-IAM",
+      "type": "manual",
+      "title": "Least-privilege access for people and workloads",
+      "architecture": "Record how people sign in (SSO with MFA, no shared or root/owner accounts for daily work), the roles and their permissions, the identity each workload and the CI/CD pipeline uses, break-glass access and the access review schedule.",
+      "acceptance": [
+        "Human access uses individual SSO accounts with MFA; root/owner credentials are locked away and alerted on use",
+        "Each workload and the deploy pipeline uses its own identity with only the permissions it needs and no long-lived keys where federation is available",
+        "Access is reviewed on a schedule and leavers are removed"
+      ]
+    },
+    {
+      "id": "G-OPS-ENCRYPTION",
+      "type": "manual",
+      "title": "Encryption in transit and at rest",
+      "architecture": "Record TLS termination points and minimum version, internal service-to-service encryption, encryption at rest for every data store and backup, and key management (provider-managed or customer-managed keys, who can use them).",
+      "acceptance": [
+        "All external endpoints use TLS 1.2 or later and redirect or refuse plain HTTP",
+        "Every data store, volume, bucket and backup is encrypted at rest"
+      ]
+    },
+    {
+      "id": "G-OPS-ENVIRONMENTS",
+      "type": "manual",
+      "title": "Separated environments",
+      "architecture": "Record the environments (for example development, staging, production), how they are isolated (separate accounts, subscriptions or projects and networks), how changes are promoted, and the rule for production data outside production.",
+      "acceptance": [
+        "Production runs in its own account, subscription or project with separate credentials",
+        "Non-production environments do not hold production personal data unless masked and documented",
+        "Deployments to production go through the recorded promotion path"
+      ]
+    },
+    {
+      "id": "G-OPS-INCIDENT",
+      "type": "manual",
+      "title": "Incident response runbook",
+      "architecture": "Record who is on call and how they are reached, severity levels, the runbook for common failures (rollback, failover, restore, credential compromise), the communication plan for users, and the post-incident review practice.",
+      "acceptance": [
+        "A runbook covers rollback, restore from backup and revoking compromised credentials, and names the people to contact",
+        "The rollback or restore procedure has been rehearsed at least once"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 2,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "scope-change",
+  "arm": "bmad",
+  "model": "opus",
+  "date": "2026-10-20T05:44:44.652Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8,
+    "groups": {
+      "original api": {
+        "pass": 5,
+        "total": 5
+      },
+      "change": {
+        "pass": 3,
+        "total": 3
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "npm test: ok 37 - INVALID_RELEASE error has a descriptive message # pass 37 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 2.9965,
+  "costByModel": {
+    "claude-opus-5-5": 2.9965
+  },
+  "minutes": 6.4,
+  "messages": 2,
+  "scriptedReplies": 0,
+  "agentTurns": 56,
+  "tokens": {
+    "input": 62,
+    "cacheWrite": 76114,
+    "cacheRead": 1812913,
+    "output": 29044,
+    "total": 1918133
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-scope-change-bmad-OvNJ1r"
+}

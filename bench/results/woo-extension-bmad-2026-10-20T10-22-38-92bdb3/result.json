@@ -1,0 +1,86 @@
+{
+  "kitDigest": "590de62d12b1",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "bmad",
+  "model": "opus",
+  "date": "2026-10-20T10:36:35.317Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": false,
+      "errors": 2,
+      "details": "{\"warnings\":3,\"files\":5,\"bySource\":{\"PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket\":1,\"PEAR.Functions.FunctionCallSignature.CloseBracketLine\":1},\"first\":[\"uninstall.php:11 PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket: Opening parenthesis of a multi-line function call m"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"first\":[]}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":false,\"errors\":[\"includes/class-min-order-by-role-settings.php:101: $_POST['?'] used without sanitising (inside: wp_unslash)\"],\"warnings\":"
+    }
+  ],
+  "review": null,
+  "costUsd": 4.4228,
+  "costByModel": {
+    "claude-opus-5-5": 4.4228
+  },
+  "minutes": 13.4,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 7,
+  "tokens": {
+    "input": 8,
+    "cacheWrite": 8382,
+    "cacheRead": 415190,
+    "output": 2865,
+    "total": 426445
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-bmad-Hd2seO"
+}

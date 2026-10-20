@@ -1,0 +1,41 @@
+{
+  "id": "node-package",
+  "kind": "platform",
+  "title": "Node.js project or package",
+  "appliesWhen": "The project has a package.json.",
+  "ask": null,
+  "detect": {
+    "files": [
+      "package.json"
+    ]
+  },
+  "sources": [
+    {
+      "title": "npm audit",
+      "url": "https://docs.npmjs.com/cli/commands/npm-audit"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-NODE-TESTS",
+      "type": "automated",
+      "title": "The full test suite passes",
+      "command": "npm test",
+      "architecture": "Record the test runner and where tests live.",
+      "acceptance": [
+        "npm test exits 0"
+      ]
+    },
+    {
+      "id": "G-NODE-TYPES",
+      "type": "automated",
+      "title": "Type check passes (TypeScript projects)",
+      "command": "npx tsc --noEmit",
+      "architecture": "Record whether TypeScript or JSDoc types are used; remove this gate for untyped JavaScript.",
+      "acceptance": [
+        "npx tsc --noEmit reports no errors"
+      ]
+    }
+  ]
+}

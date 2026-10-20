@@ -1,0 +1,164 @@
+{
+  "id": "crates-library",
+  "kind": "platform",
+  "title": "Rust crate published to crates.io",
+  "appliesWhen": "A Rust library (or binary) crate published to crates.io for others to depend on or install.",
+  "ask": "Will this crate be published to crates.io? What is the minimum supported Rust version (MSRV), and is it a single crate or a workspace?",
+  "detect": {
+    "files": [
+      "src/lib.rs"
+    ],
+    "packages": [],
+    "contentPatterns": [
+      {
+        "glob": "Cargo.toml",
+        "pattern": "\\[package\\]"
+      }
+    ],
+    "requestWords": [
+      "crates.io",
+      "crate",
+      "Rust crate",
+      "Rust library",
+      "Rust SDK",
+      "SDK",
+      "client library"
+    ]
+  },
+  "sources": [
+    {
+      "title": "The Cargo Book: Publishing on crates.io",
+      "url": "https://doc.rust-lang.org/cargo/reference/publishing.html"
+    },
+    {
+      "title": "The Cargo Book: The Manifest Format",
+      "url": "https://doc.rust-lang.org/cargo/reference/manifest.html"
+    },
+    {
+      "title": "The Cargo Book: Rust version (MSRV)",
+      "url": "https://doc.rust-lang.org/cargo/reference/rust-version.html"
+    },
+    {
+      "title": "The Cargo Book: Continuous Integration (verifying rust-version)",
+      "url": "https://doc.rust-lang.org/cargo/guide/continuous-integration.html"
+    },
+    {
+      "title": "The Cargo Book: SemVer Compatibility",
+      "url": "https://doc.rust-lang.org/cargo/reference/semver.html"
+    },
+    {
+      "title": "crates.io: Usage Policy",
+      "url": "https://crates.io/policies"
+    },
+    {
+      "title": "crates.io: Trusted Publishing",
+      "url": "https://crates.io/docs/trusted-publishing"
+    },
+    {
+      "title": "rust-lang/crates-io-auth-action",
+      "url": "https://github.com/rust-lang/crates-io-auth-action"
+    },
+    {
+      "title": "cargo-semver-checks",
+      "url": "https://github.com/obi1kenobi/cargo-semver-checks"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "crates.io requires description and license (SPDX 2.3 expression) or license-file; also fill repository, readme, and up to 5 keywords and 5 categories (exact slugs from crates.io/category_slugs). documentation defaults to the docs.rs page.",
+    "cargo publish --dry-run only warns (\"manifest has no description, license, ...\") when metadata is missing; the gate treats that warning as a failure.",
+    "Publishing is permanent: a version can never be overwritten or deleted. cargo yank only stops new lockfiles from selecting it; a leaked secret must be rotated, not yanked.",
+    "Control the .crate contents with include or exclude (cargo package --list shows them); the limit is 10 MB.",
+    "Set rust-version (MSRV) and verify it in CI (cargo hack check --rust-version); changing rust-version is treated as a minor incompatibility, so document the MSRV policy (for example N-2).",
+    "Run cargo semver-checks before each release; it compares against the latest version on crates.io, so it has nothing to compare before the first release.",
+    "Trusted publishing (GitHub Actions; check crates.io docs for other providers) needs the first release published manually; then the workflow uses rust-lang/crates-io-auth-action@v1 with id-token: write and passes the token as CARGO_REGISTRY_TOKEN.",
+    "Features must be additive; removing a Cargo feature or a public item is a major change, while adding a dependency is minor unless it adds new requirements such as nightly (Cargo SemVer reference).",
+    "cargo publish --dry-run leaves target/package/<crate>/Cargo.toml behind, which makes cargo semver-checks fail with \"package is ambiguous\"; both gate commands remove target/package.",
+    "Workspaces: cargo publish --workspace --dry-run checks all publishable members together; mark internal crates publish = false."
+  ],
+  "gates": [
+    {
+      "id": "G-CRATE-PACKAGE",
+      "type": "automated",
+      "title": "cargo publish --dry-run succeeds with complete metadata",
+      "command": "out=$(cargo publish --dry-run --allow-dirty 2>&1); s=$?; rm -rf target/package; printf '%s\\n' \"$out\"; [ $s -eq 0 ] && ! printf '%s' \"$out\" | grep -q 'manifest has no'",
+      "architecture": "Record the crate name, licence (SPDX), repository, readme, keywords/categories, and what the package includes (include/exclude); for a workspace, which members are published.",
+      "acceptance": [
+        "cargo publish --dry-run packages and verifies the crate",
+        "Cargo reports no \"manifest has no description, license, ...\" warning"
+      ]
+    },
+    {
+      "id": "G-CRATE-CLIPPY",
+      "type": "automated",
+      "title": "Clippy reports no warnings",
+      "command": "cargo clippy --all-targets --all-features -- -D warnings",
+      "architecture": "Record the lint configuration ([lints] in Cargo.toml) and any allowed lints with reasons.",
+      "acceptance": [
+        "cargo clippy --all-targets --all-features -- -D warnings exits 0"
+      ]
+    },
+    {
+      "id": "G-CRATE-TESTS",
+      "type": "automated",
+      "title": "Tests and doctests pass",
+      "command": "cargo test --all-features",
+      "architecture": "Record the test layout (unit, integration, doctests) and the feature combinations tested.",
+      "acceptance": [
+        "cargo test --all-features exits 0, including doctests"
+      ]
+    },
+    {
+      "id": "G-CRATE-DOCS",
+      "type": "automated",
+      "title": "Public API is documented and docs build without warnings",
+      "command": "RUSTDOCFLAGS=\"-D warnings\" cargo doc --no-deps --all-features",
+      "architecture": "Record the documentation policy (#![warn(missing_docs)], crate-level docs with an example, docs.rs features/metadata).",
+      "acceptance": [
+        "cargo doc --no-deps --all-features builds with RUSTDOCFLAGS=\"-D warnings\"",
+        "Every public item has a doc comment"
+      ]
+    },
+    {
+      "id": "G-CRATE-MSRV",
+      "type": "automated",
+      "title": "The declared rust-version (MSRV) builds",
+      "setup": "cargo install cargo-hack --locked (or taiki-e/install-action@cargo-hack in CI, as in the Cargo CI guide); cargo hack adds the rust-version toolchain with rustup when it is missing. Very old MSRVs may have no toolchain for newer hosts (for example Apple silicon), so run this gate in Linux CI.",
+      "command": "cargo hack check --rust-version --workspace --all-targets --ignore-private",
+      "architecture": "Record the rust-version and the MSRV policy (for example latest stable minus two releases).",
+      "acceptance": [
+        "Cargo.toml sets rust-version",
+        "cargo hack check --rust-version passes for every publishable package"
+      ]
+    },
+    {
+      "id": "G-CRATE-SEMVER",
+      "type": "automated",
+      "title": "No accidental SemVer breakage against the last published version",
+      "setup": "cargo install cargo-semver-checks --locked (or obi1kenobi/cargo-semver-checks-action@v2 in CI); skip until the first release is on crates.io",
+      "command": "rm -rf target/package && cargo semver-checks",
+      "architecture": "Record the public API surface and the versioning policy (0.x minor bumps for breaking changes, 1.x majors); breaking changes go in a changelog.",
+      "acceptance": [
+        "cargo semver-checks reports no breaking changes for a minor or patch release",
+        "Each release has a changelog entry"
+      ]
+    },
+    {
+      "id": "G-CRATE-PUBLISH",
+      "type": "manual",
+      "title": "Releases are published from CI with trusted publishing and controlled owners",
+      "architecture": "Record the release workflow (tag trigger, environment, id-token: write, rust-lang/crates-io-auth-action), the owners and teams on crates.io, and how a bad release is handled (yank, new version, secret rotation).",
+      "acceptance": [
+        "After the first manual release, versions are published from the CI workflow registered as a trusted publisher; no long-lived crates.io token is stored in CI",
+        "crates.io owners are listed and limited to current maintainers"
+      ]
+    },
+    {
+      "id": "G-CRATE-LICENSES",
+      "type": "legal",
+      "title": "Crate licence and dependency licence compatibility need review",
+      "architecture": "Record the chosen licence expression and the dependencies (including build dependencies and any bundled C code) with their licences.",
+      "acceptance": []
+    }
+  ]
+}

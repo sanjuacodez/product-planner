@@ -1,0 +1,86 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "bmad",
+  "model": "opus",
+  "date": "2026-10-20T06:30:15.516Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"first\":[]}"
+    },
+    {
+      "name": "security-scan",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"nonce-or-settings-api\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"capability-"
+    }
+  ],
+  "review": null,
+  "costUsd": 5.9184,
+  "costByModel": {
+    "claude-opus-5-5": 5.9184
+  },
+  "minutes": 18,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 10,
+  "tokens": {
+    "input": 14,
+    "cacheWrite": 5082,
+    "cacheRead": 665700,
+    "output": 3078,
+    "total": 673874
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-bmad-iqkxm7"
+}

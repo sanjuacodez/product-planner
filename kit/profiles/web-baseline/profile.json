@@ -1,0 +1,75 @@
+{
+  "id": "web-baseline",
+  "kind": "baseline",
+  "title": "Web application baseline",
+  "appliesWhen": "Any product with a web UI or HTTP API used by people outside the development team.",
+  "ask": "Is this a web app or API used by real users?",
+  "detect": {
+    "files": [
+      "index.html",
+      "public/index.html",
+      "next.config.js",
+      "next.config.mjs",
+      "vite.config.js",
+      "vite.config.ts",
+      "nuxt.config.ts",
+      "astro.config.mjs"
+    ],
+    "packages": [
+      "express",
+      "fastify",
+      "next",
+      "react",
+      "vue",
+      "svelte",
+      "@sveltejs/kit",
+      "koa",
+      "hono",
+      "nuxt",
+      "astro"
+    ]
+  },
+  "sources": [
+    {
+      "title": "OWASP Application Security Verification Standard",
+      "url": "https://owasp.org/www-project-application-security-verification-standard/"
+    },
+    {
+      "title": "WCAG 2.2",
+      "url": "https://www.w3.org/TR/WCAG22/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-WEB-ASVS",
+      "type": "manual",
+      "title": "Security controls checked against the chosen OWASP ASVS level",
+      "architecture": "Choose the ASVS level by risk (L1 for low-risk apps, L2 for apps with personal or financial data) and record authentication, session, access control, input validation and secrets handling decisions.",
+      "acceptance": [
+        "Every applicable requirement of the chosen ASVS level is checked and the checklist is stored with evidence"
+      ]
+    },
+    {
+      "id": "G-WEB-WCAG",
+      "type": "manual",
+      "title": "WCAG 2.2 AA for the user interface",
+      "architecture": "Record the component approach for keyboard access, focus order, labels, contrast and error messages.",
+      "acceptance": [
+        "Main journeys are usable by keyboard alone with visible focus",
+        "Form fields have labels and errors are announced in text",
+        "Text contrast meets 4.5:1 (3:1 for large text)"
+      ]
+    },
+    {
+      "id": "G-WEB-DEPS",
+      "type": "automated",
+      "title": "No known high or critical vulnerabilities in dependencies",
+      "command": "npm audit --audit-level=high",
+      "architecture": "Record the dependency update policy.",
+      "acceptance": [
+        "npm audit --audit-level=high (or the stack's equivalent) reports no high or critical vulnerabilities"
+      ]
+    }
+  ]
+}

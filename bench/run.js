@@ -3,7 +3,7 @@
 // question with the same scripted reply, then score the result with hidden acceptance tests.
 //
 //   node bench/run.js --scenario booking-lib --arm planner [--model opus] [--budget 25] [--max-messages 14]
-//   arms: plain | planner | tiered | speckit | bmad   (tiered = planner with `models tiered`: Sonnet developer, Haiku QA, delegated tasks)
+//   arms: plain | planner | tiered | router | speckit | bmad   (router = recommended model per task, delegated)   (tiered = planner with `models tiered`: Sonnet developer, Haiku QA, delegated tasks)
 //   --review adds a blind rubric review by a separate model (extra cost, reported separately).
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
@@ -21,8 +21,8 @@ const { values: opt } = parseArgs({ options: {
 } });
 const scenarioDir = path.join(ROOT, 'scenarios', opt.scenario || '');
 if (!opt.scenario || !fs.existsSync(path.join(scenarioDir, 'prompt.md'))) throw new Error('--scenario must name a folder in bench/scenarios');
-if (!['plain', 'planner', 'tiered', 'speckit', 'bmad'].includes(opt.arm)) throw new Error('--arm must be plain, planner, tiered, speckit or bmad');
-const PLANNER = ['planner', 'tiered'].includes(opt.arm);
+if (!['plain', 'planner', 'tiered', 'router', 'speckit', 'bmad'].includes(opt.arm)) throw new Error('--arm must be plain, planner, tiered, router, speckit or bmad');
+const PLANNER = ['planner', 'tiered', 'router'].includes(opt.arm);
 
 const budget = Number(opt.budget), maxMessages = Number(opt['max-messages']), repeats = Number(opt.repeat);
 if (!Number.isFinite(budget) || budget <= 0 || !Number.isInteger(maxMessages) || maxMessages < 1 || !Number.isInteger(repeats) || repeats < 1 || repeats > 10) throw new Error('budget must be positive; max-messages and repeat must be positive integers (repeat <= 10)');
@@ -72,7 +72,10 @@ if (PLANNER) {
   const pp = (...a) => { const r = sh(process.execPath, [path.join(PKG, 'bin', 'product-planner.js'), ...a]); if (r.status) throw new Error(r.stderr); };
   pp('init', '--tools', 'claude', '--yes');
   pp('state', 'set', 'options.autoOpenDashboard', 'false');
-  if (opt.arm === 'tiered') pp('models', 'tiered');
+  // planner: one model (routing off); tiered: the fixed Sonnet/Haiku preset; router: recommended models per task, delegated.
+  if (opt.arm === 'planner') pp('state', 'set', 'options.modelRouting', 'off');
+  if (opt.arm === 'tiered') { pp('state', 'set', 'options.modelRouting', 'off'); pp('models', 'tiered'); }
+  if (opt.arm === 'router') pp('state', 'set', 'options.delegateTasks', 'true');
   fs.appendFileSync(path.join(ws, '.gitignore'), '.bench-bin/\n');
 } else if (opt.arm === 'speckit') {
   const r = sh('uvx', ['--from', SPECKIT, 'specify', 'init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh']);
@@ -107,7 +110,9 @@ function ownerReply(agentText) {
   return `${(res.result || '').trim() || 'Use your recommendations.'}\n\n${APPROVE}`;
 }
 let stopReason = 'message_limit';
-const asksSomething = (text) => /\?\s*$|\bapprov|\breply\b|\bconfirm\b|which option|let me know|should i\b|\bproceed\b|\bwant me to\b/i.test(text.slice(-600));
+// Waiting for the user: ends with a question, uses a hand-over phrase, or lists several questions near the end.
+const asksSomething = (text) => /\?\s*$|\bapprov|\brepl(y|ies)\b|\bconfirm\b|which option|let me know|should i\b|\bproceed\b|\bwant me to\b|once you('ve| have)? (answer|decid|confirm)|your answers?\b|answer (these|the|my) questions|before i (write|build|start|implement)/i.test(text.slice(-800))
+  || (text.slice(-4000).match(/\?(\s|\*|\)|$)/g) || []).length >= 3;
 // Planner arm: finished when the phase is done, or the build has nothing left except blocked tasks.
 const plannerDone = (text) => {
   const dir = path.join(ws, '.product-planner');
@@ -135,6 +140,10 @@ for (let i = 0; i < maxMessages && cost < budget; i++) {
     tokens: { input: u.input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, output: u.output_tokens || 0 } });
   fs.writeFileSync(path.join(out, 'transcript.json'), JSON.stringify(turns, null, 2));
   console.log(`[${opt.arm}] message ${i + 1}: $${(res.total_cost_usd || 0).toFixed(2)} · ${res.num_turns} turns · ${res.subtype || ''}`);
+  // A subscription usage limit is not the arm's failure: stop and mark it so the run is redone after the reset.
+  if (/hit your (session|usage|weekly|daily) limit|usage limit reached/i.test(String(res.result || ''))) { stopReason = 'usage_limit'; break; }
+  // Hitting the per-message turn cap is not an error: the scripted user simply continues the conversation.
+  if (res.subtype === 'error_max_turns' && session && cost < budget) continue;
   if (res.is_error || r.error || r.status !== 0) { stopReason = res.subtype?.includes('budget') ? 'budget_exhausted' : 'host_error'; break; }
   if (queue.length) continue;
   if (PLANNER) { if (plannerDone(res.result || '')) { stopReason = 'completed'; break; } continue; }

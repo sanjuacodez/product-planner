@@ -1,0 +1,168 @@
+{
+  "id": "browser-extension",
+  "kind": "baseline",
+  "title": "Browser extension (WebExtensions, Manifest V3)",
+  "appliesWhen": "Any browser extension built on the WebExtensions APIs (Chrome, Edge, Firefox, Safari, other Chromium browsers), whether published to a store or distributed privately.",
+  "ask": "Which browsers and stores will the extension ship to (Chrome Web Store, Firefox Add-ons, Edge Add-ons, Safari, enterprise only), and which sites and user data will it touch?",
+  "detect": {
+    "files": [],
+    "packages": [
+      "webextension-polyfill",
+      "wxt",
+      "plasmo",
+      "web-ext",
+      "@types/chrome",
+      "@types/webextension-polyfill",
+      "@crxjs/vite-plugin"
+    ],
+    "contentPatterns": [
+      {
+        "glob": "manifest.json",
+        "pattern": "\"manifest_version\"\\s*:\\s*[23]"
+      },
+      {
+        "glob": "*/manifest.json",
+        "pattern": "\"manifest_version\"\\s*:\\s*[23]"
+      }
+    ],
+    "requestWords": [
+      "browser extension",
+      "Chrome extension",
+      "Firefox add-on",
+      "Firefox extension",
+      "Edge extension",
+      "Edge add-on",
+      "web extension",
+      "WebExtension",
+      "content script"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Chrome extensions: Stay secure",
+      "url": "https://developer.chrome.com/docs/extensions/develop/security-privacy/stay-secure"
+    },
+    {
+      "title": "Chrome extensions: Manifest content_security_policy",
+      "url": "https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy"
+    },
+    {
+      "title": "Chrome extensions: Deal with remote hosted code violations",
+      "url": "https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code"
+    },
+    {
+      "title": "Chrome extensions: chrome.storage API",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/storage"
+    },
+    {
+      "title": "MDN: manifest.json background (cross-browser background scripts)",
+      "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background"
+    },
+    {
+      "title": "MDN: Chrome incompatibilities",
+      "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Chrome_incompatibilities"
+    },
+    {
+      "title": "Extension Workshop: Manifest V3 migration guide (Firefox)",
+      "url": "https://extensionworkshop.com/documentation/develop/manifest-v3-migration-guide/"
+    }
+  ],
+  "lastVerified": "2026-10-20",
+  "guidance": [
+    "Manifest V3 is the target: Chrome disabled Manifest V2 extensions in Chrome 138 (July 2025) and the Chrome Web Store removed the remaining MV2 extensions on 31 August 2026.",
+    "All executable code (JavaScript and WebAssembly) must ship inside the package. Fetching data (JSON, CSS, images, configuration) is allowed; loading scripts from a server, eval and new Function are not. Check dependencies too: SDKs that inject remote scripts (analytics, auth widgets, payment widgets) are the usual cause of store rejections.",
+    "The MV3 extension_pages CSP cannot be weaker than script-src 'self' 'wasm-unsafe-eval'; object-src 'self'. 'unsafe-eval' is an install-time error in Chrome. Code that must evaluate strings belongs in a sandboxed page (manifest sandbox key), which has no access to extension APIs.",
+    "Prefer activeTab, optional_permissions and optional_host_permissions (requested at the moment of use from a user gesture) over broad install-time host permissions such as <all_urls>. Users can revoke host permissions at any time in Chrome and Firefox, so check permissions.contains before relying on them.",
+    "Treat content scripts as running in hostile territory: any message from a content script may have been crafted by the page. Validate message shape, check sender.id and sender.url/origin, keep privileged calls and secrets in the background, and never let a content script choose an arbitrary URL to fetch or arbitrary arguments for an extension API.",
+    "Only listen to runtime.onMessageExternal when needed, and restrict callers with externally_connectable matches/ids. Keep web_accessible_resources to the files pages truly need, limited by matches; every exposed file lets sites fingerprint the extension.",
+    "Do not build DOM from page or server data with innerHTML or document.write; create nodes and set textContent.",
+    "storage.local and storage.sync are readable by content scripts and are not encrypted; storage.session is in memory and not exposed to content scripts by default, so use it for tokens and other sensitive values. storage.sync is small (about 100 KB total, 8 KB per item, 120 writes per minute). Local extension storage is cleared on uninstall; data on your servers is not.",
+    "Cross-browser background: Chrome MV3 supports only background.service_worker; Firefox does not support service workers and uses background.scripts (event page). Declaring both keys works in Chrome 121+ and Firefox 121+; Safari uses scripts unless preferred_environment says otherwise.",
+    "Service workers and event pages are terminated when idle: keep state in storage, register listeners synchronously at top level, and use chrome.alarms instead of setTimeout/setInterval for anything longer than a few seconds.",
+    "Chrome now exposes the browser namespace with promises (Chrome 148+); for older Chrome versions or shared code use webextension-polyfill. Firefox needs browser_specific_settings.gecko.id to publish; Firefox gives web_accessible_resources a random per-install UUID, so do not hard-code moz-extension:// URLs.",
+    "Build output, not source, is what browsers and reviewers see: run the checks against the packaged directory (dist/ in the gate commands; change it with profile gate … --command)."
+  ],
+  "gates": [
+    {
+      "id": "G-EXT-MANIFEST",
+      "type": "automated",
+      "title": "Manifest V3 with a CSP no weaker than the default",
+      "setup": "Build the extension so the packaged manifest is at dist/manifest.json, or point the command at the built manifest (for example per browser build folder) with profile gate G-EXT-MANIFEST --command \"…\".",
+      "command": "node -e \"const f=process.argv[1],m=JSON.parse(require('fs').readFileSync(f,'utf8')),e=[];if(m.manifest_version!==3)e.push('manifest_version is '+m.manifest_version+', expected 3');const c=m.content_security_policy;if(c&&typeof c!=='object')e.push('content_security_policy must be an object with extension_pages (MV3)');const p=(c&&c.extension_pages)||'';const s=(p.match(/script-src([^;]*)/)||['',''])[1].trim().split(/\\s+/).filter(Boolean);for(const t of s)if(!['\\'self\\'','\\'wasm-unsafe-eval\\''].includes(t))e.push('extension_pages script-src allows '+t);if(/unsafe-eval|unsafe-inline/.test(p.replace('wasm-unsafe-eval','')))e.push('extension_pages CSP relaxes eval or inline script');if(e.length){console.error(f+': '+e.join('; '));process.exit(1)}console.log(f+': MV3, default-or-stricter CSP')\" dist/manifest.json",
+      "architecture": "Record the target browsers and minimum versions, where the built manifest for each browser comes from (hand-written, generated by a framework, merged per browser), and the content_security_policy (default or stricter).",
+      "acceptance": [
+        "The built manifest declares manifest_version 3",
+        "content_security_policy.extension_pages, if set, allows only 'self' and 'wasm-unsafe-eval' in script-src and contains no unsafe-eval or unsafe-inline"
+      ]
+    },
+    {
+      "id": "G-EXT-REMOTE-CODE",
+      "type": "automated",
+      "title": "No remotely hosted code in the package",
+      "setup": "Build first; the command scans dist/ (change the folder with profile gate G-EXT-REMOTE-CODE --command \"…\"). It catches script tags, import() and importScripts() that load http(s) URLs; review other dynamic loading (script.src assignments, eval, new Function) by hand.",
+      "command": "test -d dist && ! grep -rEnI \"(import\\(|importScripts\\() *[\\\"'\\`]https?://|from *[\\\"']https?://|<script[^>]*src=[\\\"']?https?://\" dist",
+      "architecture": "Record that all executable code is bundled, which third-party SDKs are included and that none loads remote scripts, and what is fetched at runtime (data and configuration only, never logic).",
+      "acceptance": [
+        "The scan of the built package finds no script tags, import() or importScripts() loading http(s) URLs",
+        "No eval, new Function or string-based setTimeout in extension code outside a sandboxed page",
+        "Remote responses are treated as data and never change which code paths exist"
+      ]
+    },
+    {
+      "id": "G-EXT-PERMISSIONS",
+      "type": "manual",
+      "title": "Least-privilege permissions and host permissions",
+      "architecture": "Record a table of every permission and host pattern in the manifest with the feature that needs it, whether it is required or optional (optional_permissions / optional_host_permissions, requested at the moment of use), and why a narrower alternative (activeTab, specific hosts, declarativeNetRequest) is not enough.",
+      "acceptance": [
+        "Every permission and host pattern in the built manifest maps to a feature in the permissions table; nothing is requested for future use",
+        "Broad host access (<all_urls>, *://*/*) is absent, or justified in the architecture and requested optionally where the browser allows",
+        "Features behind optional or revocable permissions check permissions.contains and degrade gracefully when access is missing, with tests"
+      ]
+    },
+    {
+      "id": "G-EXT-MESSAGING",
+      "type": "manual",
+      "title": "Message passing validates senders and input",
+      "architecture": "Record every message channel (content script to background, popup/options to background, externally_connectable pages or extensions, native messaging), the message types each accepts, how the sender is checked (sender.id, sender.url or origin, tab), and which privileged actions stay in the background.",
+      "acceptance": [
+        "Every runtime.onMessage / onConnect handler validates the message type and payload and rejects unknown types, with tests",
+        "runtime.onMessageExternal is absent, or externally_connectable lists exact matches/ids and the handler checks sender origin or id, with tests",
+        "Content scripts cannot make the background fetch an arbitrary URL or call an extension API with caller-chosen arguments",
+        "No secrets, tokens or cross-origin data are sent to content scripts"
+      ]
+    },
+    {
+      "id": "G-EXT-CONTENT-SAFETY",
+      "type": "manual",
+      "title": "Page content handled as untrusted; minimal web-accessible resources",
+      "architecture": "Record which pages content scripts run on (matches, run_at, world), how they read and change the page, and which web_accessible_resources are exposed and to which matches.",
+      "acceptance": [
+        "No innerHTML, outerHTML, insertAdjacentHTML or document.write with page, user or server data in extension or content-script code",
+        "Content scripts run only on the sites listed in the architecture; MAIN-world scripts, if any, receive no privileged data",
+        "web_accessible_resources lists only the files pages need, restricted by matches"
+      ]
+    },
+    {
+      "id": "G-EXT-STORAGE",
+      "type": "manual",
+      "title": "User data stored in the right place and transmitted securely",
+      "architecture": "Record every item of user data the extension keeps, its storage area (storage.session, storage.local, storage.sync, IndexedDB, server), whether content scripts can read it, retention, and how server-side data is deleted when the user asks or uninstalls.",
+      "acceptance": [
+        "Tokens and other sensitive values live in storage.session or on the server, not in storage.local, storage.sync or localStorage",
+        "storage.session access level is not widened to content scripts unless the architecture records why",
+        "All network requests use HTTPS",
+        "Data kept on a server can be deleted on request, with tests"
+      ]
+    },
+    {
+      "id": "G-EXT-CROSS-BROWSER",
+      "type": "manual",
+      "title": "Cross-browser manifest and API differences handled",
+      "architecture": "Record the build per target browser: background (service_worker for Chromium, scripts for Firefox and Safari, or both keys), browser_specific_settings.gecko.id and strict_min_version for Firefox, namespace and promise handling (browser namespace or webextension-polyfill), and APIs unavailable in a target (for example sidePanel vs sidebar_action, debugger and declarativeContent in Firefox).",
+      "acceptance": [
+        "The extension loads without manifest errors in each target browser at its minimum version",
+        "Features using browser-specific APIs are feature-detected or built per browser, and the core flow is tested in each target browser"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "id": "dpdp-india",
+  "kind": "regulation",
+  "title": "Digital Personal Data Protection Act, 2023 (India)",
+  "appliesWhen": "Digital personal data is processed in India, or outside India in connection with offering goods/services to people in India.",
+  "ask": "Will people in India use the product or have their personal data processed?",
+  "detect": {},
+  "sources": [
+    {
+      "title": "Ministry of Electronics and IT: DPDP Act and Rules",
+      "url": "https://www.meity.gov.in/"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-PRIV-INVENTORY",
+      "type": "manual",
+      "title": "Personal data inventory and purpose",
+      "architecture": "List each personal data field, the specified purpose and retention.",
+      "acceptance": [
+        "Every stored personal data field has a recorded purpose and retention period"
+      ]
+    },
+    {
+      "id": "G-DPDP-CONSENT",
+      "type": "manual",
+      "title": "Notice and consent records, with withdrawal",
+      "architecture": "Record how notice is shown, how consent is captured per purpose and stored, and how withdrawal stops processing.",
+      "acceptance": [
+        "Consent is captured per purpose with an itemised notice, recorded, and can be withdrawn as easily as given"
+      ]
+    },
+    {
+      "id": "G-PRIV-RIGHTS",
+      "type": "manual",
+      "title": "Access, correction, erasure and grievance requests",
+      "architecture": "Record how requests and grievances are received and fulfilled across stores.",
+      "acceptance": [
+        "Access, correction and erasure requests are supported end to end, with tests",
+        "A grievance contact is shown in the product"
+      ]
+    },
+    {
+      "id": "G-PRIV-SECURITY",
+      "type": "manual",
+      "title": "Reasonable security safeguards and breach handling",
+      "architecture": "Record encryption, access control, logging and the breach notification procedure.",
+      "acceptance": [
+        "Personal data is encrypted in transit and at rest",
+        "Access to personal data is logged"
+      ]
+    },
+    {
+      "id": "G-DPDP-LEGAL",
+      "type": "legal",
+      "title": "Children's data, Significant Data Fiduciary status, transfers and Rules timelines need legal review",
+      "architecture": "",
+      "acceptance": []
+    }
+  ]
+}

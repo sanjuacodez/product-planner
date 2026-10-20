@@ -51,7 +51,7 @@ export function renderDashboard(d) {
       ...custom.research,
     ],
     docs: [
-      d.docs.length ? docsSection(d.docs) : '',
+      d.docs.length ? docsSection(d.docs) : empty('No planning documents yet. Run pp-plan in your coding tool: existing products are inspected and documented first; new products start with a requirements interview. Plans are saved in .product-planner/. Regenerate with product-planner dashboard after saving documents.'),
       d.risks ? section('docs-risks', 'Risks and open questions', mdToHtml(d.risks)) : '',
       d.decisions ? section('docs-decisions', 'Decisions', mdToHtml(d.decisions)) : '',
       ...custom.docs,
@@ -149,10 +149,18 @@ function modelMismatch(task, d) {
   const missing = reported.filter((m) => !seen.some((s) => base(s) === base(m)));
   return missing.length ? { reported: missing, seen } : null;
 }
+/** Recorded implementation models that differ from the task's recommended model. */
+function offRoute(task) {
+  if (!task.model) return null;
+  const ran = [...new Set((task.workedBy || []).filter((w) => w.agent !== 'qa' && w.model).map((w) => w.model))];
+  const other = ran.filter((m) => baseModelId(m) !== baseModelId(task.model) && modelLabel(m) !== modelLabel(task.model));
+  return other.length ? other : null;
+}
 function whoChips(task, d) {
   const names = d.config.dashboard?.modelNames || {};
   const mismatch = modelMismatch(task, d);
   return assignees(task, d).map((a) => `<span class="who-chip${a.recorded ? '' : ' planned'}" title="${esc(`${a.recorded ? 'Recorded when the task moved' : 'Planned assignment'}${a.model ? ` · model id ${a.model}` : ''}`)}"><b>${esc(roleName(a.agent))}</b>${a.model ? ` · ${esc(modelLabel(a.model, names))}` : ' · <i>model not recorded</i>'}${a.recorded ? '' : ' <small>(planned)</small>'}</span>`).join('')
+    + (offRoute(task) ? `<span class="who-chip warn" title="Recommended ${esc(task.model)} for this task; the recorded work ran on ${esc(offRoute(task).join(', '))}">⚠ recommended ${esc(modelLabel(task.model, names))}</span>` : '')
     + (mismatch ? `<span class="who-chip warn" title="The agent reported ${esc(mismatch.reported.join(', '))}; the transcripts for this task show ${esc(mismatch.seen.join(', '))}">⚠ transcript model: ${esc(mismatch.seen.map((m) => modelLabel(m, names)).join(', '))}</span>` : '');
 }
 

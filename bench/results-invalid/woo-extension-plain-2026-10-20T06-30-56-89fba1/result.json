@@ -1,0 +1,84 @@
+{
+  "kitDigest": "5b098095bd2f",
+  "status": "host_error",
+  "stages": 1,
+  "budgetUsd": 10,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T07:16:16.290Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": false,
+      "errors": 1,
+      "details": "no npm or composer test script"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":1,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":5,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"first\":[]}"
+    },
+    {
+      "name": "security-scan",
+      "pass": false,
+      "errors": 1,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":false,\"errors\":[\"includes/class-min-order-by-role-settings.php:104: $_POST['?'] used without sanitising (inside: is_array)\"],\"warnings\":[]"
+    }
+  ],
+  "review": null,
+  "costUsd": 0,
+  "costByModel": {},
+  "minutes": 45.1,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 0,
+  "tokens": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0,
+    "total": 0
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-plain-q5rtPa"
+}

@@ -34,7 +34,7 @@ export function checkPlan(cwd) {
     if (loadState(cwd).options?.requestCoverage && items.length) errors.push(...requestCoverage(features, items).errors.map((e) => `request coverage: ${e}`));
   }
   // Quality profile: each platform/regulatory gate needs an architecture decision and a delivering task.
-  const prof = profileCheck(cwd, { architecture: planningText(cwd, 'architecture.md'), tasks: tasks.tasks });
+  const prof = profileCheck(cwd, { architecture: planningText(cwd, 'architecture.md'), tasks: tasks.tasks, request: readText(path.join(dir, 'request.md'), '') });
   errors.push(...prof.errors.map((e) => `quality profile: ${e}`)); warnings.push(...prof.warnings.map((w) => `quality profile: ${w}`));
   const drift = lockDrift(cwd);
   if (drift.length) warnings.push(`changed since the plan was approved: ${drift.join(', ')}. Record scope changes with pp-replan and approve again (plan approve).`);
@@ -138,7 +138,7 @@ export function taskContext(cwd, id) {
   const lines = [
     `# ${task.id}: ${task.title}`,
     `epic ${task.epic || '-'} · agent ${task.agent} · priority ${task.priority}${task.risk ? ` · risk ${task.risk}` : ''} · status ${task.status}`,
-    plannedModel ? `Requested model: ${plannedModel} (preference only; record the actual host model on transitions)` : '',
+    plannedModel ? `Requested model: ${plannedModel} (preference only; record the actual host model on transitions)${task.reviewModel ? `. Independent review: ${task.reviewModel}` : ''}` : '',
     `\n## Product context (concept.md)\n${concept || `${state.product.name || '(unnamed product)'}: ${state.product.summary || '(concept.md missing; read request.md and recover the agreed goal before implementing)'}`}`,
     `\n## Evidence freshness\n${freshness.status}${freshness.changed.length ? ': ' + freshness.changed.join(', ') : ''}. ${task.sources?.length ? 'Declared sources: ' + task.sources.join(', ') : 'No source paths declared; freshness covers planning files and declared writes only.'}`,
     lessons ? `\n## Relevant lessons (lessons.md; revalidate source evidence)\n${lessons}` : '',

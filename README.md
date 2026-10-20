@@ -209,6 +209,19 @@ pp feature check                   # is the scope ready for requirements and tas
 
 ## Model selection and concurrent tasks
 
+The kit recommends a model for every task instead of asking you to pick one per role.
+`pp models available …` records what your tools, keys and plans give you (Claude, GPT, Gemini,
+DeepSeek and others; inferred from the installed tools when you don't say). `pp models recommend`
+then explains each choice: the minimum tier the task needs (architecture, high risk, security or
+privacy checks and tasks QA returned need the strongest models; mechanical checks and small edits
+can use fast ones), the cheapest available model that meets it at your project's real token mix,
+review on a different provider from the implementation, and equally suitable tasks spread across
+providers. Models that keep failing a kind of task in your project are skipped (`pp models stats`).
+The recommendations appear in the final plan review and are applied when you approve; each tool's
+agent files get the models that tool can run (Claude Code, Codex, OpenCode, Cursor, Antigravity),
+and tools that choose models only in their UI get the recommendation in the brief.
+
+
 The host runs models and creates subagents. Product Planner supplies the task graph,
 briefs and delegation instructions. A task's `model` takes precedence over
 `state.models.<agent>` and `state.models.default` as the requested model. These settings
@@ -243,7 +256,7 @@ These run as code in the CLI, so they cost no model tokens. The workflows call t
 | Exact acceptance criteria | Every rule, number, name and error code in your request is copied into a feature's acceptance criteria and gets its own FR ID | Rules you stated become things that get tested |
 | `pp check` | Checks task graph errors, unready features, MVP features without tasks, unmapped request statements and quality gates without an architecture decision or task, and warns on FR IDs no task references, unverified profiles, changes since approval, vague criteria (“fast”, “user-friendly”, “etc.”) and unfilled template sections | Catches plan gaps before any code is written, without spending tokens |
 | Request coverage | `pp request list` numbers each statement of request.md (R1, R2, …); each must map to a feature's `requests` or to `notFeatures` with a reason before `pp plan approve` succeeds | A requirement can't silently drop out between your message and the plan |
-| Quality profiles | `pp profile detect/set/verify/run`: platform and regulatory gates (for example PHPCS + PHPStan for WordPress, privacy webhooks for Shopify, export and deletion for GDPR/DPDP). Each needs an architecture decision and a task; automated gates run with each task's verification; legal items are listed for legal review, never passed by a test | Platform standards and privacy controls are designed in, built and checked, instead of remembered at the end |
+| Quality profiles | Folders installed as skills when selected, so they cost tokens only where they apply. Missing platforms or laws get a researched profile (`pp profile new`) saved to your library for reuse. `pp profile detect/set/verify/run`: platform and regulatory gates (for example PHPCS + PHPStan for WordPress, privacy webhooks for Shopify, export and deletion for GDPR/DPDP). Each needs an architecture decision and a task; automated gates run with each task's verification; legal items are listed for legal review, never passed by a test | Platform standards and privacy controls are designed in, built and checked, instead of remembered at the end |
 | Tests first | The developer writes at least one test per acceptance criterion, named after it, before implementing. QA records evidence for each criterion | Each criterion gets a test, so “done” is checked rather than claimed |
 | Definition of done | `pp task complete T# --file report.json` records evidence for every acceptance criterion, the full test suite result, each gate the task lists, and the checks its `risk` requires (an independent reviewer from medium; integration and a security/data review for high or a task QA returned three times), then marks it done in one step. With `options.requireVerification` (default for new projects) a task can't be done without it, or when the verified files changed afterwards | “Done” needs recorded evidence, and editing code after QA forces a recheck |
 | Increment review | When the last task of an epic is done, the agent runs the epic's integration checks and records them with `pp epic review E#`; with more than one epic the audit requires every review | Each increment is checked as a working slice, not just as separate tasks |
@@ -581,6 +594,12 @@ The phase, approvals, task history, agent/model records and activity log travel 
 `.product-planner/` is intended for git; heavy local vector/model artifacts are ignored by its own `.gitignore`. The agent commits per task when agreed during planning, while preserving unrelated user changes. It never pushes without prior authorization. The CLI does not push or commit automatically.
 
 `pp uninstall` removes the known adapter files and marked instruction blocks, while keeping project state/docs, the installed kit and dashboard. `pp browser remove` removes the Playwright MCP entry. Generated adapter files are managed by this package; do not store unrelated custom content in them.
+
+## Where product understanding and plans live
+
+Run `pp-plan` in your coding tool from the product repository. For an existing product, the workflow inventories repository files, reads its documents and inspects implementation and tests before asking about missing information. It saves source-backed discovery and baseline reports, then reconciles the concept, requirements, UX, architecture and roadmap in `.product-planner/`. Existing capabilities are documented without inventing completed task history. For a new product, the interview gathers missing requirements and saves the answers and plans in the same folder. Quick plans combine requirements, UX and architecture in `plan.md`.
+
+Run `pp dashboard --open` to view the saved result: **Documents** contains discovery, baseline and design documents; **Roadmap** contains release plans; **Tasks → By epic** contains imported epics and tasks. An empty Documents tab explains how to create the missing plans. Updating the CLI or running `init` refreshes instructions, but does not perform discovery or create a product plan: run `pp-plan` afterwards (or resume/replan an existing approved plan).
 
 ## Updating and uninstalling
 

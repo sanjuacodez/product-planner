@@ -1,0 +1,107 @@
+{
+  "id": "wordpress-plugin",
+  "kind": "platform",
+  "title": "WordPress plugin",
+  "appliesWhen": "A plugin for WordPress, especially one distributed on WordPress.org or sold.",
+  "ask": "Will this plugin be published on WordPress.org or sold?",
+  "detect": {
+    "contentPatterns": [
+      {
+        "glob": "*.php",
+        "pattern": "Plugin Name:"
+      },
+      {
+        "glob": "*/*.php",
+        "pattern": "Plugin Name:"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "title": "Plugin Handbook: Security",
+      "url": "https://developer.wordpress.org/plugins/security/"
+    },
+    {
+      "title": "WordPress Coding Standards for PHP_CodeSniffer",
+      "url": "https://github.com/WordPress/WordPress-Coding-Standards"
+    },
+    {
+      "title": "Plugin Check",
+      "url": "https://wordpress.org/plugins/plugin-check/"
+    },
+    {
+      "title": "PHPStan WordPress extension",
+      "url": "https://github.com/szepeviktor/phpstan-wordpress"
+    },
+    {
+      "title": "PHPCompatibilityWP",
+      "url": "https://github.com/PHPCompatibility/PHPCompatibilityWP"
+    }
+  ],
+  "lastVerified": null,
+  "gates": [
+    {
+      "id": "G-WP-PHPCS",
+      "type": "automated",
+      "title": "WordPress Coding Standards: no errors",
+      "setup": "composer require --dev wp-coding-standards/wpcs dealerdirect/phpcodesniffer-composer-installer (allow the installer plugin in composer.json)",
+      "command": "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/*,node_modules/* .",
+      "architecture": "Record the plugin prefix used for functions, classes, options, hooks and the text domain.",
+      "acceptance": [
+        "phpcs with the WordPress standard reports 0 errors"
+      ]
+    },
+    {
+      "id": "G-WP-PHPSTAN",
+      "type": "automated",
+      "title": "PHPStan level 5 or higher with WordPress stubs",
+      "setup": "composer require --dev phpstan/phpstan szepeviktor/phpstan-wordpress phpstan/extension-installer; add phpstan.neon with level and paths",
+      "command": "vendor/bin/phpstan analyse --no-progress",
+      "architecture": "Record the PHPStan level and any baseline for existing code.",
+      "acceptance": [
+        "phpstan analyse reports no errors at the configured level"
+      ]
+    },
+    {
+      "id": "G-WP-PHPCOMPAT",
+      "type": "automated",
+      "title": "Compatible with the supported PHP versions",
+      "setup": "composer require --dev phpcompatibility/phpcompatibility-wp",
+      "command": "vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 7.4- --extensions=php --ignore=vendor/* .",
+      "architecture": "Record the minimum PHP and WordPress versions (plugin header Requires PHP / Requires at least).",
+      "acceptance": [
+        "PHPCompatibilityWP reports no errors for the minimum PHP version"
+      ]
+    },
+    {
+      "id": "G-WP-SECURITY",
+      "type": "manual",
+      "title": "Input sanitised, output escaped, nonces and capability checks",
+      "architecture": "Record where requests enter (admin forms, AJAX, REST) and the sanitisation, nonce/permission_callback and capability used for each; database access uses $wpdb->prepare or WordPress APIs.",
+      "acceptance": [
+        "Every $_GET/$_POST/$_REQUEST read is sanitised",
+        "Every output is escaped with the matching esc_* function",
+        "Every state-changing request verifies a nonce or REST permission_callback and a capability"
+      ]
+    },
+    {
+      "id": "G-WP-LIFECYCLE",
+      "type": "manual",
+      "title": "Internationalised strings and clean uninstall",
+      "architecture": "Record the text domain, and which options, tables and transients uninstall removes.",
+      "acceptance": [
+        "User-facing strings use the plugin text domain",
+        "uninstall.php (or an uninstall hook) removes the plugin's options and data"
+      ]
+    },
+    {
+      "id": "G-WP-PLUGIN-CHECK",
+      "type": "manual",
+      "title": "Plugin Check passes before release",
+      "architecture": "Record how Plugin Check runs (a local WordPress with the Plugin Check plugin, or wp plugin check via WP-CLI).",
+      "acceptance": [
+        "Plugin Check reports no errors for the release build"
+      ]
+    }
+  ]
+}

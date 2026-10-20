@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "The inventory core is built: `inventory.js` exports `createInventory()`, it has no runtime dependencies, and all 17 tests pass.\n\n**What's there**\n- **`inventory.js`**: each call to `createInventory()` returns a separate inventory with `add`, `reserve` and `stock`. Inputs are checked before any change is made, so a failed call leaves stock unchanged and never creates the SKU. Errors are normal `Error` objects with a `code` of `INVALID_INPUT` or `INSUFFICIENT_STOCK`.\n- **`README.md`**: documents the public API, return values, input rules, error codes and how to run the tests.\n- **`package.json`**: marks the project as an ES module and sets `npm test` to Node's built-in test runner. Nothing to install.\n- **Tests**: `inventory.test.js` has one test per rule, using the exact values and error codes you gave. `readme.test.js` checks that the documentation covers the API.\n\n**Choices I made where you didn't specify**\n- `stock(sku)` with an invalid SKU also throws `INVALID_INPUT`.\n- If a call is both invalid and short on stock (e.g. `reserve('UNKNOWN', 0)`), `INVALID_INPUT` wins.\n- Quantities can't go above `Number.MAX_SAFE_INTEGER`. An `add` that would pass that limit throws `INVALID_INPUT` and leaves stock unchanged, which keeps the arithmetic exact.\n- SKUs match exactly, including case and spaces. A SKU made only of spaces, like `\"  \"`, is accepted because it is a nonempty string.\n- Reserving everything leaves the SKU at 0 rather than deleting it.\n- The returned inventory object is frozen so its methods can't be replaced.\n\n**How it was checked**\nI wrote the tests first and saw them fail before writing the code. The planning steps are recorded under `.product-planner/`: two tasks, each with a verification report, and a final check against your request that passed every statement.\n\n**Limitations**\nStock exists only in memory, so it's lost when the process ends, and there's no list of all SKUs. Both match what you asked for.\n\nI haven't committed anything.",
+    "cost": 0.7821708,
+    "ms": 134900,
+    "turns": 31,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 44,
+      "cacheWrite": 40002,
+      "cacheRead": 794094,
+      "output": 15158
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "`release(sku, quantity)` is in, and all 26 tests pass. The 14 original tests are unchanged; I only added new ones after them.\n\n**What changed**\n- **`inventory.js`**: each inventory now also keeps a running count of reserved units per SKU. `reserve` adds to that count. `release` takes from it, puts the units back into stock and returns the new stock level.\n  - Releasing more than is reserved throws `INVALID_RELEASE` and leaves both stock and the reserved count unchanged.\n  - Bad input to `release` throws `INVALID_INPUT` under the same rules as the other methods.\n  - `add`, `reserve` and `stock` work as before, with the same error codes. Each inventory is still independent, and a failed call still changes nothing.\n- **Tests**: 9 new tests in `inventory.test.js` and 2 new README checks in `readme.test.js`.\n- **`README.md`**: documents `release`, `reserved`, the new `INVALID_RELEASE` error, and that a failed call leaves stock and reservations unchanged. I ran the updated example and it prints the values the README shows.\n\n**Choices I made where you didn't specify** (also written down in `.product-planner/decisions.md`)\n- **New `reserved(sku)` method:** returns how many units of a SKU are reserved and not yet released, or 0 for an unknown SKU, so callers can see what can be released. This is the one method you didn't ask for.\n- **Release only returns reserved units:** releasing a SKU with nothing reserved throws `INVALID_RELEASE`, even if it has stock or doesn't exist.\n- **Error priority:** if a call is both invalid and an over-release, `INVALID_INPUT` wins, the same way it already wins over `INSUFFICIENT_STOCK`.\n- **Size limit:** a `release`, or a `reserve` that would push the reserved count past `Number.MAX_SAFE_INTEGER`, throws `INVALID_INPUT` and changes nothing, the same as `add`. In practice this limit is never reached.\n\n**How it was checked**\nI added feature F3 and two follow-up tasks: T3 for the code and tests, T4 for the docs. The earlier tasks T1 and T2 stayed done. For both new tasks I wrote the tests first and saw them fail before making the changes. I then re-ran the check against your request, now including the change request, and every item passed.\n\nNothing is committed.",
+    "cost": 1.5336919999999996,
+    "ms": 157475,
+    "turns": 30,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 32,
+      "cacheWrite": 27122,
+      "cacheRead": 1047486,
+      "output": 16246
+    }
+  }
+]

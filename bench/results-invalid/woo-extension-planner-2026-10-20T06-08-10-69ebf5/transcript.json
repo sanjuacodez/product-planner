@@ -1,0 +1,16 @@
+[
+  {
+    "message": "I want a WooCommerce extension that sets a minimum order amount per customer role. We will sell it on the WooCommerce Marketplace, so it must meet the marketplace's quality, security and coding expect",
+    "cost": 5.6778276,
+    "ms": 1096903,
+    "turns": 81,
+    "error": true,
+    "subtype": "error_max_turns",
+    "tokens": {
+      "input": 160,
+      "cacheWrite": 174913,
+      "cacheRead": 8424526,
+      "output": 101851
+    }
+  }
+]
