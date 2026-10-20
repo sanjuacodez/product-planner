@@ -66,6 +66,60 @@ two-paragraph request, and 18 KB of instructions read at the start.
 6. **Accept.** The final audit checks the request and the features against evidence.
    Gaps become tasks. The product is marked done only when the audit passes.
 
+### Agent team and orchestration (updated 2026-10-20)
+
+Use the **specialized collaborative team** as the default for substantial work. One
+coordinator maintains the task graph, assigns bounded work, validates returned evidence
+and integrates changes. The coordinator is a responsibility, not an additional expensive
+model that must participate in every turn. Small, precise tasks keep the direct path;
+four roles do not require four simultaneous agents.
+
+| Role | Claude preference | Codex preference | Responsibility and access |
+|---|---|---|---|
+| Architect | Opus | GPT-6 Astra, max reasoning | Requirements, system dependencies, technical specifications and cross-repository planning. Read-only codebase access; returns the spec for the coordinator to persist. |
+| Builder | Sonnet | GPT-6.1 Sol, medium reasoning; high for complex implementation | Default implementation role; edits only assigned paths against the accepted spec and acceptance criteria. |
+| Validator / QA | Haiku | GPT-6 Luna, low reasoning for mechanical checks | Runs tests, parses CI logs, scans for secrets and security findings, and returns evidence and actionable defects to the Builder. Escalates ambiguous failures and security judgments to a stronger reviewer. |
+| Scribe | Haiku or Sonnet | GPT-6 Luna; GPT-6.1 Sol for complex documentation | README and user documentation, change summaries and PR descriptions, based on verified behavior; writes only assigned documentation paths. |
+
+These are the user's requested role defaults. Explicit task choices take precedence;
+the router handles availability, risk escalation and measured outcomes. Record requested
+and actual model and reasoning separately, including unsupported settings and fallbacks.
+Keep existing analyst, PM, UX and planner personas for discovery; this table describes
+execution responsibilities rather than removing those planning specialties.
+
+Keep the **hierarchical orchestrator-worker pattern** as an alternative for complex state
+trees and changing dependency graphs. A Claude Opus/Fable lead decomposes and validates
+atomic Sonnet/Haiku work; a Codex lead may use Astra for the difficult planning decisions
+and Sol/Luna for bounded execution. Both patterns use the same traceability, ownership
+and acceptance gates. Avoid recursive delegation and repeated full-history handoffs.
+
+Implementation guardrails to deliver in W11:
+
+- **Structured contracts:** versioned strict JSON schemas for kit-owned API tool inputs,
+  delegation briefs and worker results. Reject malformed, unknown or missing fields before
+  tool execution or state mutation. Use provider strict-schema controls where supported
+  and deterministic local validation at every kit-owned boundary; host tools retain their
+  supplied schemas. Include task ID, base revision, owned paths, acceptance criteria,
+  requested model/effort, changed paths, commands/results, blockers and actual model/effort.
+- **Worker isolation:** a separate Git worktree or sandbox for every concurrent writer,
+  from a recorded base revision, with isolated generated outputs and test artifacts.
+  Worktrees separate files; sandbox permissions enforce access. The coordinator alone
+  writes shared planner state and integrates reviewed changes. Recheck contracts and the
+  combined result after integration; when isolation is unavailable, serialize writers.
+- **Token budgets and caching:** stable system instructions, tool schemas and relevant
+  repository context precede the variable task brief. Reuse provider-supported caches
+  within their retention limits; do not assume a cache persists across sessions or models.
+  Set task and run budgets, record cached/uncached input, output, cost and elapsed time,
+  and use fresh, focused worker contexts. Caching reduces repeated computation and cost;
+  it does not remove context tokens or coordination overhead. The proposed up-to-90%
+  saving and Sol's one-fifth cost are hypotheses to validate against current prices and
+  measured workload, not guaranteed end-to-end savings or quality equivalence.
+
+Host controls must be verified before applying the preset; see the official
+[Codex subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+Cache behavior follows the provider's
+[prompt-caching guidance](https://developers.openai.com/api/docs/guides/prompt-caching).
+
 ## 4. Workstreams
 
 **W1. Remove overhead** (from the session logs).
@@ -209,6 +263,29 @@ every provider a tool offers.
 - *Proof:* a `router` benchmark arm against the single-model planner and the fixed `tiered`
   preset, on quality and cost.
 
+**W11. Specialized teams and execution guardrails — planned.**
+
+1. Map Architect, Builder, Validator and Scribe responsibilities onto the existing personas;
+   add the Claude and Codex role presets above, including requested reasoning effort and
+   explicit host-capability fallback. Preserve user overrides and keep the generic router.
+2. Define and validate versioned JSON contracts before connecting a worker launcher.
+   Acceptance: malformed payloads cannot launch tools or alter planner state; schema errors
+   identify the field and can be corrected without a partial task transition.
+3. Add isolated worker lifecycle support: create from a known base, capture returned diff
+   and evidence, integrate through the coordinator, and retain failed work for recovery.
+   Acceptance: concurrent workers cannot overwrite each other's files or planner state;
+   integration conflicts are detected and resolved before dependent tasks start. The
+   Architect cannot modify source; QA checks may write artifacts in its isolated workspace.
+4. Add budgets, cache-aware brief assembly and model/effort provenance. Acceptance: reports
+   distinguish requested from observed execution and cached from uncached usage; unsupported
+   telemetry is unknown, and budget exhaustion preserves resumable work without marking it
+   complete. Coordinator cost is included in the run total.
+5. Compare single-model execution, fixed specialized teams, hierarchical workers and the
+   adaptive router on the same requests, tools and quality gates. Measure total cost,
+   latency, first-pass acceptance, regressions and coordination overhead; also compare
+   cache-enabled runs against an equivalent uncached baseline where the host permits it.
+   Adopt defaults from repeated evidence, retaining the direct path for small tasks.
+
 **W7. Proof: benchmark v2.**
 - *Simulated product owner:* the request is incomplete, and a hidden fact sheet holds the
   owner's answers. When the agent asks, a small model answers strictly from the fact
@@ -258,7 +335,9 @@ every provider a tool offers.
    happens before the feature work, so every later change is measured on scenarios that
    can show a difference.
 3. **M3:** W3, W4 and W8, then a re-measure on the screened scenarios and the platform scenario.
-4. **M4:** W5 and W6.
+4. **M4:** W5 and W6, plus W11 in dependency order: role presets and contracts, isolated
+   execution, then budgets/cache telemetry. W10 supplies available models and routing;
+   validate host integration with local fixtures before any paid model runs.
 5. **M5:** Full comparison: 4 arms × screened scenarios × 3 runs. The maximum spend is
    confirmed with `--dry-run` and approved before it starts.
 6. **M6: real-project trial.** The developer builds a new product idea and improves an
@@ -280,6 +359,7 @@ every provider a tool offers.
 | W7 Benchmark v2 | Built and screened | Scenarios `product-owner` (Haiku answers from facts.md, topic-aware), `long-spec`, `change-sequence`, `existing-codebase` (seeded repository), `woo-extension` (PHPCS, PHP compatibility, PHPStan, security scan); `bmad` arm (BMAD-METHOD 6.12.4); grouped hidden-test scores, quality checks (npm or composer test suites), optional blind review; pipeline tested with a fake CLI before paid runs. Screening (plain, Opus 5.5, one run each): long-spec 40/40, change-sequence 20/20, existing-codebase 18/18, product-owner 16/17, woo-extension 14/14 with every platform check passing. Two harness issues found and fixed during screening (a hidden test that let one missed fact fail six tests; PHPStan not seeing plugin constants); affected runs were rescored with the reason recorded. |
 | W8 Quality profiles | Done | Catalog of 12 profiles (web baseline, Node, WordPress, WooCommerce, Shopify, GDPR, UK GDPR, CCPA/CPRA, DPDP, PCI DSS, HIPAA, COPPA) with detection, interview questions, sources and gates. `profile detect/set/verify/gate/run`; `check` requires an architecture decision and a task per non-legal gate; verification requires gate evidence; the audit has gate rows and a legal-review list. Catalog entries are not yet verified by the maintainers (`lastVerified` null): planning must verify them. |
 | W9 Dashboard | Done | "Developer · Sonnet 5.5" labels with the model id on hover; transcript-model mismatch flag; estimated cost by product, phase, epic, task, role and model from a dated, editable price table (verified 2026-10-06); dashboard rebuilt on every usage hook event; quality profile section. |
+| W11 Specialized teams and guardrails | Planned | Role/model preferences and acceptance criteria are recorded above. Existing task ownership, batching and briefs are foundations; strict worker contracts, enforced per-worker isolation, reasoning provenance and budget enforcement still need implementation. No worker launcher or savings claim is implied by this plan update. |
 
 ### Findings and next measurements (2026-10-20)
 

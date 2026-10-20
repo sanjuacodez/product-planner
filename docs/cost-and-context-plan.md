@@ -86,3 +86,24 @@ should help quality.
 
 - Ambiguous-request and larger benchmark scenarios; `booking-lib` repeats on the current kit.
 - Host integration: no automatic worker launcher, per-task model switching or locking.
+
+## Specialized team follow-up (2026-10-20)
+
+The [product development plan](product-development-plan.md#agent-team-and-orchestration-updated-2026-10-20)
+now defines the requested collaborative team and the hierarchical alternative. Codex defaults:
+Architect = GPT-6 Astra/max with read-only codebase access; Builder = GPT-6.1 Sol/medium
+or high; Validator = GPT-6 Luna/low for mechanical checks; Scribe = GPT-6 Luna or
+GPT-6.1 Sol. These are planned preferences, with actual execution recorded separately.
+
+W11 adds strict JSON contracts, a separate worktree or sandbox for each concurrent writer,
+coordinator-only state updates and integration, task/run budgets, and cache-aware focused
+briefs. Implement contracts before the launcher and isolation before parallel writes;
+measure model/effort provenance and cached versus uncached usage before benchmarking.
+Keep the direct path for small work and escalate difficult QA judgments by risk.
+
+Stable prefixes and provider-supported caching should lower repeated-input cost. They do
+not reduce the number of context tokens or guarantee persistent reuse. The suggested
+up-to-90% saving and one-fifth model cost remain measurement hypotheses; report total
+run cost including coordination, quality, latency and cache usage across repeated runs.
+The earlier fixed-team regression makes this comparison necessary before adopting a
+team preset as a cost optimization. This update changes the plan, not runtime behavior.
