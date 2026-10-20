@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "note": "Kit defaults for routing. Tiers and strengths are starting points that the project's own evidence adjusts (product-planner models stats). Prices are API list prices in USD per million tokens with the date and source they were checked; null means not verified, never a guess. Subscriptions are billed differently.",
+  "tiers": {
+    "frontier": "Hardest reasoning: architecture, ambiguous requirements, security and data integrity, high-risk changes, recovery after failed attempts.",
+    "strong": "Everyday implementation and review of well-specified tasks.",
+    "fast": "Mechanical, well-bounded work: running checks and filling evidence, documentation, small low-risk edits."
+  },
+  "models": [
+    { "id": "claude-fable-5-1", "provider": "anthropic", "label": "Fable 5.1", "tier": "frontier", "strengths": ["reasoning", "coding", "review", "long-context"], "context": 1000000,
+      "price": { "input": 10, "output": 50, "cacheRead": 0.25, "cacheWrite5m": 12.5, "cacheWrite1h": 20 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "ids": { "claude-code": "claude-fable-5-1" } },
+    { "id": "claude-opus-5-5", "provider": "anthropic", "label": "Opus 5.5", "tier": "frontier", "strengths": ["reasoning", "coding", "review", "long-context"], "context": 1000000,
+      "price": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite5m": 5, "cacheWrite1h": 8 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "ids": { "claude-code": "opus" } },
+    { "id": "claude-sonnet-5-5", "provider": "anthropic", "label": "Sonnet 5.5", "tier": "strong", "strengths": ["coding", "review", "ui", "long-context"], "context": 1000000,
+      "price": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite5m": 2.5, "cacheWrite1h": 4 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "ids": { "claude-code": "sonnet" } },
+    { "id": "claude-haiku-5-5", "provider": "anthropic", "label": "Haiku 5.5", "tier": "fast", "strengths": ["coding", "checks"], "context": 1000000,
+      "price": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite5m": 0.125, "cacheWrite1h": 0.2 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing", "priceNote": "Prompts over 100K tokens are billed at $0.50 / $2.50.",
+      "ids": { "claude-code": "haiku" } },
+    { "id": "claude-opus-5", "provider": "anthropic", "label": "Opus 5", "tier": "frontier", "strengths": ["reasoning", "coding", "review"], "context": 1000000, "legacy": true,
+      "price": { "input": 5, "output": 25, "cacheRead": 0.5, "cacheWrite5m": 6.25, "cacheWrite1h": 10 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing" },
+    { "id": "claude-sonnet-5", "provider": "anthropic", "label": "Sonnet 5", "tier": "strong", "strengths": ["coding", "review"], "context": 1000000, "legacy": true,
+      "price": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite5m": 2.5, "cacheWrite1h": 4 }, "priceVerified": "2026-10-06", "source": "https://platform.claude.com/docs/en/about-claude/pricing" }
+  ]
+}

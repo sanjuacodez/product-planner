@@ -2,6 +2,8 @@ import path from 'node:path';
 import { loadState, saveState, stateDir, appendLog, PLANNING_STEPS } from './state.js';
 import { readText, readJson, nowIso } from './util/fs.js';
 import { hash } from './evidence.js';
+import { recommend, applyRecommendations } from './router.js';
+import { syncClaudeAgents } from './init/adapters.js';
 
 const DEPTHS = {
   direct: { documents: ['request.md', 'features.json', 'tasks.json'], roles: ['developer (plans, implements and tests in one pass)', 'qa by risk'] },
@@ -41,11 +43,17 @@ export function approvePlan(cwd, { reason, check }) {
   const state = loadState(cwd);
   for (const step of PLANNING_STEPS) state.planning[step] = state.planning[step] === 'in_progress' || ['tasks', 'handoff'].includes(step) ? 'done' : state.planning[step] === 'pending' ? 'skipped' : state.planning[step];
   state.lock = { at: nowIso(), reason: reason.trim(), ...lockHashes(cwd) };
+  // Recommended models are applied at approval (the user saw them in the final review), unless routing is off.
+  let routing = null;
+  if (state.options?.modelRouting !== 'off') {
+    const rec = recommend(cwd);
+    if (rec.tasks.some((r) => r.model)) { routing = { ...applyRecommendations(cwd, rec), tasks: rec.tasks }; state.models = { ...(state.models || {}), ...routing.roles }; syncClaudeAgents(cwd, state.models); }
+  }
   const from = state.phase;
   state.phase = 'build';
   saveState(cwd, state);
   appendLog(cwd, { type: 'phase', from, to: 'build', message: `plan approved: ${reason.trim()}` });
-  return { lock: state.lock, warnings: result.warnings };
+  return { lock: state.lock, warnings: result.warnings, routing };
 }
 export function lockHashes(cwd) {
   const dir = stateDir(cwd);

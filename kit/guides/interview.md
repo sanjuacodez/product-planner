@@ -56,7 +56,7 @@ Propose a track from the idea and repository, and confirm it with the first roun
 
 **Further rounds.** If the gate still fails after round 3, ask another round about the remaining gaps only, with the same format. Say how many open items remain ("3 open questions left on F2 and F4"), so the user can answer or say "use your recommendations".
 
-**Round 3: constraints, compliance, principles and setup** (standard and existing tracks; in quick, show defaults to confirm in one line). Always include the quality-profile questions that apply (`product-planner profile catalog` lists them, `profile detect` shows repository signals): target platform or marketplace, where the users are, what personal data is handled, and how payments work. Their answers select the quality profile (`profile set … --because "…"`), which adds platform and regulatory gates to the architecture and tasks. Deadline, budget and paid-service limits, stack/hosting preferences, design style and accessibility, 3–5 project principles the plan must respect (for example "no new runtime dependencies", "tests first for business rules", "accessible to WCAG AA"; propose defaults), then the setup options in one batch with defaults: research and web access, browser access (`guides/browser-policy.md`), project memory, models per agent, commit-per-task and push/deploy permission, dashboard sections and auto-open.
+**Round 3: constraints, compliance, principles and setup** (standard and existing tracks; in quick, show defaults to confirm in one line). Always include the quality-profile questions that apply (`product-planner profile catalog` lists them, `profile detect` shows repository signals): target platform or marketplace, where the users are, what personal data is handled, and how payments work. Their answers select the quality profile (`profile set … --because "…"`), which adds platform and regulatory gates to the architecture and tasks. Deadline, budget and paid-service limits, stack/hosting preferences, design style and accessibility, 3–5 project principles the plan must respect (for example "no new runtime dependencies", "tests first for business rules", "accessible to WCAG AA"; propose defaults), then the setup options in one batch with defaults: research and web access, browser access (`guides/browser-policy.md`), project memory, which AI tools, providers and plans are available (not which model to use for each role: the kit recommends that), commit-per-task and push/deploy permission, dashboard sections and auto-open.
 
 ## Step 3: stop when the scope is ready
 
@@ -81,7 +81,8 @@ Show the one-page concept brief from concept.md (problem, users, MVP features, n
 | Platform, markets, personal data, payments | `product-planner profile set <ids> --because "…"` → profile.json |
 | Problem, users, value, non-goals, success metric | concept.md (concept brief template) |
 | Track, research, browser, memory, git and dashboard options | `product-planner state set options.<key> <value>` |
-| Planned models per agent | `product-planner state set models.<agent> <model-id>` |
+| Available models (from the user's tools, keys and plans) | `product-planner models available <ids…>` (unknown models: `--provider … --tier …`) |
+| Model per task | Recommended by `product-planner models recommend`, shown at the final review; the user's edits win (`task update T# --json '{"model":"…"}'`) |
 | Push/deploy scope, stack preferences, constraints, assumptions | decisions.md |
 
 features.json shape (see `templates/features.json`):

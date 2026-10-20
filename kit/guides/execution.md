@@ -14,12 +14,39 @@ Record the actual worker model with `--model` on each transition; when the host 
 identify it, omit the value and note that it is unknown. Never substitute the requested
 model for an unknown actual model.
 
-In Claude Code the planned model of a role is written into its agent file (`.claude/agents/pp-<role>.md`,
-`model:`), which Claude Code honours for that sub-agent: `product-planner state set models.developer sonnet`
-or the `product-planner models tiered` preset (developer on Sonnet, QA on Haiku, every build task delegated
-to sub-agents with fresh contexts). Cost falls only when delegated work runs on a cheaper model and with a
-smaller context than the coordinator's; sub-agents on the same model mainly add re-reading. Measure with
-`product-planner usage` and the benchmark's `tiered` arm before relying on a saving.
+### Recommended models (the router)
+
+`product-planner models recommend` proposes a model for every open task from the models this
+project can use (`models available`, or inferred from the installed tools):
+
+- A minimum tier from the task: architecture, high risk, security or privacy gates and tasks QA
+  returned need the frontier tier; implementation needs the strong tier; mechanical QA,
+  documentation and small low-risk changes may use the fast tier.
+- The cheapest available model that meets it, priced at this project's measured token mix
+  (agent sessions are mostly cache reads, so cache prices matter more than output prices).
+- Equally suitable tasks are spread across providers when the pool has several, and an
+  independent review goes to a different provider; with one provider it runs in a fresh context.
+- Evidence: a model that keeps failing a role in this project (three or more tasks, under 60%
+  first pass) is skipped for that role (`models stats`).
+
+`models apply` writes each task's requested model (`model`) and reviewer (`reviewModel`) and sets
+the role defaults; `models auto` also turns on delegated build tasks. The user's own choices win.
+
+### Applying a recommendation in each tool
+
+- Claude Code: role defaults are written into `.claude/agents/pp-<role>.md` (`model:`), which
+  Claude Code honours for that sub-agent; only Claude models are written there. When the agent
+  tool accepts a model per call, pass the task's `model` (and `reviewModel` for its review).
+- Tools whose agents read a model from project files: the kit writes it where the format is
+  verified (see the adapters); otherwise the coordinator follows the brief.
+- Tools where models are chosen only in their UI: the brief names the recommended model; the user
+  or coordinator selects it, and the actual model is recorded with `--model`.
+- Several providers in one tool: give parallel batch slots and reviews the providers the router
+  chose, so work is split across them rather than queued on one.
+
+Cost falls only when delegated work runs on a cheaper model and with a smaller context than the
+coordinator's; sub-agents on the same model mainly add re-reading. Measure with `product-planner
+usage`, `models stats` and the benchmark before relying on a saving.
 
 Prefer a lower-cost available model for bounded, low-risk work with clear acceptance;
 use a stronger available model for architecture, ambiguous requirements, security-sensitive

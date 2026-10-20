@@ -20,6 +20,7 @@ export function defaultState() {
       track: 'standard',
       requireVerification: true,
       requestCoverage: true,
+      modelRouting: 'recommend',
       maxConcurrentTasks: 2,
       research: true,
       marketing: false,

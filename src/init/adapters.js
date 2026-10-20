@@ -103,9 +103,19 @@ export function agentModel(a, models = {}) {
   const role = a.meta.name.replace(/^pp-/, '');
   return models[role] || a.meta.model || null;
 }
+/** Claude Code runs only Claude models: catalog ids map to its aliases; other providers' models are left to their tools. */
+function claudeModel(value) {
+  if (!value || value === 'inherit') return value || null;
+  try {
+    const catalog = JSON.parse(fs.readFileSync(path.join(KIT_SRC, 'models', 'catalog.json'), 'utf8'));
+    const m = catalog.models.find((x) => x.id === value);
+    if (m) return m.provider === 'anthropic' ? m.ids?.['claude-code'] || m.id : null;
+  } catch { /* no catalog: write the value as given */ }
+  return value;
+}
 function writeClaudeAgent(cwd, a, models) {
   const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
-  const model = agentModel(a, models);
+  const model = claudeModel(agentModel(a, models));
   writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\n${toolsList(a).length ? `tools: ${toolsList(a).join(', ')}\n` : ''}${model ? `model: ${model}\n` : ''}---\n\n${a.body}\n`);
   return p;
 }

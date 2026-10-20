@@ -143,7 +143,7 @@ test('planned role models are written into Claude Code agent files; the tiered p
   assert.match(agent('developer'), /^model: sonnet$/m); assert.match(agent('qa'), /^model: haiku$/m); assert.doesNotMatch(agent('architect'), /^model:/m);
   assert.equal(loadState(cwd).options.delegateTasks, true);
   ok(cwd, 'state', 'set', 'models.architect', 'claude-opus-5-5');
-  assert.match(agent('architect'), /^model: claude-opus-5-5$/m);
+  assert.match(agent('architect'), /^model: opus$/m); // catalog id → Claude Code alias
   ok(cwd, 'auto', 'off'); assert.match(agent('qa'), /^model: haiku$/m); // reinstalling keeps planned models
   ok(cwd, 'models', 'inherit'); assert.doesNotMatch(agent('developer'), /^model:/m);
   assert.match(ok(cwd, 'models', 'show'), /none \(every role inherits/);
