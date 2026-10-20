@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I run a café and want the core of a loyalty-points ledger for it. Make it a plain JavaScript ES module, no runtime dependencies, no UI or server. Put it in loyalty.js exporting createLedger(). Each ca",
+    "result": "The repo is empty apart from the setup commit, and Node 22 is available. You asked me to check your shop's rules with you before I decide them, so here are my questions. Each one has a suggested default in brackets; reply \"default\" to any you don't mind about.\n\n**Earning points**\n1. What is the earn rate? [1 point per ₹100 spent]\n2. How are fractional points rounded? For example, how many points does a ₹250 purchase earn? [round down, so 2]\n3. Does the tier change the earn rate, for example Gold earns 1.5×? If so, give the multiplier for each tier. [no multiplier]\n4. Is there a minimum purchase amount, or a cap on points per purchase? [neither]\n\n**Redeeming points**\n5. Is there a minimum redemption, or must points be redeemed in fixed blocks such as multiples of 50? [no minimum, any positive integer]\n6. Does redeeming points affect the customer's tier? [no]\n\n**Refunds**\n7. If a customer has already spent the points from a purchase and then gets a refund, what should happen? Options:\n   - (a) the balance goes negative\n   - (b) the balance is capped at 0 and the shortfall is written off\n   - (c) the refund is refused with an error\n\n   [(b)]\n8. Can a purchase be refunded more than once, or only partly? What should a refund of an unknown purchaseId do? [full refunds only; refunding an unknown or already-refunded purchase throws, with codes `UNKNOWN_PURCHASE` and `ALREADY_REFUNDED`]\n9. Should a refunded purchase still count toward the customer's tier? [no, it's removed from tier progress]\n\n**Tiers**\n10. What are the tier names and thresholds? [bronze from 0, silver from ₹5,000, gold from ₹20,000]\n11. Is the tier based on total rupees spent, lifetime points earned, or current balance? [total rupees spent, after refunds]\n12. Can a customer lose a tier, for example after a refund? Is there any time window, such as \"spend in the last 12 months\"? [the tier is always recalculated from current totals, so it can drop after a refund; no time window]\n13. When an upgrade happens, does the purchase that crosses the threshold earn at the old rate or the new one? This only matters if you said yes to question 3. [old rate]\n\nOnce you reply, I'll write `loyalty.js`, tests using `node:test` with no dependencies, and a README that documents the API.",
+    "cost": 0.11910820000000001,
+    "ms": 15561,
+    "turns": 2,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 4,
+      "cacheWrite": 11230,
+      "cacheRead": 34461,
+      "output": 1118
+    }
+  },
+  {
+    "message": "1. Customers earn 1 base point per 10 rupees spent. Base points are rounded down per purchase: base points = floor(amount / 10), so a 99 rupee purchase earns 9 base points and a 5 rupee purchase earns",
+    "result": "I've built the loyalty ledger with your rules for earning, redeeming, refunds and tiers. All 32 tests pass, and I ran the example in the README and got the values it shows. Nothing is committed yet.\n\n**Files:**\n- `loyalty.js`: exports `createLedger()`. Each call gives a separate in-memory ledger, with no runtime dependencies.\n- `loyalty.test.js`: tests using Node's built-in test runner. Run them with `npm test`.\n- `package.json`: marks the project as an ES module and sets up the test command.\n- `README.md`: the public API, every rule with worked examples, and a table of error codes.\n\n**Decisions I made where you said \"use your recommendation\":**\n- **Minimum purchase or points cap (Q4):** there is neither. A ₹5 purchase is recorded and earns 0 base points.\n- **Partial refunds (Q8):** not supported. `refund(purchaseId)` always reverses the whole purchase.\n- **Time window (Q12):** none. Lifetime points never expire.\n\n**Smaller choices you may want to check:**\n- **₹0-point first purchase:** a first purchase still gets the 20-point welcome bonus even if it earns 0 base points (e.g. ₹5). I read \"first purchase earns 20 extra points\" literally.\n- **Customer records:** a failed `earn` or `redeem` doesn't create a customer record. For example, a failed redeem for a new customer doesn't use up their welcome bonus.\n- **Paise:** fractional rupee amounts like ₹19.99 are allowed and round down as usual.\n- **Order of error checks:** invalid input is checked before anything else. After that, `earn` checks for a duplicate purchase; `redeem` checks the multiple-of-100 rule, then the balance; and `refund` checks for an unknown purchase, then one already refunded.\n- **Invalid IDs everywhere:** `balance` and `tier` also throw `INVALID_INPUT` for an empty or non-string `customerId`.",
+    "cost": 0.5093626,
+    "ms": 91752,
+    "turns": 7,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 16498,
+      "cacheRead": 161652,
+      "output": 11295
+    }
+  }
+]

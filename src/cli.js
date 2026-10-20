@@ -302,6 +302,7 @@ function cmdTask(cwd, rest) {
         recordVerification(cwd, getTask(loadTasks(cwd), id), report);
       }
       if (sub === 'start') for (const w of readinessWarnings(getTask(t, id), loadFeatures(cwd))) console.log(`definition of ready: ${w}`);
+      if (sub === 'start' && loadState(cwd).options?.delegateTasks) { const tk = getTask(t, id); console.log(tk.risk === 'high' ? `delegated mode: ${id} is high risk, so implement and verify it in this session on the strongest model.` : `delegated mode: do not implement ${id} here. Give the pp-developer sub-agent the brief (product-planner task context ${id}), owned paths and acceptance; then the pp-qa sub-agent the brief, changed paths and the report template; review their evidence and run task complete.`); }
       const task = transition(cwd, id, map[sub], { note: values.note, reason: values.reason, agent: values.agent, model: values.model });
       console.log(`${task.id} → ${task.status}`);
       if ((task.qaReturns || 0) >= LOOP_LIMIT && task.status === 'in_progress') { console.log(`warning: QA has returned ${task.id} ${task.qaReturns} times. Possible loop: change approach, or block it with a precise reason and continue with other work.`); appendLog(cwd, { type: 'note', task: task.id, message: `possible loop: QA returned ${task.id} ${task.qaReturns} times` }); }

@@ -148,3 +148,11 @@ test('planned role models are written into Claude Code agent files; the tiered p
   ok(cwd, 'models', 'inherit'); assert.doesNotMatch(agent('developer'), /^model:/m);
   assert.match(ok(cwd, 'models', 'show'), /none \(every role inherits/);
 });
+
+test('delegated mode: task start tells the coordinator to hand the task to sub-agents, except high-risk tasks', async (t) => {
+  const cwd = await project(t, 'claude'); write(cwd, '.product-planner/request.md', REQUEST); write(cwd, 'plan.json', PLAN);
+  ok(cwd, 'plan', 'import', '--file', 'plan.json'); ok(cwd, 'models', 'tiered');
+  assert.match(ok(cwd, 'task', 'start', 'T1'), /delegated mode: do not implement T1 here/);
+  ok(cwd, 'models', 'inherit'); ok(cwd, 'task', 'reopen', 'T1');
+  assert.doesNotMatch(ok(cwd, 'task', 'start', 'T1'), /delegated mode/);
+});

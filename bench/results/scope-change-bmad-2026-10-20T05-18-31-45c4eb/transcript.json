@@ -1,0 +1,32 @@
+[
+  {
+    "message": "/bmad-build I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runti",
+    "result": "I built the inventory core in `inventory.js`: `createInventory()` returns separate in-memory inventories with `add`, `reserve` and `stock`, following all the rules you set. All 23 tests pass, and the public API is documented in `README.md`.\n\n**Decisions I made on details you left open:**\n- **SKUs** are case-sensitive and used exactly as given (no trimming). A whitespace-only SKU like `' '` counts as nonempty.\n- **Quantities** above `Number.MAX_SAFE_INTEGER` (the largest integer JavaScript stores exactly) are rejected with `INVALID_INPUT`. So is an `add` whose total would go past it, so stock values are always exact.\n- **`stock`** also rejects an invalid SKU with `INVALID_INPUT`.\n- **Order of checks:** an invalid SKU is reported before an invalid quantity, and both before a stock shortage.\n- **`reserve`** permanently subtracts stock. There is no release or cancel, so returning stock means calling `add`. Reserving exactly what's available is allowed and leaves 0.\n- **Tests** use Node's built-in test runner (`npm test`, Node 20 or later), so there are no dev dependencies either.\n\n**Review:** one independent reviewer raised nine findings, all minor. I fixed seven in documentation and tests. I declined two:\n- Adding the rejected value to error messages, which would mean new public API.\n- A note about SKUs reserved down to zero, which can't be observed through the API anyway.\n\nNothing was deferred, and the full reasoning is in `_bmad-output/implementation-artifacts/spec-inventory-core.md`.\n\nThe work is committed as `7d33855` directly on `main`, since the repo had only a setup commit. Nothing was pushed, and there's no remote set up.\n\nNext, I can walk you through the change with `bmad-walkthrough`, or make another change.",
+    "cost": 1.0796189999999999,
+    "ms": 204548,
+    "turns": 32,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 32,
+      "cacheWrite": 51417,
+      "cacheRead": 668509,
+      "output": 16145
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "`release(sku, quantity)` is in and committed as `b13ea7e` on `main`; all 38 tests pass. It returns reserved items to stock and returns the resulting stock quantity. Releasing more than is outstanding throws `INVALID_RELEASE` and leaves both stock and reservations unchanged. It uses the same `INVALID_INPUT` checks as the other methods, and those run first.\n\nChoices I made:\n- **New `reserved(sku)` method:** shows the outstanding reservation for a SKU, or 0 if it's unknown. Without it the tracked number can't be seen. `stock(sku)` still means available, unreserved stock.\n- **`reserve` now also records the reservation.** Its return value, errors and effect on stock are the same as before.\n- **Unknown SKUs:** releasing on a SKU that's unknown or has nothing reserved throws `INVALID_RELEASE`, even if stock is available.\n- **New export:** `INVALID_RELEASE` is exported alongside the existing error code constants.\n\n**What the review changed:** my first version put a new size limit in `add` (stock plus reservations had to stay under the largest exact integer). The reviewer showed this would make `add` fail in a case that used to succeed, which breaks your \"preserve every existing API\" rule. `add` is now exactly as it was. Instead, `release` throws `INVALID_INPUT` if the resulting stock would go over that limit, the same rule `add` already used. This only matters for quantities near 2^53. I also patched the smaller documentation and test gaps the reviewer found.\n\n**Deferred:** the original spec's notes still say a reservation is permanent and that release is out of scope. I didn't edit that finished spec; it's logged in `_bmad-output/implementation-artifacts/deferred-work.md`.\n\nI committed straight to `main` as before, and nothing has been pushed.\n\nNext, I can walk you through the change with `bmad-walkthrough`, fix the deferred note, or make another change.",
+    "cost": 2.0428508,
+    "ms": 228297,
+    "turns": 33,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 22,
+      "cacheWrite": 29327,
+      "cacheRead": 855976,
+      "output": 18434
+    }
+  }
+]
