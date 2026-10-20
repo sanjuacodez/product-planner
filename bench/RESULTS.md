@@ -50,6 +50,7 @@ Run after the build and never shown to the agent: committed secrets, the agent's
 | woo-extension | plain | 2026-10-20T05:08 | no committed secrets: pass · own test suite passes: pass · semgrep findings: not run · phpcs-wordpress: pass · php-compatibility-7.4: pass · phpstan-level5: pass · security-scan: pass |
 
 
+
 ## Every run
 
 | Scenario | Arm | Model | Hidden tests | Quality checks | Status | Cost | Minutes | Messages | Tokens | Output tokens | Kit | Date |

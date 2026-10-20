@@ -19,6 +19,7 @@ import { checkPlan, taskContext } from './check.js';
 import { loadFeatures, validateFeatures, readiness, coverage, sortedFeatures, upsertFeatures, setFeature, requestCoverage } from './features.js';
 import { requestItems } from './request.js';
 import { loadCatalog, loadProfile, detectProfiles, setProfiles, verifyProfile, editGate, runGates } from './profile.js';
+import { syncClaudeAgents } from './init/adapters.js';
 import { BROWSER_OPTIONS, TARGETS, browserStatus, recordChoice, setupBrowser, unregisterServer } from './browser/index.js';
 import { writeJson } from './util/fs.js';
 
@@ -73,6 +74,7 @@ Usage: product-planner <command> [options]
                                       After user approval: install free Playwright MCP + Chromium and register it
   browser remove                      Remove the Playwright MCP entry from this project's tool configs
   usage [summary] [--json] | bind --file transcript --task T# | hook              Token usage per task/phase (recorded by the Claude Code hook)
+  models show | tiered | inherit      Planned models per role; tiered = developer on Sonnet, QA on Haiku, each task delegated
   auto on|off|status                  Automatic mode: agents start pp-plan/pp-replan/pp-resume from plain requests
   doctor                              Environment checks (node, git, web, memory)
   version | help
@@ -121,6 +123,7 @@ export async function main(argv) {
       return;
     }
     case 'profile': return cmdProfile(cwd, rest);
+    case 'models': return cmdModels(cwd, rest);
     case 'auto': return cmdAuto(cwd, rest);
     case 'usage': return cmdUsage(cwd, rest);
     case 'check': { requireInit(cwd); const r = checkPlan(cwd); if (rest.includes('--json')) console.log(JSON.stringify(r, null, 2)); else { for (const e of r.errors) console.log(`error: ${e}`); for (const w of r.warnings) console.log(`warning: ${w}`); console.log(`${r.errors.length ? 'not ready' : 'ok'}: ${r.stats.tasks} tasks, ${r.stats.features} features, ${r.stats.requirements} requirement IDs (${r.stats.uncoveredRequirements} without tasks)${r.stats.highRisk.length ? `, high-risk: ${r.stats.highRisk.join(', ')}` : ''}`); } if (r.errors.length) process.exitCode = 1; return; }
@@ -221,6 +224,32 @@ function cmdProfile(cwd, rest) {
   }
 }
 
+/** Model presets for delegated work. tiered: implementation on Sonnet, QA on Haiku, each task in a fresh
+ * sub-agent context; planning, architecture, coordination and high-risk tasks stay on the session model. */
+const MODEL_PRESETS = {
+  tiered: { models: { developer: 'sonnet', qa: 'haiku' }, delegateTasks: true },
+  inherit: { models: {}, delegateTasks: false },
+};
+function cmdModels(cwd, rest) {
+  requireInit(cwd);
+  const [sub] = rest;
+  const st = loadState(cwd);
+  if (!sub || sub === 'show') {
+    console.log(`planned models: ${Object.keys(st.models || {}).length ? Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ') : 'none (every role inherits the session model)'}`);
+    console.log(`delegate each build task to sub-agents: ${st.options?.delegateTasks ? 'yes' : 'no'}`);
+    return;
+  }
+  const preset = MODEL_PRESETS[sub];
+  if (!preset) throw new Error(`usage: models show | ${Object.keys(MODEL_PRESETS).join(' | ')}`);
+  st.models = { ...preset.models };
+  st.options.delegateTasks = preset.delegateTasks;
+  saveState(cwd, st);
+  const n = syncClaudeAgents(cwd, st.models).length;
+  appendLog(cwd, { type: 'note', message: `models preset ${sub}: ${JSON.stringify(st.models)}, delegateTasks ${preset.delegateTasks}` });
+  console.log(`models: ${sub}${Object.keys(st.models).length ? ` (${Object.entries(st.models).map(([k, v]) => `${k}=${v}`).join(', ')})` : ''}; delegate tasks: ${preset.delegateTasks ? 'yes' : 'no'}${n ? `; ${n} Claude Code agent files updated` : ''}`);
+  refreshDashboard(cwd);
+}
+
 function cmdTask(cwd, rest) {
   requireInit(cwd);
   const [sub, id] = rest;
@@ -315,7 +344,7 @@ function cmdState(cwd, rest) {
   const st = loadState(cwd);
   switch (sub) {
     case undefined: case 'get': { if (!key) { console.log(JSON.stringify(st, null, 2)); return; } const v = key.split('.').reduce((o, k) => o?.[k], st); console.log(typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)); return; }
-    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); refreshDashboard(cwd); return; }
+    case 'set': { if (!key || !vals.length) throw new Error('usage: state set <dotted.key> <value>'); setByPath(st, key, vals.join(' ')); saveState(cwd, st); console.log(`${key} = ${JSON.stringify(key.split('.').reduce((o, k) => o?.[k], st))}`); if (key.startsWith('models.')) { const n = syncClaudeAgents(cwd, st.models).length; if (n) console.log(`Claude Code agents updated with the planned models (${n} files)`); } refreshDashboard(cwd); return; }
     case 'phase': { if (!PHASES.includes(key)) throw new Error(`phase must be one of ${PHASES.join(', ')}`); if (key === 'build' && (st.planning.handoff !== 'done' || !loadTasks(cwd).tasks.length)) throw new Error('build requires an approved handoff and a nonempty task plan'); if (key === 'done' && st.options?.requireVerification && auditStatus(cwd).status !== 'pass') throw new Error('done requires a current passing acceptance audit'); const from = st.phase; if (from === key) { console.log(`phase is already ${key}`); return; } st.phase = key; saveState(cwd, st); appendLog(cwd, { type: 'phase', from, to: key }); console.log(`phase: ${from} → ${key}`); const out = refreshDashboard(cwd); if (key === 'build' && st.options?.autoOpenDashboard !== false && out) { openInBrowser(out); console.log(`opened ${path.relative(cwd, out)} in the browser`); } return; }
     case 'step': { const status = vals[0]; if (!PLANNING_STEPS.includes(key)) throw new Error(`step must be one of ${PLANNING_STEPS.join(', ')}`); if (!['pending', 'in_progress', 'done', 'skipped'].includes(status)) throw new Error('status must be pending|in_progress|done|skipped'); st.planning[key] = status; if (st.phase === 'init') st.phase = 'planning'; saveState(cwd, st); appendLog(cwd, { type: 'planning', step: key, to: status }); console.log(`planning.${key} = ${status}`); refreshDashboard(cwd); return; }
     case 'product': { const { values } = args([key, ...vals].filter(Boolean), { name: { type: 'string' }, tagline: { type: 'string' }, summary: { type: 'string' } }); Object.assign(st.product, Object.fromEntries(Object.entries(values).filter(([, v]) => v != null))); saveState(cwd, st); console.log(JSON.stringify(st.product, null, 2)); refreshDashboard(cwd); return; }
@@ -457,7 +486,7 @@ function cmdAuto(cwd, rest) {
   if (!['on', 'off'].includes(sub)) throw new Error('usage: auto on|off|status');
   config.autoRun = sub === 'on';
   writeJson(configPath(cwd), config);
-  installTools(cwd, config.tools, undefined, { autoRun: config.autoRun });
+  installTools(cwd, config.tools, undefined, { autoRun: config.autoRun, models: loadState(cwd).models || {} });
   console.log(`automatic mode ${sub}: ${config.autoRun ? 'agents start pp-plan, pp-replan and pp-resume from plain requests' : 'use the /pp-* commands (or say "run pp-plan")'}.\nInstructions refreshed for: ${config.tools.join(', ')}. Start a new chat session so the agent reloads them.`);
 }
 

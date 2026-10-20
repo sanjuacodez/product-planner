@@ -33,6 +33,7 @@ const groupRows = [...groups.entries()].flatMap(([key, list]) => {
   if (names.length < 2) return [];
   return [`| ${scenario} | ${arm} | ${kit} | ${names.map((g) => { const v = list.map((r) => r.hidden.groups?.[g]).filter(Boolean); return `${g} ${v.reduce((a, x) => a + x.pass, 0)}/${v.reduce((a, x) => a + x.total, 0)}`; }).join(' · ')} |`];
 });
+const modelRows = runs.filter((r) => r.costByModel && Object.keys(r.costByModel).length).map((r) => `| ${r.scenario} | ${r.arm} | ${r.date.slice(0, 16)} | ${Object.entries(r.costByModel).sort((a, b) => b[1] - a[1]).map(([m, v]) => `${m.replace(/^claude-/, '')} $${v.toFixed(2)} (${r.costUsd ? Math.round((v / r.costUsd) * 100) : 0}%)`).join(' · ')} |`);
 const reviewed = runs.filter((r) => r.review?.scores);
 const reviewRows = reviewed.map((r) => `| ${r.scenario} | ${r.arm} | ${['correctness', 'maintainability', 'tests', 'documentation', 'security'].map((k) => r.review.scores[k] ?? '—').join(' | ')} | ${String(r.review.scores.notes || '').replace(/\|/g, '/').slice(0, 160)} |`);
 const qualityRows = runs.filter((r) => r.quality?.length).map((r) => `| ${r.scenario} | ${r.arm} | ${r.date.slice(0, 16)} | ${r.quality.map((q) => `${q.name}: ${q.pass === null ? 'not run' : q.pass ? 'pass' : `fail${q.errors ? ` (${q.errors})` : ''}`}`).join(' · ')} |`);
@@ -65,6 +66,14 @@ Run after the build and never shown to the agent: committed secrets, the agent's
 | Scenario | Arm | Run | Checks |
 |---|---|---|---|
 ${qualityRows.join('\n')}
+` : ''}
+${modelRows.length ? `## Cost by model per run
+
+From Claude Code's per-model usage (main session and sub-agents). The tiered arm should move work from the session model to cheaper models.
+
+| Scenario | Arm | Run | Cost by model |
+|---|---|---|---|
+${modelRows.join('\n')}
 ` : ''}
 ${reviewRows.length ? `## Blind review (1–5, \`--review\`)
 

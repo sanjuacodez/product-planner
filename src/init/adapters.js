@@ -97,14 +97,28 @@ ${wf}`}
 const PREAMBLE = (w) => `${w.meta.description}\n\nThis is the \`${w.meta.name}\` workflow from product-planner. Each step names the commands it needs; \`${STATE_DIR}/kit/README.md\` is a reference manual, so read a section only when a step points to it. Agent personas are in \`${STATE_DIR}/kit/agents/\`.\n\nUser input / arguments: $ARGUMENTS\n\n---\n\n`;
 const toolsList = (a) => Array.isArray(a.meta.tools) ? a.meta.tools : (a.meta.tools ? String(a.meta.tools).split(',').map((s) => s.trim()) : []);
 
+/** The model a persona's sub-agent runs on: planned per role (state.models.<role>), then the persona default.
+ * Claude Code honours `model:` in agent files (an alias such as sonnet or haiku, a full model id, or inherit). */
+export function agentModel(a, models = {}) {
+  const role = a.meta.name.replace(/^pp-/, '');
+  return models[role] || a.meta.model || null;
+}
+function writeClaudeAgent(cwd, a, models) {
+  const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
+  const model = agentModel(a, models);
+  writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\n${toolsList(a).length ? `tools: ${toolsList(a).join(', ')}\n` : ''}${model ? `model: ${model}\n` : ''}---\n\n${a.body}\n`);
+  return p;
+}
+/** Rewrite Claude Code agent files after the planned models change (only where Claude Code is installed). */
+export function syncClaudeAgents(cwd, models, kit = loadKit()) {
+  if (!fs.existsSync(path.join(cwd, '.claude', 'agents'))) return [];
+  return kit.agents.map((a) => writeClaudeAgent(cwd, a, models));
+}
+
 const ADAPTERS = {
   claude(cwd, kit, opts = {}) {
     const files = [];
-    for (const a of kit.agents) {
-      const p = path.join(cwd, '.claude', 'agents', `${a.meta.name}.md`);
-      writeText(p, `---\nname: ${a.meta.name}\ndescription: ${a.meta.description}\n${toolsList(a).length ? `tools: ${toolsList(a).join(', ')}\n` : ''}${a.meta.model ? `model: ${a.meta.model}\n` : ''}---\n\n${a.body}\n`);
-      files.push(p);
-    }
+    for (const a of kit.agents) files.push(writeClaudeAgent(cwd, a, opts.models));
     for (const w of kit.workflows) {
       const p = path.join(cwd, '.claude', 'commands', `${w.meta.name}.md`);
       writeText(p, `---\ndescription: ${w.meta.description}\n---\n\n${PREAMBLE(w)}${w.body}\n`);

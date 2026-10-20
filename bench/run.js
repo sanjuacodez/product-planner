@@ -3,7 +3,7 @@
 // question with the same scripted reply, then score the result with hidden acceptance tests.
 //
 //   node bench/run.js --scenario booking-lib --arm planner [--model opus] [--budget 25] [--max-messages 14]
-//   arms: plain | planner | speckit | bmad
+//   arms: plain | planner | tiered | speckit | bmad   (tiered = planner with `models tiered`: Sonnet developer, Haiku QA, delegated tasks)
 //   --review adds a blind rubric review by a separate model (extra cost, reported separately).
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
@@ -21,7 +21,8 @@ const { values: opt } = parseArgs({ options: {
 } });
 const scenarioDir = path.join(ROOT, 'scenarios', opt.scenario || '');
 if (!opt.scenario || !fs.existsSync(path.join(scenarioDir, 'prompt.md'))) throw new Error('--scenario must name a folder in bench/scenarios');
-if (!['plain', 'planner', 'speckit', 'bmad'].includes(opt.arm)) throw new Error('--arm must be plain, planner, speckit or bmad');
+if (!['plain', 'planner', 'tiered', 'speckit', 'bmad'].includes(opt.arm)) throw new Error('--arm must be plain, planner, tiered, speckit or bmad');
+const PLANNER = ['planner', 'tiered'].includes(opt.arm);
 
 const budget = Number(opt.budget), maxMessages = Number(opt['max-messages']), repeats = Number(opt.repeat);
 if (!Number.isFinite(budget) || budget <= 0 || !Number.isInteger(maxMessages) || maxMessages < 1 || !Number.isInteger(repeats) || repeats < 1 || repeats > 10) throw new Error('budget must be positive; max-messages and repeat must be positive integers (repeat <= 10)');
@@ -63,7 +64,7 @@ const env = { ...process.env };
 sh('git', ['init', '-q']);
 const seed = path.join(scenarioDir, 'seed');
 if (fs.existsSync(seed)) { fs.cpSync(seed, ws, { recursive: true }); sh('git', ['add', '-A']); sh('git', ['commit', '-qm', 'existing product']); }
-if (opt.arm === 'planner') {
+if (PLANNER) {
   const bin = path.join(ws, '.bench-bin');
   fs.mkdirSync(bin);
   for (const name of ['product-planner', 'pp']) fs.symlinkSync(path.join(PKG, 'bin', 'product-planner.js'), path.join(bin, name));
@@ -71,6 +72,7 @@ if (opt.arm === 'planner') {
   const pp = (...a) => { const r = sh(process.execPath, [path.join(PKG, 'bin', 'product-planner.js'), ...a]); if (r.status) throw new Error(r.stderr); };
   pp('init', '--tools', 'claude', '--yes');
   pp('state', 'set', 'options.autoOpenDashboard', 'false');
+  if (opt.arm === 'tiered') pp('models', 'tiered');
   fs.appendFileSync(path.join(ws, '.gitignore'), '.bench-bin/\n');
 } else if (opt.arm === 'speckit') {
   const r = sh('uvx', ['--from', SPECKIT, 'specify', 'init', '--here', '--force', '--non-interactive', '--integration', 'claude', '--script', 'sh']);
@@ -93,6 +95,7 @@ script.push(...changes);
 // ---------- conversation loop ----------
 const turns = [];
 let session = null, cost = 0, responderCost = 0, ownerAnswers = 0;
+const costByModel = {}; // from Claude Code's modelUsage: main session and sub-agents
 /** The product owner: answers only what was asked, from facts.md; never mentions tests. */
 function ownerReply(agentText) {
   const ask = `You are the product owner replying to a developer. Answer the questions in the developer's message using ONLY the facts below, quoting numbers, codes and rules exactly. Like a real owner, when you answer a question about a topic (for example earning points, redeeming, refunds, tiers), also mention the other facts on that same topic. Do not bring up topics the developer did not ask about. For a question the facts do not answer, reply "Use your recommendation" for that question. Do not mention tests. Reply in plain text, no tools.\n\n<facts>\n${FACTS}\n</facts>\n\n<developer_message>\n${agentText.slice(-6000)}\n</developer_message>`;
@@ -126,6 +129,7 @@ for (let i = 0; i < maxMessages && cost < budget; i++) {
   let res; try { res = JSON.parse(r.stdout); } catch { res = { is_error: true, result: (r.stdout || '') + (r.stderr || ''), usage: {} }; }
   session = res.session_id || session;
   cost += res.total_cost_usd || 0;
+  for (const [m, u] of Object.entries(res.modelUsage || {})) costByModel[m] = Number(((costByModel[m] || 0) + (u.costUSD || 0)).toFixed(4));
   const u = res.usage || {};
   turns.push({ message: message.slice(0, 200), result: res.result, cost: res.total_cost_usd || 0, ms: Date.now() - t0, turns: res.num_turns, error: res.is_error || false, subtype: res.subtype,
     tokens: { input: u.input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, output: u.output_tokens || 0 } });
@@ -133,7 +137,7 @@ for (let i = 0; i < maxMessages && cost < budget; i++) {
   console.log(`[${opt.arm}] message ${i + 1}: $${(res.total_cost_usd || 0).toFixed(2)} · ${res.num_turns} turns · ${res.subtype || ''}`);
   if (res.is_error || r.error || r.status !== 0) { stopReason = res.subtype?.includes('budget') ? 'budget_exhausted' : 'host_error'; break; }
   if (queue.length) continue;
-  if (opt.arm === 'planner') { if (plannerDone(res.result || '')) { stopReason = 'completed'; break; } continue; }
+  if (PLANNER) { if (plannerDone(res.result || '')) { stopReason = 'completed'; break; } continue; }
   if (res.subtype === 'error_max_turns') continue;
   if (!asksSomething(res.result || '')) { stopReason = 'completed'; break; }
 }
@@ -164,7 +168,7 @@ const result = {
   hiddenExitCode: test.status,
   hidden: { pass: count('pass'), fail: count('fail'), total: count('tests'), groups },
   harness: HARNESS, quality, review, owner: FACTS ? { answers: ownerAnswers, model: RESPONDER_MODEL, costUsd: Number(responderCost.toFixed(4)) } : undefined,
-  costUsd: Number(cost.toFixed(4)), minutes: Number((turns.reduce((a, t) => a + t.ms, 0) / 60000).toFixed(1)),
+  costUsd: Number(cost.toFixed(4)), costByModel, minutes: Number((turns.reduce((a, t) => a + t.ms, 0) / 60000).toFixed(1)),
   messages: turns.length, scriptedReplies: Math.max(0, turns.length - script.length), agentTurns: turns.reduce((a, t) => a + (t.turns || 0), 0),
   tokens: { input: sum('input'), cacheWrite: sum('cacheWrite'), cacheRead: sum('cacheRead'), output: sum('output') },
   ownTests: fs.existsSync(path.join(ws, 'package.json')) || fs.readdirSync(ws).some((f) => /test/i.test(f)),

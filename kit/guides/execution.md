@@ -14,6 +14,13 @@ Record the actual worker model with `--model` on each transition; when the host 
 identify it, omit the value and note that it is unknown. Never substitute the requested
 model for an unknown actual model.
 
+In Claude Code the planned model of a role is written into its agent file (`.claude/agents/pp-<role>.md`,
+`model:`), which Claude Code honours for that sub-agent: `product-planner state set models.developer sonnet`
+or the `product-planner models tiered` preset (developer on Sonnet, QA on Haiku, every build task delegated
+to sub-agents with fresh contexts). Cost falls only when delegated work runs on a cheaper model and with a
+smaller context than the coordinator's; sub-agents on the same model mainly add re-reading. Measure with
+`product-planner usage` and the benchmark's `tiered` arm before relying on a saving.
+
 Prefer a lower-cost available model for bounded, low-risk work with clear acceptance;
 use a stronger available model for architecture, ambiguous requirements, security-sensitive
 changes or failed attempts. Respect the user's explicit choices. Escalate with failure

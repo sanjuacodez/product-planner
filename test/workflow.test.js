@@ -134,3 +134,17 @@ test('dashboard shows estimated cost by product, epic and role, and flags a repo
   assert.match(html, /Est\. cost<\/th>/);
   assert.match(ok(cwd, 'usage'), /Estimated cost: \$2\.00/);
 });
+
+test('planned role models are written into Claude Code agent files; the tiered preset delegates tasks', async (t) => {
+  const cwd = await project(t, 'claude');
+  const agent = (role) => fs.readFileSync(path.join(cwd, `.claude/agents/pp-${role}.md`), 'utf8');
+  assert.doesNotMatch(agent('developer'), /^model:/m);
+  assert.match(ok(cwd, 'models', 'tiered'), /developer=sonnet, qa=haiku\); delegate tasks: yes; 10 Claude Code agent files updated/);
+  assert.match(agent('developer'), /^model: sonnet$/m); assert.match(agent('qa'), /^model: haiku$/m); assert.doesNotMatch(agent('architect'), /^model:/m);
+  assert.equal(loadState(cwd).options.delegateTasks, true);
+  ok(cwd, 'state', 'set', 'models.architect', 'claude-opus-5-5');
+  assert.match(agent('architect'), /^model: claude-opus-5-5$/m);
+  ok(cwd, 'auto', 'off'); assert.match(agent('qa'), /^model: haiku$/m); // reinstalling keeps planned models
+  ok(cwd, 'models', 'inherit'); assert.doesNotMatch(agent('developer'), /^model:/m);
+  assert.match(ok(cwd, 'models', 'show'), /none \(every role inherits/);
+});

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { STATE_DIR, exists, writeJson, writeText, readText } from '../util/fs.js';
+import { STATE_DIR, exists, writeJson, writeText, readText, readJson } from '../util/fs.js';
 import { defaultState, defaultConfig, statePath, configPath, isInitialised, loadConfig } from '../state.js';
 import { emptyTasks, tasksPath } from '../tasks.js';
 import { TOOLS, detectTools, installTools } from './adapters.js';
@@ -32,7 +32,7 @@ export async function init(cwd, opts = {}) {
   const gi = path.join(cwd, STATE_DIR, '.gitignore');
   if (!exists(gi)) writeText(gi, '# keep everything in git except heavy local memory artefacts\nmemory/node_modules/\nmemory/lancedb/\nmemory/models/\n');
   for (const d of ['research', 'dashboard']) { const keep = path.join(cwd, STATE_DIR, d, '.gitkeep'); if (!exists(keep)) writeText(keep, ''); }
-  const written = installTools(cwd, tools, undefined, { autoRun: config.autoRun !== false });
+  const written = installTools(cwd, tools, undefined, { autoRun: config.autoRun !== false, models: readJson(statePath(cwd))?.models || {} });
   return { tools, detected, fresh, written };
 }
 
