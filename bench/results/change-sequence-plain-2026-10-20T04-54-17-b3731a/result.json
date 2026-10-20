@@ -1,0 +1,75 @@
+{
+  "kitDigest": "1f38bae76bfa",
+  "status": "completed",
+  "stages": 5,
+  "budgetUsd": 5,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "change-sequence",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T04:59:31.057Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 20,
+    "fail": 0,
+    "total": 20,
+    "groups": {
+      "base": {
+        "pass": 10,
+        "total": 10
+      },
+      "change 1": {
+        "pass": 3,
+        "total": 3
+      },
+      "change 2": {
+        "pass": 2,
+        "total": 2
+      },
+      "change 3": {
+        "pass": 2,
+        "total": 2
+      },
+      "change 4": {
+        "pass": 3,
+        "total": 3
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "# pass 35 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 4.8348,
+  "minutes": 5.2,
+  "messages": 5,
+  "scriptedReplies": 0,
+  "agentTurns": 65,
+  "tokens": {
+    "input": 60,
+    "cacheWrite": 72580,
+    "cacheRead": 1608044,
+    "output": 33359,
+    "total": 1714043
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-change-sequence-plain-AQx1Ve"
+}

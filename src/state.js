@@ -17,6 +17,10 @@ export function defaultState() {
     phase: 'init',
     planning: Object.fromEntries(PLANNING_STEPS.map((s) => [s, 'pending'])),
     options: {
+      track: 'standard',
+      requireVerification: true,
+      requestCoverage: true,
+      maxConcurrentTasks: 2,
       research: true,
       marketing: false,
       memory: false,
@@ -32,6 +36,7 @@ export function defaultConfig() {
   return {
     version: 1,
     tools: [],
+    autoRun: true,
     dashboard: { output: 'product-dashboard.html', autoRefreshSeconds: 30, title: '' },
     research: { engine: 'duckduckgo', maxResults: 8 },
     memory: { backend: 'auto', include: ['.product-planner/**/*.md', 'docs/**/*.md', 'README.md'] },

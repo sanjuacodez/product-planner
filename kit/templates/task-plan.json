@@ -16,10 +16,14 @@
       "acceptance": [
         "The documented setup command starts the application successfully."
       ],
+      "features": ["F1"],
       "agent": "developer",
       "priority": "high",
       "estimate": "S",
       "dependsOn": [],
+      "risk": "medium",
+      "writes": ["package.json", "src/"],
+      "sources": [],
       "status": "todo"
     }
   ]

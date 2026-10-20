@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "The inventory core is built and tested, and the acceptance audit passed. All 53 tests pass on Node 22.\n\n**What's there**\n- **`inventory.js`**: a plain ES module with no imports, exporting `createInventory()`. Each call gets its own separate stock, and `add`, `reserve` and `stock` behave exactly as you specified, including the `INVALID_INPUT` and `INSUFFICIENT_STOCK` error codes.\n- **`test/inventory.test.js`**: has at least one test for each of your rules. These include a range of bad inputs, a failed operation leaving stock as it was, and stock never going below zero.\n- **`README.md`**: documents the public API, the input rules, the error codes and how to run the tests. `test/readme.test.js` runs the README's examples against the real module, so the docs can't drift from the code.\n- **`package.json`**: has no dependencies and runs the tests with `npm test`, using Node's built-in test runner.\n\n**Choices I made for details you left open**\n- SKUs are case-sensitive and used exactly as given, with no trimming. `'bolt'` and `' bolt'` are different SKUs, and a whitespace-only string is accepted because it isn't empty.\n- Quantities must be real whole numbers. Numeric strings like `'5'`, BigInts, `NaN` and `Infinity` are rejected with `INVALID_INPUT`, as are numbers too large for JavaScript to hold exactly.\n- An `add` that would push stock past that limit (about 9 quadrillion) also throws `INVALID_INPUT`, and stock stays unchanged.\n- `stock(sku)` also rejects an invalid SKU with `INVALID_INPUT`.\n- When a call has a bad input and asks for more than is available, it reports `INVALID_INPUT`, because input is checked first.\n\n**Limitations**\n- Running the tests needs Node 22 or later. The module itself has no such requirement.\n- Stock lives in memory only and is lost when the process ends. That's what you asked for.\n\nThe planning state in `.product-planner/` is updated and the project is marked done. I haven't committed anything; tell me if you'd like me to.",
+    "cost": 1.0137129999999999,
+    "ms": 181074,
+    "turns": 45,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 58,
+      "cacheWrite": 47190,
+      "cacheRead": 1184605,
+      "output": 19952
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "`release(sku, quantity)` is in and works as you specified. All 105 tests pass, the 53 original tests among them unedited, and the acceptance audit passed again.\n\n**What changed**\n- **`inventory.js`**: each inventory now keeps the outstanding reserved quantity for every SKU, separate from stock. `reserve` adds to it and `release` takes from it.\n- **`release(sku, quantity)`**:\n  - It adds the quantity back to stock and returns the new stock quantity.\n  - Releasing more than is reserved throws `INVALID_RELEASE` and leaves both stock and reservations unchanged. That includes an unknown SKU or one with nothing reserved.\n  - It checks the SKU and quantity the same way as the other methods and throws `INVALID_INPUT` for bad input. When an input is bad and the release is also too big, `INVALID_INPUT` wins, as it does for `reserve`.\n- **`reserved(sku)`**: I added this as a read-only way to see the outstanding reservation. It returns 0 for an unknown SKU and rejects an invalid SKU with `INVALID_INPUT`. Without it, callers would have no way to see the reservations they're tracking.\n- **Existing behaviour**: `add`, `reserve`, `stock`, the error codes, separate inventories, and failed calls changing nothing all work as before. `add` refills stock but leaves reservations alone.\n- **`test/release.test.js`**: 47 new tests, including the same bad inputs used for the originals and a check that a failed release changes nothing.\n- **`README.md`**: documents `release`, `reserved`, the stock and reservation tracking, and `INVALID_RELEASE`. Its new examples run against the module in `test/readme.test.js`.\n\n**One small behaviour change you should know about.** Stock or reservations could go past `Number.MAX_SAFE_INTEGER` (about 9 quadrillion) after very large refills. `release` and `reserve` now throw `INVALID_INPUT` in that case and change nothing, the same way `add` already did. Below that size, `reserve` behaves exactly as before.\n\nThe planner is updated: new feature F3, extended F2, tasks T3 and T4, and a dated replan entry in `.product-planner/decisions.md`. Nothing is committed yet; tell me if you'd like me to commit.",
+    "cost": 2.1223522,
+    "ms": 206904,
+    "turns": 44,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 48,
+      "cacheWrite": 35925,
+      "cacheRead": 1859836,
+      "output": 22454
+    }
+  }
+]

@@ -1,15 +1,23 @@
 import path from 'node:path';
+import { planningText } from '../planning.js';
 import { stateDir, loadState, loadConfig, readLog, PLANNING_STEPS } from '../state.js';
 import { loadTasks, summary, tasksByEpic } from '../tasks.js';
 import { readText, readJson, listFiles } from '../util/fs.js';
+import { loadFeatures, sortedFeatures, coverage } from '../features.js';
+import { readUsage, summarizeUsage } from '../usage.js';
+import { loadProfile } from '../profile.js';
 
 const DOCS = [
   ['concept', 'Product concept', 'concept.md'],
+  ['plan', 'Quick delivery plan', 'plan.md'],
   ['prd', 'Product requirements (PRD)', 'prd.md'],
   ['ux', 'UX and UI direction', 'ux.md'],
   ['marketing', 'Marketing plan', 'marketing.md'],
   ['architecture', 'Architecture', 'architecture.md'],
-  ['market', 'Market research', path.join('research', 'market.md')],
+  ['baseline', 'Current product baseline', 'baseline.md'],
+  ['lessons', 'Verified lessons', 'lessons.md'],
+  ['acceptance', 'Acceptance audit', 'acceptance.md'],
+  ['request', 'Original request (verbatim)', 'request.md'],
 ];
 
 export function collect(cwd = process.cwd()) {
@@ -18,23 +26,29 @@ export function collect(cwd = process.cwd()) {
   const config = loadConfig(cwd);
   const tasks = loadTasks(cwd);
   const log = readLog(cwd);
+  const featureFile = loadFeatures(cwd);
+  const features = sortedFeatures(featureFile).map((f) => ({ ...f, tasks: coverage(featureFile, tasks).byFeature.get(f.id) || [] }));
   const docs = DOCS.map(([key, title, file]) => ({ key, title, file, text: readText(path.join(dir, file)) })).filter((d) => d.text);
   const custom = listFiles(path.join(dir, 'dashboard'), (f) => f.endsWith('.json'))
     .map((f) => { try { return { file: path.basename(f), ...readJson(f) }; } catch (e) { return { file: path.basename(f), title: path.basename(f), type: 'text', text: `Invalid JSON: ${e.message}` }; } })
     .sort((a, b) => (a.order ?? 50) - (b.order ?? 50) || a.file.localeCompare(b.file));
   return {
     generatedAt: new Date().toISOString(),
-    state, config, tasks, log,
+    state, config, tasks, log, features,
     summary: summary(tasks),
     byEpic: tasksByEpic(tasks),
     planningSteps: PLANNING_STEPS.map((s) => ({ step: s, status: state.planning?.[s] || 'pending' })),
     docs,
-    roadmap: readText(path.join(dir, 'roadmap.md')),
-    risks: readText(path.join(dir, 'risks.md')),
+    roadmap: planningText(cwd, 'roadmap.md'),
+    risks: planningText(cwd, 'risks.md'),
     decisions: readText(path.join(dir, 'decisions.md')),
     competitors: readJson(path.join(dir, 'research', 'competitors.json'), null),
+    market: readText(path.join(dir, 'research', 'market.md')),
+    sources: readText(path.join(dir, 'research', 'sources.md')),
     custom,
     burnup: burnupSeries(log, tasks),
+    profile: loadProfile(cwd),
+    usage: summarizeUsage(readUsage(cwd), { prices: config.pricing?.models }),
   };
 }
 
@@ -48,6 +62,7 @@ export function burnupSeries(log, tasks) {
   const doneSet = new Set();
   const seen = new Set();
   for (const e of events) {
+    if (e.to === 'removed') { if (seen.delete(e.task)) scope--; if (doneSet.delete(e.task)) done--; days.set(day(e.ts), { date: day(e.ts), scope, done }); continue; }
     if (!seen.has(e.task)) { seen.add(e.task); scope++; }
     if (e.to === 'done' && !doneSet.has(e.task)) { doneSet.add(e.task); done++; }
     if (e.from === 'done' && e.to !== 'done' && doneSet.has(e.task)) { doneSet.delete(e.task); done--; }

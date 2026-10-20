@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+const { createInventory } = await import(pathToFileURL(process.env.BENCH_TARGET || path.resolve('inventory.js')));
+const error = (fn, code) => assert.throws(fn, (e) => e instanceof Error && e.code === code);
+test('original API: stock defaults to zero and add accumulates quantities', () => { const i = createInventory(); assert.equal(i.stock('a'), 0); assert.equal(i.add('a', 3), 3); assert.equal(i.add('a', 2), 5); });
+test('original API: reserve subtracts and quantities stay nonnegative', () => { const i = createInventory(); i.add('a', 3); assert.equal(i.reserve('a', 3), 0); error(() => i.reserve('a', 1), 'INSUFFICIENT_STOCK'); assert.equal(i.stock('a'), 0); });
+test('original API: invalid inputs retain their exact error code', () => { const i = createInventory(); for (const [sku, q] of [['', 1], [null, 1], ['a', 0], ['a', -1], ['a', 1.5]]) for (const method of ['add', 'reserve', 'release']) error(() => i[method](sku, q), 'INVALID_INPUT'); });
+test('original API: instances and SKUs stay isolated', () => { const a = createInventory(), b = createInventory(); a.add('x', 3); a.add('y', 5); a.reserve('x', 2); assert.equal(a.stock('y'), 5); assert.equal(b.stock('x'), 0); });
+test('original API: failed reserve is atomic, including unknown SKU', () => { const i = createInventory(); i.add('a', 2); error(() => i.reserve('a', 3), 'INSUFFICIENT_STOCK'); error(() => i.reserve('missing', 1), 'INSUFFICIENT_STOCK'); assert.equal(i.stock('a'), 2); });
+test('change: release returns reserved stock and reports new quantity', () => { const i = createInventory(); i.add('a', 10); i.reserve('a', 6); assert.equal(i.release('a', 2), 6); assert.equal(i.release('a', 4), 10); });
+test('change: excessive release is atomic for stock and reservation', () => { const i = createInventory(); i.add('a', 10); i.reserve('a', 4); error(() => i.release('a', 5), 'INVALID_RELEASE'); assert.equal(i.stock('a'), 6); assert.equal(i.release('a', 4), 10); error(() => i.release('a', 1), 'INVALID_RELEASE'); });
+test('change: reservations accumulate and remain SKU-specific', () => { const i = createInventory(); i.add('a', 10); i.add('b', 10); i.reserve('a', 2); i.reserve('a', 3); i.reserve('b', 1); assert.equal(i.release('a', 5), 10); error(() => i.release('b', 2), 'INVALID_RELEASE'); assert.equal(i.release('b', 1), 10); });

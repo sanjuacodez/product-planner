@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I've built the inventory core, and all 19 tests pass on Node 22 (`npm test`). Nothing has been committed.\n\nThe four files:\n- **`inventory.js`** exports `createInventory()`, which provides `add`, `reserve` and `stock` exactly as you specified.\n- **`inventory.test.js`** has the tests, using Node's built-in test runner. Beyond the rules you listed, they check that failed calls leave stock unchanged, that separate inventories don't share stock, and they run 2,000 random operations checking that stock never goes negative and always matches the expected value.\n- **`README.md`** documents the public API, the input rules, the error codes and the guarantees.\n- **`package.json`** sets the project up as an ES module with `npm test`, and has no dependencies.\n\nChoices I made where you didn't specify:\n- **SKU matching:** SKUs must match exactly. They are case-sensitive and not trimmed, so a SKU of only spaces counts as valid because it isn't empty.\n- **Unusual SKU names:** any string works as a SKU, including names like `\"__proto__\"` that can break a plain JavaScript object.\n- **What counts as a valid quantity:** a positive whole number up to JavaScript's largest exact integer (`Number.MAX_SAFE_INTEGER`, about 9 quadrillion). Text like `\"3\"`, decimals and BigInts are rejected with `INVALID_INPUT`.\n- **Too much stock:** an `add` that would push stock past that limit throws `INVALID_INPUT` and leaves stock unchanged. Otherwise the numbers would quietly lose accuracy.\n- **Error priority:** inputs are checked first, so `reserve('UNKNOWN', 0)` gives `INVALID_INPUT`, not `INSUFFICIENT_STOCK`.\n- **Error details:** every error is a plain `Error` with a `code` property and a message that explains the problem, for example how much stock is actually available.\n- **`stock()` checks its input too:** calling it with an invalid SKU throws `INVALID_INPUT` instead of returning 0.\n- **Locked object:** each inventory object is frozen, so other code can't replace its methods.\n- **SKUs at zero:** a SKU reserved down to 0 is kept, and `stock` reports 0 for it.",
+    "cost": 0.2858952,
+    "ms": 68116,
+    "turns": 7,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 17124,
+      "cacheRead": 115016,
+      "output": 6293
+    }
+  },
+  {
+    "message": "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns t",
+    "result": "I've added `release(sku, quantity)`, and all 31 tests pass (`npm test`). Nothing is committed.\n\n**How it works:** each inventory now keeps a second count per SKU, the outstanding reservation. `reserve` takes units from stock and adds them to it. `release` moves units back into stock and returns the new stock level. Releasing more than is reserved throws `INVALID_RELEASE`, and stock and the reservation stay as they were. `release` checks its inputs the same way as the other methods and throws `INVALID_INPUT` for a bad SKU or quantity.\n\n**Kept from your original request:** the methods `add`, `reserve` and `stock` and their return values, the existing error codes, separate state for each inventory, and the rule that a failed call changes nothing. That rule now covers the reservation as well as stock.\n\nChoices I made where you didn't specify:\n- **New `reserved(sku)` method:** it returns the outstanding reservation, or 0 for an unknown SKU, and checks the SKU like `stock` does. You asked me to track reservations, and this is the only way to read them from outside. It's an addition, so nothing existing changes.\n- **Releasing with nothing reserved:** this gives `INVALID_RELEASE`. That covers unknown SKUs and SKUs whose reservations have all been released.\n- **Error priority:** inputs are checked first, so `release('X', 0)` gives `INVALID_INPUT`, not `INVALID_RELEASE`.\n- **Overflow limit:** same as the existing limit on `add`. A `release` that would push stock past `Number.MAX_SAFE_INTEGER` throws `INVALID_INPUT`. So does a `reserve` that would push the reservation past it, which can happen after many add-and-reserve cycles. In both cases nothing changes. This is the only new way an existing method can fail, and you'd only hit it with quantities near 9 quadrillion.\n- **`add` doesn't touch reservations:** stock added later is never counted as reserved.\n\n**Tests:** in `inventory.test.js`, the existing input-validation checks now also run against `release` and `reserved`. The test that inventories are separate now covers reservations too. The random-operations test now includes releases and compares both stock and reservations against expected values. There are 12 new tests for `release` and `reserved`, covering release limits, releasing with nothing reserved, failed calls leaving both values unchanged, and the overflow limits.\n\n**Docs:** `README.md` now explains the stock and reservation counts and documents `release` and `reserved`. It also lists `INVALID_RELEASE` in the error table, and states that failed calls and the no-negative rule cover reservations too.",
+    "cost": 0.7821352,
+    "ms": 116952,
+    "turns": 17,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 12,
+      "cacheWrite": 22116,
+      "cacheRead": 239320,
+      "output": 13570
+    }
+  }
+]

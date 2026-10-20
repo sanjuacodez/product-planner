@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "id": "F1",
+      "title": "Replace with a user-visible capability",
+      "priority": "must",
+      "status": "proposed",
+      "release": "MVP",
+      "story": "As a <user>, I want <capability> so that <outcome>.",
+      "flow": ["Replace with the main steps the user takes"],
+      "acceptance": ["Replace with an observable, testable result"],
+      "openQuestions": [],
+      "assumptions": [],
+      "source": "user"
+    }
+  ]
+}

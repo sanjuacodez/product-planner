@@ -1,0 +1,77 @@
+[
+  {
+    "message": "I want a small shopping-cart pricing core for an online shop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no r",
+    "result": "I built the cart in `cart.js`, with tests and API docs. All 17 tests pass (`npm test`), and I ran the README example to confirm its numbers are right. Nothing is committed yet.\n\n**Files**\n- `cart.js`: the ES module. `createCart()` returns an independent cart with `addItem`, `removeItem`, `items`, `subtotal`, `applyCoupon`, `discount` and `total`, all as you specified. Errors are plain `Error`s with a `code` property.\n- `cart.test.js`: tests using Node's built-in test runner. They cover the behaviour you specified, including that each failed operation leaves the cart unchanged.\n- `README.md`: the public API, the four error codes, the validation rules and a usage example.\n- `package.json`: an ES module package with no dependencies; `npm test` runs the tests. It needs Node 18 or later.\n\n**Choices I made where you didn't specify**\n- **Checking order:** bad input always throws `INVALID_INPUT` first, before `PRICE_MISMATCH` or `INVALID_REMOVE`. Every check runs before anything changes.\n- **Re-adding a removed SKU:** it becomes a new line at the end of the cart and can have a different price. Adding more of a SKU already in the cart keeps its original position.\n- **Exact matching:** SKUs and coupon codes are case-sensitive and not trimmed, so `save10` is rejected. Numbers passed as strings, like `\"100\"`, throw `INVALID_INPUT`.\n- **Bad coupon values:** anything that isn't a known code, including non-strings like `null`, throws `UNKNOWN_COUPON`, not `INVALID_INPUT`.\n- **Very large amounts:** if an `addItem` would push a quantity or the subtotal past JavaScript's largest exact integer, it throws `INVALID_INPUT`, so cent amounts never lose accuracy.\n- **Discounts are live:** a coupon can be applied to an empty cart. Its discount is recalculated from the current subtotal each time, so it follows changes to the cart.\n- **Rounding:** `SAVE10` uses whole-number arithmetic, so the 10% always rounds down to the exact cent.\n- **Free items:** a unit price of 0 is allowed.\n\nThere is currently no way to remove a coupon once applied, because you didn't ask for one. A `removeCoupon()` method would be easy to add if you want it.",
+    "cost": 0.38537859999999996,
+    "ms": 81591,
+    "turns": 8,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 20916,
+      "cacheRead": 123953,
+      "output": 9661
+    }
+  },
+  {
+    "message": "Change request: add shipping. Add shipping() returning the shipping cost in cents: 0 for an empty cart, 0 when the discounted subtotal (subtotal() minus discount()) is 5000 cents or more, and 499 othe",
+    "result": "I added `shipping()` and changed `total()` to include it. All 22 tests pass (the original 17 plus 5 new shipping tests), and I re-ran the README example to confirm its numbers. All other rules, methods and error codes are unchanged.\n\n**What changed**\n- **`cart.js`:** `shipping()` returns 0 for an empty cart and 0 when `subtotal() − discount()` is 5000 or more. Otherwise it returns 499. `total()` is now `subtotal() − discount() + shipping()`.\n- **`cart.test.js`:** five existing tests expected the old `total()`, so I updated them to include the 499 shipping. The helper tests use to check that failed operations leave the cart unchanged now compares shipping too. The new tests cover:\n  - an empty cart, including one with a coupon applied;\n  - the exact boundary, where 4999 is charged and 5000 ships free;\n  - coupons moving a cart across the threshold;\n  - failed operations leaving shipping unchanged.\n- **`README.md`:** documents `shipping()` with a table of when it is charged, the new `total()` formula and the updated example, which now totals 4863 instead of 4364.\n\n**Choices I made where you didn't specify**\n- **\"Empty\" means no lines.** A cart whose discounted subtotal is 0 but still has items pays 499. That covers a cart with only free items, or one where `FLAT500` cancels out the whole subtotal. If you'd rather such carts ship free, it's a one-line change.\n- **Coupons can change shipping.** The threshold uses the discounted subtotal, so applying a coupon can make shipping start being charged. For example, a 5500 cart with `SAVE10` drops to 4950 and pays 499. That is what your rule specifies; I've noted it in the docs so it doesn't surprise anyone.\n\nNothing is committed yet; all four files are still uncommitted in the repo.",
+    "cost": 0.6687708000000001,
+    "ms": 54302,
+    "turns": 16,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 14,
+      "cacheWrite": 12675,
+      "cacheRead": 274181,
+      "output": 6355
+    }
+  },
+  {
+    "message": "Change request: limit quantities. A line may hold at most 10 units. An addItem call that would take a line above 10 units, including a new line added with more than 10, throws an Error with code QUANT",
+    "result": "I added the 10-unit limit per line. `addItem` now throws `QUANTITY_LIMIT` for any call that would take a line above 10 units, including a new line added with more than 10. All 26 tests pass, and all other rules and error codes are unchanged.\n\n**What changed**\n- **`cart.js`:** `addItem` checks the line's new quantity against the limit before changing anything, so a rejected call leaves the cart exactly as it was.\n- **`cart.test.js`:** four new tests cover:\n  - reaching exactly 10, both in one call and over several calls;\n  - removing units to make room, then adding again up to 10;\n  - a new line over 10, adding to a nearly full or full line, and the cart being unchanged afterwards (coupon, discount, shipping and line order included);\n  - which error wins when a call breaks more than one rule.\n\n  One older test, which checks that sums too large to stay exact are rejected, relied on a quantity in the trillions. It now uses large prices instead, so it still tests the same thing within the new limit.\n- **`README.md`:** documents the limit under `addItem`, adds `QUANTITY_LIMIT` to the error table, and lists the order of `addItem`'s checks.\n\n**Choices I made where you didn't specify**\n- **Rejected, not capped.** A call that would go over 10 fails as a whole. It doesn't add as many units as fit, so the caller always knows exactly what happened.\n- **Check order in `addItem`:**\n  1. `INVALID_INPUT` for bad arguments, as you asked. A quantity like `11.5` is invalid input, not a limit error.\n  2. `PRICE_MISMATCH`, because a mismatched price means it isn't really the same line.\n  3. `QUANTITY_LIMIT`.\n  4. The existing check that the subtotal stays exact.\n- **The limit is per line, not per cart.** A cart can hold any number of lines with up to 10 units each.\n\nNothing is committed yet.",
+    "cost": 0.9334890000000001,
+    "ms": 52931,
+    "turns": 11,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 10,
+      "cacheWrite": 13454,
+      "cacheRead": 262631,
+      "output": 5226
+    }
+  },
+  {
+    "message": "Change of mind: adding a SKU that is already in the cart with a different unit price no longer throws PRICE_MISMATCH. Instead, the new unit price replaces the old one for the whole line, the quantity ",
+    "result": "Adding a SKU that's already in the cart at a different price now changes the price for the whole line instead of throwing `PRICE_MISMATCH`. All 29 tests pass. `PRICE_MISMATCH` is no longer thrown anywhere; every other rule and error code is unchanged.\n\n**How it behaves now**\n- `addItem('A', 250, 2)` followed by `addItem('A', 300, 1)` gives one line of 3 units at 300 cents each, in its original position.\n- The new price can be higher, lower, or 0.\n- The 10-unit limit still applies. If an `addItem` is rejected for any reason, the line keeps its old price and quantity.\n\n**One fix you didn't ask for:** the check that the subtotal stays small enough to be exact was adding only the new units at the new price. With the whole line repriced, it could miss a total that's too large. It now subtracts the old line total and adds the full line at the new price, and a test covers a case the old version would have let through.\n\n**Tests**\n- I replaced the `PRICE_MISMATCH` test with one for the new behaviour: a raised price, a dropped price (including to 0), the line staying in place, and the returned quantity.\n- A new test checks that repricing updates the discount, shipping and total. The example crosses the free-shipping threshold.\n- A new test checks that a repricing call rejected for the unit limit, bad input or a too-large total leaves the old price and quantity.\n- Three existing tests asserted `PRICE_MISMATCH`, so I switched them to the remaining checks.\n\n**README:** `addItem` now describes and shows the repricing, `PRICE_MISMATCH` is gone from the error table, and the check order is now: invalid input, then the unit limit, then the too-large-total check.\n\nNothing is committed yet.",
+    "cost": 1.2774816000000004,
+    "ms": 69645,
+    "turns": 17,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 14,
+      "cacheWrite": 14669,
+      "cacheRead": 466123,
+      "output": 6668
+    }
+  },
+  {
+    "message": "Change request: add a FREESHIP coupon and removeCoupon(). FREESHIP gives no discount (discount() is 0) but makes shipping() 0 regardless of the subtotal. It follows the existing coupon rules: only one",
+    "result": "I added the `FREESHIP` coupon and `removeCoupon()`. All 35 tests pass, and every other rule and error code is unchanged.\n\n**How it behaves now**\n- **`FREESHIP`:** `discount()` is 0 and `shipping()` is 0 at any subtotal, including a cart that has items but a subtotal of 0. It follows the one-coupon rule, so it replaces `SAVE10` or `FLAT500`, and applying either of those replaces it. An unknown code throws `UNKNOWN_COUPON` and leaves `FREESHIP` active. Like the other codes, it's case-sensitive, so `freeship` is rejected.\n- **`removeCoupon()`:** removes whatever coupon is active and returns nothing. With no coupon active, it does nothing and doesn't throw. Items are unaffected, and a new coupon can be applied afterwards.\n\n**Code change:** each coupon in `cart.js` now has a discount rule and an optional free-shipping flag. This keeps `discount()` and `shipping()` simple and makes future coupons easy to add.\n\n**Tests:** six new tests cover:\n- free shipping both below and above the 5000 threshold, and on a cart with a subtotal of 0;\n- switching between `FREESHIP` and the other two coupons in both directions;\n- an unknown code leaving `FREESHIP` active;\n- removing each type of coupon;\n- calling `removeCoupon()` with no coupon, including on an empty cart;\n- items being unchanged after a coupon is removed.\n\n**README:** adds `FREESHIP` to the coupon table and the shipping table, documents `removeCoupon()`, and notes that `FREESHIP` can't be combined with a discount coupon.\n\nNothing is committed yet.",
+    "cost": 1.5696688000000005,
+    "ms": 54215,
+    "turns": 13,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 12,
+      "cacheWrite": 10866,
+      "cacheRead": 481156,
+      "output": 5449
+    }
+  }
+]

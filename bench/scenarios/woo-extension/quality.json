@@ -1,0 +1,12 @@
+{
+  "description": "Platform-quality checks run by the harness after the build; never shown to the agent. Placeholders: ${SCENARIO} = this scenario folder, ${WORKSPACE} = the run's workspace, ${BENCH_TOOLS} = shared tool cache outside the workspace. Each check prints one JSON line {name, pass, errors, details} and exits 0 only on pass.",
+  "setup": [
+    { "cmd": "node", "args": ["${SCENARIO}/quality/check.js", "setup", "--tools", "${BENCH_TOOLS}"] }
+  ],
+  "checks": [
+    { "name": "phpcs-wordpress", "cmd": "node", "args": ["${SCENARIO}/quality/check.js", "phpcs", "--tools", "${BENCH_TOOLS}", "--target", "${WORKSPACE}/min-order-by-role"], "cwd": "workspace", "pass": "exit0" },
+    { "name": "php-compatibility-7.4", "cmd": "node", "args": ["${SCENARIO}/quality/check.js", "phpcompat", "--tools", "${BENCH_TOOLS}", "--target", "${WORKSPACE}/min-order-by-role"], "cwd": "workspace", "pass": "exit0" },
+    { "name": "phpstan-level5", "cmd": "node", "args": ["${SCENARIO}/quality/check.js", "phpstan", "--tools", "${BENCH_TOOLS}", "--target", "${WORKSPACE}/min-order-by-role"], "cwd": "workspace", "pass": "exit0" },
+    { "name": "security-scan", "cmd": "node", "args": ["${SCENARIO}/quality/security-scan.js", "--target", "${WORKSPACE}/min-order-by-role"], "cwd": "workspace", "pass": "exit0" }
+  ]
+}

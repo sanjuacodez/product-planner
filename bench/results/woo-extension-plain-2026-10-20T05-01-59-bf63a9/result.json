@@ -1,0 +1,94 @@
+{
+  "kitDigest": "1f38bae76bfa",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 5,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "woo-extension",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T05:08:41.200Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 14,
+    "fail": 0,
+    "total": 14,
+    "groups": {
+      "other": {
+        "pass": 14,
+        "total": 14
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "composer test: 69 checks, 0 failures",
+      "original": {
+        "pass": false,
+        "details": "no npm test script"
+      },
+      "rescored": "harness fix: composer test scripts are run for PHP projects (previously only npm test)"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    },
+    {
+      "name": "phpcs-wordpress",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":6,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "php-compatibility-7.4",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"warnings\":0,\"files\":6,\"bySource\":{},\"first\":[]}"
+    },
+    {
+      "name": "phpstan-level5",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"first\":[]}",
+      "original": {
+        "pass": false,
+        "errors": 1,
+        "details": "{\"first\":[\"includes/class-min-order-by-role.php:56 Constant MIN_ORDER_BY_ROLE_PATH not found. [constant.notFound]\"]}"
+      },
+      "rescored": "harness fix: constants the plugin define()s are bootstrapped for PHPStan (previously reported as not found in other files)"
+    },
+    {
+      "name": "security-scan",
+      "pass": true,
+      "errors": 0,
+      "details": "{\"syntax\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"direct-access\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"input-sanitised\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"nonce-or-settings-api\":{\"pass\":true,\"errors\":[],\"warnings\":[],\"errorCount\":0},\"capability-"
+    }
+  ],
+  "review": null,
+  "costUsd": 1.586,
+  "minutes": 6.5,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 40,
+  "tokens": {
+    "input": 50,
+    "cacheWrite": 59905,
+    "cacheRead": 1282351,
+    "output": 42502,
+    "total": 1384808
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-woo-extension-plain-F1O9zd"
+}

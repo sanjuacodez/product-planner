@@ -1,0 +1,17 @@
+[
+  {
+    "message": "I want a small inventory core for a workshop. Make sensible choices for any details I haven't specified and build it without asking me to choose a stack. Use plain JavaScript with no runtime dependenc",
+    "result": "I built the inventory core, tested it and documented it. All 28 tests pass (`npm test`, Node 22), and a separate QA review found no defects.\n\n**What's there**\n- **`inventory.js`**: an ES module that exports `createInventory()` and an `ErrorCode` constant. Each call keeps its own private `Map`, so inventories never share stock. `add`, `reserve` and `stock` work as you specified.\n- **`package.json`**: no dependencies; `npm test` uses Node's built-in test runner and needs Node 18 or newer.\n- **`test/inventory.test.js`**: one group of tests per requirement. They cover every invalid input, check that stock is unchanged after each kind of failure, and include a 2000-step random run checked against a simple reference model.\n- **`README.md`**: the public API, both error codes, the input rules and how to run the tests.\n\n**Choices I made where you didn't specify** (also recorded in `.product-planner/decisions.md`):\n- **SKUs:** a SKU made only of spaces is rejected. Otherwise SKUs are used exactly as given: case-sensitive and not trimmed. A SKU made only of a zero-width space (`'\\u200b'`) still gets through, because trimming doesn't remove it.\n- **Quantities:** must be a whole `number` from 1 to `Number.MAX_SAFE_INTEGER`. Numeric strings, BigInt values, boxed numbers and objects are rejected.\n- **Very large totals:** an `add` that would push stock above `MAX_SAFE_INTEGER` throws `INVALID_INPUT` and changes nothing.\n- **Check order:** SKU first, then quantity, then available stock. So an invalid input always reports `INVALID_INPUT`, never `INSUFFICIENT_STOCK`.\n- **`stock()` with an invalid SKU** throws `INVALID_INPUT`, the same as the other two methods.\n- **Errors** are plain `Error` objects with a `code` property. The returned inventory object is frozen so its methods can't be replaced.\n\n**Process:** your request was precise and asked me to build, so I used product-planner's quick track with no questions and treated your request as approval of the plan. All three tasks are done, the final acceptance check passed, and the dashboard (`product-dashboard.html`) shows 3/3.\n\n**Two loose ends:**\n- I haven't made a git commit, because you authorized building and testing but not committing.\n- A leftover input file, `.product-planner/features-input.json`, needs deleting. Removing it needed a permission I didn't have; it isn't used by anything.",
+    "cost": 1.6156458000000005,
+    "ms": 332019,
+    "turns": 16,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 26,
+      "cacheWrite": 11219,
+      "cacheRead": 880692,
+      "output": 6810
+    }
+  }
+]

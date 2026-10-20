@@ -1,0 +1,17 @@
+[
+  {
+    "message": "/bmad-build I run a café and want the core of a loyalty-points ledger for it. Make it a plain JavaScript ES module, no runtime dependencies, no UI or server. Put it in loyalty.js exporting createLedge",
+    "result": "Before I write any code I need your café's rules. Your validation, duplicate-purchase and insufficient-points rules are already in the draft spec at `_bmad-output/implementation-artifacts/spec-cafe-loyalty-ledger.md`. These four questions decide how the ledger actually behaves:\n\n**1. Earning points**\n- How many points does a purchase earn per rupee? For example 1 point per ₹10, or 1 point per ₹1.\n- How are fractions handled? For ₹95 at 1 point per ₹10: round down to 9 (most common), round to nearest, or keep fractional points?\n- Do higher tiers earn at a higher rate (say Gold earns 1.5×), or is the rate the same for everyone?\n\n**2. Redeeming points**\n- Is there a minimum redemption (for example at least 50 points)?\n- Must points be redeemed in fixed steps (for example multiples of 10)?\n- Is there a cap per redemption? If none of these apply, I'll allow any positive whole number up to the balance.\n\n**3. Refunds**\n- If the customer has already spent the purchase's points, should the refund:\n  - (a) push the balance negative, so they owe points;\n  - (b) stop at 0, so the café absorbs the loss; or\n  - (c) be refused with an error?\n- What should happen with a purchaseId that was never recorded, or one already refunded? My suggestion is to throw `UNKNOWN_PURCHASE` and `ALREADY_REFUNDED`.\n- Once a purchase is refunded, can its purchaseId be used again? My suggestion is no: it stays used.\n\n**4. Tiers**\n- What are the tier names and thresholds? For example bronze from 0, silver from 500, gold from 2000.\n- What do the thresholds measure: lifetime rupees spent, lifetime points earned, or current balance?\n- Can a refund drop a customer to a lower tier? Can redeeming points drop them?\n\nIf any of these don't matter to you, say \"your call\" and I'll pick a sensible default and note it in the docs.",
+    "cost": 0.3931568,
+    "ms": 62252,
+    "turns": 9,
+    "error": false,
+    "subtype": "success",
+    "tokens": {
+      "input": 18,
+      "cacheWrite": 31604,
+      "cacheRead": 291464,
+      "output": 4098
+    }
+  }
+]

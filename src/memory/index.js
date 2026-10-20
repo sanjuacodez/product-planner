@@ -4,6 +4,7 @@
  * upgrades to local vector search (LanceDB + transformers.js, all free and offline) when
  * `product-planner memory setup` has installed the optional packages.
  */
+import { fileDigest } from '../evidence.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -59,7 +60,7 @@ export async function buildIndex(cwd, { paths } = {}) {
   const df = Object.create(null);
   for (const d of docs) for (const t of new Set(d.tokens)) df[t] = (df[t] || 0) + 1;
   const avgLen = docs.reduce((a, d) => a + d.tokens.length, 0) / (docs.length || 1);
-  const index = { builtAt: nowIso(), backend: 'bm25', files: files.map((f) => path.relative(cwd, f)), avgLen, df, docs: docs.map(({ tokens, ...d }) => ({ ...d, len: tokens.length, tf: countTf(tokens) })) };
+  const index = { fingerprints: Object.fromEntries(files.map((f) => { const rel = path.relative(cwd, f); return [rel, fileDigest(cwd, rel)]; })), builtAt: nowIso(), backend: 'bm25', files: files.map((f) => path.relative(cwd, f)), avgLen, df, docs: docs.map(({ tokens, ...d }) => ({ ...d, len: tokens.length, tf: countTf(tokens) })) };
   ensureDir(memoryDir(cwd));
   writeJson(indexPath(cwd), index);
   if (docs.length && vectorAvailable(cwd)) { await buildVectors(cwd, docs); index.backend = 'vector+bm25'; writeJson(indexPath(cwd), index); }
@@ -85,10 +86,13 @@ export function bm25Search(index, query, k = 5) {
 export async function searchMemory(cwd, query, k = 5) {
   const index = readJson(indexPath(cwd));
   if (!index) throw new Error('memory index not built: run `product-planner memory index`');
-  if (index.backend?.startsWith('vector') && vectorAvailable(cwd)) {
-    try { return { backend: 'vector', results: await vectorSearch(cwd, query, k) }; } catch (e) { console.error(`vector search failed (${e.message}); falling back to keyword search`); }
+  const staleFiles = index.files.filter((f) => !index.fingerprints || fileDigest(cwd, f) !== index.fingerprints[f]);
+  const fresh = new Set(index.files.filter((f) => !staleFiles.includes(f)));
+  const freshness = { staleFiles, warning: staleFiles.length ? 'Stale or unverified sources excluded; re-index memory and inspect changed source evidence.' : null };
+  if (!staleFiles.length && index.backend?.startsWith('vector') && vectorAvailable(cwd)) {
+    try { return { backend: 'vector', ...freshness, results: await vectorSearch(cwd, query, k) }; } catch (e) { console.error(`vector search failed (${e.message}); falling back to keyword search`); }
   }
-  return { backend: 'bm25', results: bm25Search(index, query, k) };
+  return { backend: 'bm25', ...freshness, results: bm25Search({ ...index, docs: index.docs.filter((d) => fresh.has(d.file)) }, query, k) };
 }
 
 /* ---------- optional vector backend (lazy-loaded) ---------- */

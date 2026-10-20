@@ -1,0 +1,3 @@
+[
+  "Change request: add release(sku, quantity) to return previously reserved items to stock. Track the outstanding reserved quantity per SKU. release adds the returned quantity back to stock and returns the resulting stock quantity. Releasing more than the outstanding reservation throws Error with code INVALID_RELEASE and leaves both stock and reservations unchanged. Apply the original INVALID_INPUT validation to release too. Preserve every existing API, error code, isolation rule and atomicity rule from my original request. Update tests and documentation and complete the change. Use your recommendations; approval for this change and its implementation is granted."
+]

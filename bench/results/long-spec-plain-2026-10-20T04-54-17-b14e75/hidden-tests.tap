@@ -1,0 +1,250 @@
+TAP version 13
+# Subtest: R1: box offices are independent, including id counters
+ok 1 - R1: box offices are independent, including id counters
+  ---
+  duration_ms: 1.269333
+  type: 'test'
+  ...
+# Subtest: R2: now defaults to Date.now and an injected clock is read every time
+ok 2 - R2: now defaults to Date.now and an injected clock is read every time
+  ---
+  duration_ms: 0.146542
+  type: 'test'
+  ...
+# Subtest: R3: holdMinutes defaults to 10 and must be an integer from 1 to 60
+ok 3 - R3: holdMinutes defaults to 10 and must be an integer from 1 to 60
+  ---
+  duration_ms: 0.272167
+  type: 'test'
+  ...
+# Subtest: R4: every error is an Error with a string code from the rules
+ok 4 - R4: every error is an Error with a string code from the rules
+  ---
+  duration_ms: 0.25975
+  type: 'test'
+  ...
+# Subtest: R5: failed operations change nothing and use up no ids
+ok 5 - R5: failed operations change nothing and use up no ids
+  ---
+  duration_ms: 0.341792
+  type: 'test'
+  ...
+# Subtest: R6: addEvent stores the event and returns its fields
+ok 6 - R6: addEvent stores the event and returns its fields
+  ---
+  duration_ms: 0.063208
+  type: 'test'
+  ...
+# Subtest: R7: event id and name must be non-empty strings after trimming
+ok 7 - R7: event id and name must be non-empty strings after trimming
+  ---
+  duration_ms: 0.511792
+  type: 'test'
+  ...
+# Subtest: R8: capacity must be an integer from 1 to 10000
+ok 8 - R8: capacity must be an integer from 1 to 10000
+  ---
+  duration_ms: 0.070833
+  type: 'test'
+  ...
+# Subtest: R9: priceCents must be an integer of 0 or more; free events are allowed
+ok 9 - R9: priceCents must be an integer of 0 or more; free events are allowed
+  ---
+  duration_ms: 0.232084
+  type: 'test'
+  ...
+# Subtest: R10: startsAt must be an integer strictly later than now
+ok 10 - R10: startsAt must be an integer strictly later than now
+  ---
+  duration_ms: 0.279291
+  type: 'test'
+  ...
+# Subtest: R11: a duplicate event id throws DUPLICATE_EVENT even with invalid fields and keeps the original
+ok 11 - R11: a duplicate event id throws DUPLICATE_EVENT even with invalid fields and keeps the original
+  ---
+  duration_ms: 0.100709
+  type: 'test'
+  ...
+# Subtest: R12: methods taking an eventId throw UNKNOWN_EVENT for unknown events
+ok 12 - R12: methods taking an eventId throw UNKNOWN_EVENT for unknown events
+  ---
+  duration_ms: 0.047167
+  type: 'test'
+  ...
+# Subtest: R13: hold returns id, eventId, customerId, quantity and expiresAt
+ok 13 - R13: hold returns id, eventId, customerId, quantity and expiresAt
+  ---
+  duration_ms: 0.03275
+  type: 'test'
+  ...
+# Subtest: R14: customerId must be a non-empty string after trimming
+ok 14 - R14: customerId must be a non-empty string after trimming
+  ---
+  duration_ms: 0.053167
+  type: 'test'
+  ...
+# Subtest: R15: quantity must be an integer from 1 to 8
+ok 15 - R15: quantity must be an integer from 1 to 8
+  ---
+  duration_ms: 0.052875
+  type: 'test'
+  ...
+# Subtest: R16: hold ids are H1, H2, ... across all events
+ok 16 - R16: hold ids are H1, H2, ... across all events
+  ---
+  duration_ms: 0.058542
+  type: 'test'
+  ...
+# Subtest: R17: expiresAt is the hold time plus holdMinutes
+ok 17 - R17: expiresAt is the hold time plus holdMinutes
+  ---
+  duration_ms: 0.028208
+  type: 'test'
+  ...
+# Subtest: R18: sales close 60 minutes before the event starts
+ok 18 - R18: sales close 60 minutes before the event starts
+  ---
+  duration_ms: 0.043667
+  type: 'test'
+  ...
+# Subtest: R19: holding more than is available throws SOLD_OUT
+ok 19 - R19: holding more than is available throws SOLD_OUT
+  ---
+  duration_ms: 0.04275
+  type: 'test'
+  ...
+# Subtest: R20: a customer may have at most 8 tickets per event across holds and confirmed orders
+ok 20 - R20: a customer may have at most 8 tickets per event across holds and confirmed orders
+  ---
+  duration_ms: 0.045958
+  type: 'test'
+  ...
+# Subtest: R21: hold checks errors in the stated order
+ok 21 - R21: hold checks errors in the stated order
+  ---
+  duration_ms: 0.061792
+  type: 'test'
+  ...
+# Subtest: R22: holds expire at expiresAt and stop counting without clean-up
+ok 22 - R22: holds expire at expiresAt and stop counting without clean-up
+  ---
+  duration_ms: 0.042541
+  type: 'test'
+  ...
+# Subtest: R23: confirm turns an active hold into a confirmed order
+ok 23 - R23: confirm turns an active hold into a confirmed order
+  ---
+  duration_ms: 0.04175
+  type: 'test'
+  ...
+# Subtest: R24: order ids are O1, O2, ... in confirmation order across events
+ok 24 - R24: order ids are O1, O2, ... in confirmation order across events
+  ---
+  duration_ms: 0.041417
+  type: 'test'
+  ...
+# Subtest: R25: 6 or more tickets get a 10% discount rounded down to a cent
+ok 25 - R25: 6 or more tickets get a 10% discount rounded down to a cent
+  ---
+  duration_ms: 0.035834
+  type: 'test'
+  ...
+# Subtest: R26: an active hold can be confirmed after sales close
+ok 26 - R26: an active hold can be confirmed after sales close
+  ---
+  duration_ms: 0.034625
+  type: 'test'
+  ...
+# Subtest: R27: releaseHold frees the tickets and returns the new available count
+ok 27 - R27: releaseHold frees the tickets and returns the new available count
+  ---
+  duration_ms: 0.038417
+  type: 'test'
+  ...
+# Subtest: R28: unknown hold ids throw UNKNOWN_HOLD
+ok 28 - R28: unknown hold ids throw UNKNOWN_HOLD
+  ---
+  duration_ms: 0.035875
+  type: 'test'
+  ...
+# Subtest: R29: confirmed or released holds throw HOLD_INACTIVE, even after expiry time
+ok 29 - R29: confirmed or released holds throw HOLD_INACTIVE, even after expiry time
+  ---
+  duration_ms: 0.072583
+  type: 'test'
+  ...
+# Subtest: R30: holds that expired while active throw HOLD_EXPIRED
+ok 30 - R30: holds that expired while active throw HOLD_EXPIRED
+  ---
+  duration_ms: 0.041834
+  type: 'test'
+  ...
+# Subtest: R31: cancelOrder returns the order cancelled with refundCents
+ok 31 - R31: cancelOrder returns the order cancelled with refundCents
+  ---
+  duration_ms: 0.036125
+  type: 'test'
+  ...
+# Subtest: R32: full refund more than 48 hours before start, otherwise half rounded down
+ok 32 - R32: full refund more than 48 hours before start, otherwise half rounded down
+  ---
+  duration_ms: 0.036208
+  type: 'test'
+  ...
+# Subtest: R33: orders cannot be cancelled once the event has started
+ok 33 - R33: orders cannot be cancelled once the event has started
+  ---
+  duration_ms: 0.07425
+  type: 'test'
+  ...
+# Subtest: R34: UNKNOWN_ORDER and ALREADY_CANCELLED, checked before EVENT_STARTED
+ok 34 - R34: UNKNOWN_ORDER and ALREADY_CANCELLED, checked before EVENT_STARTED
+  ---
+  duration_ms: 0.044542
+  type: 'test'
+  ...
+# Subtest: R35: cancelled tickets return to availability and the customer limit
+ok 35 - R35: cancelled tickets return to availability and the customer limit
+  ---
+  duration_ms: 0.036875
+  type: 'test'
+  ...
+# Subtest: R36: orders lists a customer's orders across events by order number
+ok 36 - R36: orders lists a customer's orders across events by order number
+  ---
+  duration_ms: 0.453791
+  type: 'test'
+  ...
+# Subtest: R37: available is capacity minus held minus sold
+ok 37 - R37: available is capacity minus held minus sold
+  ---
+  duration_ms: 0.0485
+  type: 'test'
+  ...
+# Subtest: R38: report counts active holds and confirmed, not cancelled, orders
+ok 38 - R38: report counts active holds and confirmed, not cancelled, orders
+  ---
+  duration_ms: 0.054792
+  type: 'test'
+  ...
+# Subtest: R39: revenue keeps the unrefunded part of cancelled orders
+ok 39 - R39: revenue keeps the unrefunded part of cancelled orders
+  ---
+  duration_ms: 0.043417
+  type: 'test'
+  ...
+# Subtest: R40: returned objects and arrays are copies
+ok 40 - R40: returned objects and arrays are copies
+  ---
+  duration_ms: 0.053167
+  type: 'test'
+  ...
+1..40
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 62.577875

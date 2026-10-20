@@ -1,45 +1,37 @@
-# Product concept
+# Concept brief
 
-## Problem and current alternatives
+<!-- One page. This is what the user confirms at the end of the interview. Keep each section to a few lines; details live in features.json and prd.md. -->
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+**Track:** quick | standard | existing
 
-## Target users and primary jobs
+## Problem
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Who has the problem, what it costs them today, and how they solve it now. -->
 
-## Value proposition and differentiator
+## Primary user and job
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- The first user you are building for and the job they hire the product to do. Name secondary users only if the MVP serves them. -->
 
-## Core user journeys
+## Value and differentiator
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Why this beats the current alternative, in one or two sentences. -->
 
-## MVP scope
+## MVP features
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Accepted MVP features from features.json: | ID | Feature | Why it is in the MVP | -->
 
-## Non-goals and future scope
+## Not in the MVP
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Deferred/rejected features and explicit non-goals, each with the reason. -->
 
-## Business model
+## Success metric
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- One primary measurable signal with a target, plus at most two supporting signals. -->
 
-## Success metrics and targets
+## Constraints and principles
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Platform, deadline, budget, stack or hosting preferences, compliance, accessibility. Then 3–5 numbered project principles (P1…) that architecture and tasks must respect; the architect records any justified exception in decisions.md. -->
 
-## Constraints
+## Key assumptions
 
-<!-- Replace with concrete project evidence, requirements or decisions. -->
-
-## Confirmed facts and assumptions
-
-<!-- Replace with concrete project evidence, requirements or decisions. -->
-
-## Open questions
-
-<!-- Replace with concrete project evidence, requirements or decisions. -->
+<!-- Assumptions made instead of asking, each with confidence (high/medium/low) and when to revisit. -->

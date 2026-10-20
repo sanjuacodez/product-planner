@@ -1,0 +1,59 @@
+{
+  "kitDigest": "1f38bae76bfa",
+  "status": "completed",
+  "stages": 1,
+  "budgetUsd": 5,
+  "measurement": "Claude Code reported usage and API-price cost; not subscription billing",
+  "scenario": "long-spec",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-20T04:56:43.226Z",
+  "hiddenExitCode": 0,
+  "hidden": {
+    "pass": 40,
+    "fail": 0,
+    "total": 40,
+    "groups": {
+      "rules": {
+        "pass": 40,
+        "total": 40
+      }
+    }
+  },
+  "harness": 2,
+  "quality": [
+    {
+      "name": "no committed secrets",
+      "pass": true,
+      "errors": 0,
+      "details": ""
+    },
+    {
+      "name": "own test suite passes",
+      "pass": true,
+      "errors": 0,
+      "details": "# pass 27 # fail 0"
+    },
+    {
+      "name": "semgrep findings",
+      "pass": null,
+      "errors": null,
+      "details": "semgrep not installed: not run"
+    }
+  ],
+  "review": null,
+  "costUsd": 1.3373,
+  "minutes": 2.4,
+  "messages": 2,
+  "scriptedReplies": 1,
+  "agentTurns": 12,
+  "tokens": {
+    "input": 18,
+    "cacheWrite": 35352,
+    "cacheRead": 305332,
+    "output": 17791,
+    "total": 358493
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-long-spec-plain-9xfZ9i"
+}

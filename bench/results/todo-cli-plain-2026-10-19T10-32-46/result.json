@@ -1,0 +1,25 @@
+{
+  "scenario": "todo-cli",
+  "arm": "plain",
+  "model": "opus",
+  "date": "2026-10-19T10:33:39.429Z",
+  "hidden": {
+    "pass": 8,
+    "fail": 0,
+    "total": 8
+  },
+  "costUsd": 0.2459,
+  "minutes": 0.9,
+  "messages": 1,
+  "scriptedReplies": 0,
+  "agentTurns": 7,
+  "tokens": {
+    "input": 12,
+    "cacheWrite": 15654,
+    "cacheRead": 139130,
+    "output": 4640,
+    "total": 159436
+  },
+  "ownTests": true,
+  "workspace": "/var/folders/br/jz4yl76d20g1fwp0r76qfqx40000gn/T/bench-todo-cli-plain-XBY8CS"
+}
